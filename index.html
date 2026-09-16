@@ -1,0 +1,1757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Survivor 51 Fantasy Draft</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%A5%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --torch:#ff7a33;
+  --ember:#ffb347;
+  --flame-red:#e0402a;
+  --night:#0a1712;
+  --night2:#0f2119;
+  --jungle:#16342a;
+  --jungle2:#1d4635;
+  --sand:#ecdfc0;
+  --sand-dim:#c9bb98;
+  --tribe-purple:#9b6bff;
+  --tribe-yellow:#e8c53d;
+  --line:rgba(236,223,192,0.14);
+  --shadow:0 10px 30px rgba(0,0,0,0.45);
+  --radius:14px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(255,122,51,0.10), transparent 60%),
+    radial-gradient(900px 500px at 90% 0%, rgba(155,107,255,0.08), transparent 55%),
+    linear-gradient(180deg, var(--night) 0%, var(--night2) 100%);
+  color:var(--sand);
+  font-family:'Inter',system-ui,sans-serif;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 18px 60px;}
+h1,h2,h3,.display{font-family:'Bebas Neue',Impact,sans-serif;letter-spacing:0.03em;}
+a{color:var(--torch);}
+
+/* ===== Header ===== */
+header.top{
+  position:sticky;top:0;z-index:40;
+  background:linear-gradient(180deg, rgba(10,23,18,0.97), rgba(10,23,18,0.9));
+  border-bottom:1px solid var(--line);
+  backdrop-filter:blur(6px);
+}
+.top-inner{max-width:1180px;margin:0 auto;padding:14px 18px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand .flame{font-size:1.6rem;filter:drop-shadow(0 0 10px rgba(255,122,51,0.6));}
+.brand h1{font-size:1.7rem;margin:0;color:var(--sand);text-transform:uppercase;}
+.brand h1 span{color:var(--torch);}
+.brand small{display:block;font-family:'Inter';font-size:0.68rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--sand-dim);margin-top:-4px;}
+nav.tabs{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;}
+nav.tabs button{
+  font-family:'Bebas Neue';font-size:1rem;letter-spacing:0.06em;
+  background:transparent;border:1px solid var(--line);color:var(--sand-dim);
+  padding:9px 16px;border-radius:999px;cursor:pointer;transition:all .15s;text-transform:uppercase;
+}
+nav.tabs button:hover{border-color:var(--torch);color:var(--sand);}
+nav.tabs button.active{background:linear-gradient(135deg,var(--torch),var(--flame-red));border-color:transparent;color:#1a0a04;font-weight:700;}
+
+/* ===== Panels ===== */
+.panel{display:none;padding-top:22px;}
+.panel.active{display:block;animation:fadein .25s ease;}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.section-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:14px;flex-wrap:wrap;}
+.section-head h2{margin:0;font-size:1.9rem;color:var(--sand);}
+.section-head p{margin:2px 0 0;color:var(--sand-dim);font-size:0.9rem;}
+.pill-row{display:flex;gap:8px;flex-wrap:wrap;}
+.pill{font-size:0.72rem;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--sand-dim);}
+.pill.purple{border-color:var(--tribe-purple);color:var(--tribe-purple);}
+.pill.yellow{border-color:var(--tribe-yellow);color:var(--tribe-yellow);}
+
+/* ===== Castaway grid ===== */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;}
+.card{
+  background:linear-gradient(160deg, var(--jungle), var(--night2));
+  border:1px solid var(--line);border-radius:var(--radius);
+  overflow:hidden;cursor:pointer;transition:transform .15s, box-shadow .15s, border-color .15s;
+  position:relative;
+}
+.card:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:var(--torch);}
+.card.drafted{opacity:0.32;filter:grayscale(0.6);cursor:default;pointer-events:none;}
+.card.drafted::after{content:'DRAFTED';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue';font-size:1.1rem;letter-spacing:0.1em;background:rgba(0,0,0,0.45);color:var(--sand);}
+.photo-wrap{position:relative;width:100%;aspect-ratio:3/4;background:linear-gradient(135deg,var(--jungle2),var(--night));}
+.photo-wrap .fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue';font-size:2.4rem;color:var(--sand-dim);}
+.photo-wrap img{position:relative;z-index:1;width:100%;height:100%;object-fit:cover;object-position:top center;display:block;}
+.card .info{padding:9px 10px 11px;}
+.card .info .nm{font-family:'Bebas Neue';font-size:1.15rem;letter-spacing:0.02em;line-height:1;color:var(--sand);}
+.card .info .oc{font-size:0.72rem;color:var(--sand-dim);margin-top:3px;}
+.card .badge{position:absolute;top:8px;left:8px;background:rgba(10,23,18,0.75);border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:0.68rem;color:var(--ember);}
+
+/* ===== Modal ===== */
+.overlay{position:fixed;inset:0;background:rgba(4,10,8,0.78);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:100;padding:18px;}
+.overlay.open{display:flex;}
+.modal{
+  background:linear-gradient(165deg,var(--jungle),var(--night2));
+  border:1px solid var(--line);border-radius:18px;max-width:640px;width:100%;
+  max-height:88vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,0.6);
+  animation:pop .2s ease;
+}
+@keyframes pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+.modal-head{position:relative;}
+.modal-head .photo-wrap{aspect-ratio:16/9;}
+.modal-close{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;background:rgba(10,23,18,0.75);border:1px solid var(--line);color:var(--sand);font-size:1.1rem;cursor:pointer;z-index:2;}
+.modal-body{padding:20px 24px 26px;}
+.modal-body h2{font-size:2.1rem;margin:0 0 2px;color:var(--sand);}
+.modal-meta{color:var(--sand-dim);font-size:0.88rem;margin-bottom:14px;}
+.modal-quote{border-left:3px solid var(--torch);padding:10px 14px;background:rgba(255,122,51,0.06);border-radius:0 10px 10px 0;font-style:italic;color:var(--sand);margin-bottom:16px;}
+.qa-section{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);}
+.qa-head{display:flex;align-items:center;margin:0 0 10px;font-size:1.1rem;color:var(--sand);}
+.qa-head svg{width:16px;height:16px;margin-right:7px;flex:none;}
+.qa-item{background:rgba(0,0,0,0.18);border:1px solid var(--line);border-radius:10px;padding:11px 14px;margin-bottom:10px;}
+.qa-q{font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--torch);font-weight:700;margin-bottom:5px;}
+.qa-a{font-size:0.92rem;color:var(--sand);line-height:1.45;}
+.qa-source{display:inline-block;margin-top:6px;font-size:0.72rem;color:var(--sand-dim);text-decoration:none;}
+.qa-source:hover{color:var(--torch);}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:'Inter';font-weight:600;font-size:0.85rem;
+  padding:9px 14px;border-radius:10px;border:1px solid var(--line);
+  background:rgba(236,223,192,0.04);color:var(--sand);cursor:pointer;text-decoration:none;
+  transition:all .15s;
+}
+.btn:hover{border-color:var(--torch);color:var(--torch);}
+.btn.primary{background:linear-gradient(135deg,var(--torch),var(--flame-red));border-color:transparent;color:#1a0a04;}
+.btn.primary:hover{filter:brightness(1.08);color:#1a0a04;}
+.btn.ghost{background:transparent;}
+.btn.danger{border-color:#8a2b2b;color:#ff8a7a;}
+.btn:disabled{opacity:0.4;cursor:not-allowed;}
+.btn svg{width:15px;height:15px;}
+
+/* ===== Draft layout ===== */
+.draft-layout{display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start;}
+@media (max-width:900px){.draft-layout{grid-template-columns:1fr;}}
+.card-box{
+  background:linear-gradient(160deg, var(--jungle), var(--night2));
+  border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;
+}
+.setup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:14px 0;}
+label.field{display:block;font-size:0.78rem;color:var(--sand-dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;}
+input[type=text],input[type=number],select{
+  width:100%;background:rgba(0,0,0,0.25);border:1px solid var(--line);color:var(--sand);
+  padding:9px 11px;border-radius:8px;font-family:'Inter';font-size:0.92rem;
+}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:none;border-color:var(--torch);}
+.team-name-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.team-name-row .swatch{width:10px;height:10px;border-radius:50%;flex:none;}
+.checkline{display:flex;align-items:center;gap:8px;font-size:0.88rem;color:var(--sand-dim);}
+.checkline input{width:16px;height:16px;}
+
+.turn-banner{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  background:linear-gradient(120deg, rgba(255,122,51,0.16), rgba(155,107,255,0.08));
+  border:1px solid var(--torch);border-radius:12px;padding:14px 18px;margin-bottom:16px;
+}
+.turn-banner .who{font-family:'Bebas Neue';font-size:1.6rem;color:var(--sand);}
+.turn-banner .sub{color:var(--sand-dim);font-size:0.82rem;}
+.timer-chip{font-family:'Bebas Neue';font-size:1.5rem;background:rgba(0,0,0,0.3);border-radius:10px;padding:4px 14px;border:1px solid var(--line);}
+.timer-chip.low{color:#ff5a4a;border-color:#ff5a4a;}
+
+.board-list{display:flex;flex-direction:column;gap:12px;position:sticky;top:80px;}
+.team-card{background:rgba(0,0,0,0.22);border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+.team-card.current{border-color:var(--torch);box-shadow:0 0 0 1px var(--torch) inset;}
+.team-card .tname{display:flex;align-items:center;gap:8px;font-family:'Bebas Neue';font-size:1.15rem;}
+.team-card .tname .dot{width:9px;height:9px;border-radius:50%;}
+.team-card .picks{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.mini-chip{display:flex;align-items:center;gap:6px;background:rgba(236,223,192,0.06);border-radius:999px;padding:3px 9px 3px 3px;font-size:0.74rem;}
+.mini-chip img{width:22px;height:22px;border-radius:50%;object-fit:cover;}
+.mini-chip .mini-fallback{width:22px;height:22px;border-radius:50%;background:var(--jungle2);display:flex;align-items:center;justify-content:center;font-size:0.6rem;}
+.empty-slot{color:var(--sand-dim);font-size:0.74rem;font-style:italic;}
+
+.lobby-code{font-family:'Bebas Neue';font-size:2.6rem;letter-spacing:0.12em;color:var(--torch);}
+.chat-box{display:flex;flex-direction:column;height:260px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:rgba(0,0,0,0.2);}
+.chat-msgs{flex:1;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px;}
+.chat-msgs .m{font-size:0.82rem;}
+.chat-msgs .m b{color:var(--torch);}
+.chat-form{display:flex;border-top:1px solid var(--line);}
+.chat-form input{flex:1;border:none;border-radius:0;background:transparent;}
+.chat-form button{border:none;background:var(--torch);color:#1a0a04;padding:0 16px;font-weight:700;cursor:pointer;}
+
+.toast-stack{position:fixed;bottom:16px;right:16px;display:flex;flex-direction:column;gap:8px;z-index:200;}
+.toast{background:var(--jungle);border:1px solid var(--torch);border-radius:10px;padding:10px 16px;font-size:0.85rem;box-shadow:var(--shadow);animation:pop .2s ease;}
+
+.notice{border:1px dashed var(--line);border-radius:12px;padding:14px 16px;color:var(--sand-dim);font-size:0.88rem;line-height:1.5;}
+.notice code{background:rgba(0,0,0,0.35);padding:1px 6px;border-radius:5px;color:var(--ember);}
+.notice.warn{border-color:var(--torch);color:var(--sand);}
+footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-dim);font-size:0.76rem;text-align:center;}
+
+/* ===== Scoring ===== */
+.subtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;}
+.subtabs button{
+  font-family:'Inter';font-weight:600;font-size:0.82rem;
+  background:rgba(236,223,192,0.04);border:1px solid var(--line);color:var(--sand-dim);
+  padding:8px 14px;border-radius:999px;cursor:pointer;transition:all .15s;
+}
+.subtabs button:hover{border-color:var(--torch);color:var(--sand);}
+.subtabs button.on{background:linear-gradient(135deg,var(--torch),var(--flame-red));border-color:transparent;color:#1a0a04;}
+.chart-wrap{display:flex;flex-direction:column;gap:10px;margin-bottom:6px;}
+.chart-row{display:flex;align-items:center;gap:10px;}
+.chart-wk{width:46px;flex:none;font-size:0.72rem;color:var(--sand-dim);text-align:right;}
+.chart-bars{flex:1;display:flex;gap:3px;align-items:center;height:20px;}
+.chart-seg{height:100%;border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-size:0.7rem;font-weight:700;color:#0a1712;min-width:22px;transition:width .3s;}
+.chart-legend{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0 20px;font-size:0.78rem;color:var(--sand-dim);}
+.chart-legend span{display:inline-flex;align-items:center;gap:6px;}
+.chart-legend .sw{width:10px;height:10px;border-radius:3px;}
+.stand-toggle{display:flex;gap:8px;margin-bottom:14px;}
+.stand-toggle button{font-family:'Bebas Neue';font-size:0.95rem;letter-spacing:0.05em;background:transparent;border:1px solid var(--line);color:var(--sand-dim);padding:7px 16px;border-radius:8px;cursor:pointer;}
+.stand-toggle button.on{border-color:var(--torch);color:var(--torch);}
+.lb-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;margin-bottom:6px;background:rgba(0,0,0,0.18);border:1px solid var(--line);cursor:pointer;}
+.lb-row.r1{border-color:#e8c53d;} .lb-row.r2{border-color:#c7c7c7;} .lb-row.r3{border-color:#c98a4b;}
+.lb-rank{width:22px;text-align:center;font-family:'Bebas Neue';font-size:1.2rem;color:var(--sand-dim);flex:none;}
+.lb-thumb{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none;background:var(--jungle2);}
+.lb-info{flex:1;min-width:0;}
+.lb-name{font-weight:600;font-size:0.92rem;}
+.lb-sub{font-size:0.74rem;color:var(--sand-dim);}
+.lb-pts{text-align:right;flex:none;}
+.lb-pts b{font-family:'Bebas Neue';font-size:1.3rem;color:var(--torch);display:block;}
+.lb-pts span{font-size:0.65rem;color:var(--sand-dim);text-transform:uppercase;}
+.team-standing-card{background:linear-gradient(160deg,var(--jungle),var(--night2));border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px;}
+.team-standing-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.team-standing-name{font-family:'Bebas Neue';font-size:1.4rem;}
+.team-standing-pts{font-family:'Bebas Neue';font-size:1.8rem;}
+.week-picker{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
+.week-picker button{font-family:'Bebas Neue';font-size:0.9rem;background:rgba(236,223,192,0.04);border:1px solid var(--line);color:var(--sand-dim);padding:6px 13px;border-radius:8px;cursor:pointer;}
+.week-picker button.on{background:var(--torch);border-color:transparent;color:#1a0a04;}
+.week-picker button.add{border-style:dashed;}
+.score-table{width:100%;border-collapse:collapse;font-size:0.82rem;}
+.score-table th{text-align:left;padding:6px 8px;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--sand-dim);border-bottom:1px solid var(--line);white-space:nowrap;}
+.score-table td{padding:5px 8px;border-bottom:1px solid rgba(236,223,192,0.06);vertical-align:middle;}
+.score-table input[type=number]{width:52px;padding:5px 6px;text-align:center;}
+.score-table .snm-cell{display:flex;align-items:center;gap:8px;min-width:150px;}
+.score-table .snm-cell img{width:26px;height:26px;border-radius:50%;object-fit:cover;flex:none;}
+.cat-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;}
+.cat-row input[type=text]{flex:1;min-width:140px;}
+.cat-row input[type=number]{width:80px;}
+.chip{display:inline-block;background:rgba(255,122,51,0.14);color:var(--ember);border-radius:999px;padding:2px 9px;font-size:0.7rem;margin:2px 3px 0 0;}
+.elim-tag{font-size:0.68rem;color:#ff8a7a;background:rgba(140,40,40,0.3);border-radius:6px;padding:2px 7px;margin-left:6px;}
+.week-scorecard{background:rgba(0,0,0,0.18);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+.week-scorecard img{width:34px;height:34px;border-radius:50%;object-fit:cover;flex:none;}
+.week-scorecard .wsinfo{flex:1;min-width:0;}
+.week-scorecard .wsname{font-weight:600;font-size:0.88rem;}
+.week-scorecard .wspts{font-family:'Bebas Neue';font-size:1.3rem;color:var(--torch);}
+
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-thumb{background:var(--jungle2);border-radius:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <span class="flame">🔥</span>
+      <div>
+        <h1>SURVIVOR <span>51</span> DRAFT</h1>
+        <small>Outwit &middot; Outplay &middot; Outdraft</small>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button data-tab="castaways" class="active">Castaways</button>
+      <button data-tab="mock">Mock Draft</button>
+      <button data-tab="live">Live Draft</button>
+      <button data-tab="scoring">Scoring</button>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- CASTAWAYS -->
+  <section id="panel-castaways" class="panel active">
+    <div class="section-head">
+      <div>
+        <h2>Meet the Cast</h2>
+        <p>21 new castaways &middot; The Open Era &middot; Click anyone for their full profile</p>
+      </div>
+      <div class="pill-row">
+        <span class="pill purple">Purple Tribe</span>
+        <span class="pill yellow">Yellow Tribe</span>
+      </div>
+    </div>
+    <div class="grid" id="castawayGrid"></div>
+  </section>
+
+  <!-- MOCK DRAFT -->
+  <section id="panel-mock" class="panel">
+    <div id="mockRoot"></div>
+  </section>
+
+  <!-- LIVE DRAFT -->
+  <section id="panel-live" class="panel">
+    <div id="liveRoot"></div>
+  </section>
+
+  <!-- SCORING -->
+  <section id="panel-scoring" class="panel">
+    <div id="scoringRoot"></div>
+  </section>
+
+</div>
+
+<footer class="note">Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.</footer>
+
+<!-- Profile Modal -->
+<div class="overlay" id="profileOverlay">
+  <div class="modal" id="profileModal"></div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- Firebase (only used by the Live Draft tab; safe to load even before you've
+     configured your own project — see the FIREBASE SETUP block in the script below) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+
+<script>
+const CASTAWAYS = [{"name": "Aaliyah Puglia", "short": "Aaliyah", "age": 24, "hometown": "Gloucester City, NJ", "current": "Providence, RI", "occupation": "Chef", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwMzgx/aaliyah-puglia.jpg", "quote": "I'm used to being adaptable, flexible and for things to change without notice.", "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=409s", "rhap_note": "RHAP Cast Preview Pt. 1", "wiki": "https://survivor.fandom.com/wiki/Aaliyah_Puglia", "id": "aaliyah", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Aaliyah%20Puglia", "twitter": "https://x.com/search?q=Aaliyah%20Puglia&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Aaliyah%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I'm used to being adaptable, flexible and for things to change without notice.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My superpower is my adaptability and being able to think on the fly with very little.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Alexis Levine", "short": "Alexis", "age": 34, "hometown": "Atlanta, GA", "current": "Atlanta, GA", "occupation": "Criminal Defense Attorney", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwMzgz/alexis-levine.jpg", "quote": "10 years of sobriety from drugs and alcohol.", "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=1004s", "rhap_note": "RHAP Cast Preview Pt. 1", "wiki": "https://survivor.fandom.com/wiki/Alexis_Levine", "id": "alexis", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Alexis%20Levine", "twitter": "https://x.com/search?q=Alexis%20Levine&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Alexis%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "10 years of sobriety from drugs and alcohol.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is the ability to remain calm amongst chaos.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "An \"Thien An\" Nguyen", "short": "Thien An", "age": 24, "hometown": "Fort Worth, TX", "current": "Fort Worth, TX", "occupation": "Medical Student", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDUy/an-thien-an-nguyen.jpg", "quote": "Coming in at 5 feet strong, I will be LURKING incognito-ly until it's time to strike.", "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0", "rhap_note": "RHAP Cast Reveal First Reactions", "wiki": "https://survivor.fandom.com/wiki/Thien_An_Nguyen", "id": "thien-an", "instagram": "https://www.instagram.com/explore/search/keyword/?q=An%20\"Thien%20An\"%20Nguyen", "twitter": "https://x.com/search?q=An%20\"Thien%20An\"%20Nguyen&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Thien%20An%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "Coming in at 5 feet strong, I will be LURKING incognito-ly until it's time to strike.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "I think my heart is my biggest superpower... being able to empathize with people.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Ana Sani", "short": "Ana", "age": 34, "hometown": "Richmond Hill, ON", "current": "Toronto, ON", "occupation": "Voice Actress", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwMzg4/ana-sani.jpg", "quote": "I've done voices for over 60 animated shows and a ton of commercials.", "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=1455s", "rhap_note": "RHAP Cast Preview Pt. 1", "wiki": "https://survivor.fandom.com/wiki/Ana_Sani", "id": "ana", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Ana%20Sani", "twitter": "https://x.com/search?q=Ana%20Sani&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Ana%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I've done voices for over 60 animated shows and a ton of commercials.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is definitely that I'm going to be able to build relationships and bonds quite easily.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}, {"q": "What are you expecting from this season's twists?", "a": "I expect a lot more twists... allowing for the players to make more moves.", "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists", "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"}]}, {"name": "Angelica \"Jelly\" Loblack", "short": "Jelly", "age": 29, "hometown": "Garland, TX", "current": "Bloomington, IN", "occupation": "Sociology Professor", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwMzkz/angelica-jelly-loblack.jpg", "quote": "There's nobody better equipped to win a social game than the sociologists who study them.", "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=912s", "rhap_note": "RHAP Cast Preview Pt. 2", "wiki": "https://survivor.fandom.com/wiki/Jelly_Loblack", "id": "jelly", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Angelica%20\"Jelly\"%20Loblack", "twitter": "https://x.com/search?q=Angelica%20\"Jelly\"%20Loblack&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Jelly%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "There's nobody better equipped to win a social game than the sociologists who study them.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is definitely my ability to get people to open up to me.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Brady Booker", "short": "Brady", "age": 27, "hometown": "La Salle, IL", "current": "Knoxville, TN", "occupation": "Pro Wrestler", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwMzk3/brady-booker.jpg", "quote": "I am comfortable being uncomfortable. I am used to falling on my face.", "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=2117s", "rhap_note": "RHAP Cast Preview Pt. 1", "wiki": "https://survivor.fandom.com/wiki/Brady_Booker", "id": "brady", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Brady%20Booker", "twitter": "https://x.com/search?q=Brady%20Booker&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Brady%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I am comfortable being uncomfortable. I am used to falling on my face.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is the way I interact with people... I engulf them in my personality.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Carter Krull", "short": "Carter", "age": 24, "hometown": "Rock Rapids, IA", "current": "Sioux Falls, SD", "occupation": "Livestock Farmer", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDAw/carter-krull.jpg", "quote": "Survivor has been on my bucket list. You never know when your last day will be.", "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=2802s", "rhap_note": "RHAP Cast Preview Pt. 1", "wiki": "https://survivor.fandom.com/wiki/Carter_Krull", "id": "carter", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Carter%20Krull", "twitter": "https://x.com/search?q=Carter%20Krull&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Carter%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "Survivor has been on my bucket list. You never know when your last day will be.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is that I can work hard. I will outwork any person out here.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}, {"q": "What are you expecting from this season's twists?", "a": "Survivor's always changing... it's the most crazy, changing game of all time.", "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists", "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"}]}, {"name": "Cristian Chavez", "short": "Cristian", "age": 26, "hometown": "Salt Lake City, UT", "current": "Salt Lake City, UT", "occupation": "Head of HR", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDA0/cristian-chavez.jpg", "quote": "If I'm not winning, I'll do whatever it takes to make everyone else lose.", "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=3343s", "rhap_note": "RHAP Cast Preview Pt. 1", "wiki": "https://survivor.fandom.com/wiki/Cristian_Chavez", "id": "cristian", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Cristian%20Chavez", "twitter": "https://x.com/search?q=Cristian%20Chavez&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Cristian%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "If I'm not winning, I'll do whatever it takes to make everyone else lose.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is definitely the way people underestimate me.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Danny \"Kilby\" Kilby", "short": "Kilby", "age": 30, "hometown": "Mount Forest, ON", "current": "London, ON", "occupation": "Game Designer", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDA2/danny-kilby.jpg", "quote": "Biggest dream of my whole life. When I was a kid, Survivor was my favorite show.", "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=2623s", "rhap_note": "RHAP Cast Preview Pt. 2", "wiki": "https://survivor.fandom.com/wiki/Danny_Kilby", "id": "kilby", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Danny%20\"Kilby\"%20Kilby", "twitter": "https://x.com/search?q=Danny%20\"Kilby\"%20Kilby&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Kilby%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "Biggest dream of my whole life. When I was a kid, Survivor was my favorite show.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower coming into Survivor is I can make anybody laugh.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}, {"q": "What are you expecting from this season's twists?", "a": "Having seen Survivor 50, I have empirical evidence that fans like twists, so I'm expecting Survivor to throw some crazy stuff at us.", "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists", "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"}]}, {"name": "Devin Way", "short": "Devin", "age": 33, "hometown": "Lufkin, TX", "current": "Los Angeles, CA", "occupation": "Actor", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDEy/devin-way.jpg", "quote": "There is nothing else like this in the world.", "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=4151s", "rhap_note": "RHAP Cast Preview Pt. 1", "wiki": "https://survivor.fandom.com/wiki/Devin_Way", "id": "devin", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Devin%20Way", "twitter": "https://x.com/search?q=Devin%20Way&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Devin%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "There is nothing else like this in the world.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is that I can make friends with a rock. I can talk to anybody.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Eric Macksoud", "short": "Eric", "age": 34, "hometown": "Lincoln, RI", "current": "Windsor Locks, CT", "occupation": "Mental Health Counselor", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDE3/erick-macksoud.jpg", "quote": "Survivor is the ultimate celebration of the human experience.", "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=266s", "rhap_note": "RHAP Cast Preview Pt. 2", "wiki": "https://survivor.fandom.com/wiki/Eric_Macksoud", "id": "eric", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Eric%20Macksoud", "twitter": "https://x.com/search?q=Eric%20Macksoud&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Eric%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "Survivor is the ultimate celebration of the human experience.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My greatest superpower is my ability to empathize with others and my high emotional intelligence.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Jenna Doore", "short": "Jenna", "age": 30, "hometown": "Perrysburg, OH", "current": "Toledo, OH", "occupation": "Wedding Photographer", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDIx/survivor.jpg", "quote": "It's about being able to perform and create when the stakes are high.", "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=2104s", "rhap_note": "RHAP Cast Preview Pt. 2", "wiki": "https://survivor.fandom.com/wiki/Jenna_Doore", "id": "jenna", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Jenna%20Doore", "twitter": "https://x.com/search?q=Jenna%20Doore&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Jenna%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "It's about being able to perform and create when the stakes are high.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower... is my empathy. I'm a deep feeler.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}, {"q": "What are you expecting from this season's twists?", "a": "It's a whole new era of Survivor \u2014 there's going to be so much thrown our way that we can't possibly predict or plan for.", "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists", "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"}]}, {"name": "Kristin Flickinger", "short": "Kristin", "age": 49, "hometown": "Ketchum, ID", "current": "Santa Barbara, CA", "occupation": "Crisis Management", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDIz/kristin-flickinger.jpg", "quote": "I have been applying for Survivor since the middle of Season 1.", "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=3742s", "rhap_note": "RHAP Cast Preview Pt. 2", "wiki": "https://survivor.fandom.com/wiki/Kristin_Flickinger", "id": "kristin", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Kristin%20Flickinger", "twitter": "https://x.com/search?q=Kristin%20Flickinger&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Kristin%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I have been applying for Survivor since the middle of Season 1.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower coming into the game is flexibility and being able to read the room.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Lewis Kelly", "short": "Lewis", "age": 28, "hometown": "Dublin, Ireland", "current": "Puerto Rico", "occupation": "Farmer", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDI1/lewis-kelly.jpg", "quote": "I probably won't be the Sole Survivor... but if I do, the game is won.", "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=4462s", "rhap_note": "RHAP Cast Preview Pt. 2", "wiki": "https://survivor.fandom.com/wiki/Lewis_Kelly", "id": "lewis", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Lewis%20Kelly", "twitter": "https://x.com/search?q=Lewis%20Kelly&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Lewis%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I probably won't be the Sole Survivor... but if I do, the game is won.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My superpower in this game is my Irish charm.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}, {"q": "What are you expecting from this season's twists?", "a": "There's no rules, no concrete things set in stone \u2014 I could make up a million things and nobody's going to know any better.", "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists", "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"}]}, {"name": "Linnea Capobianco", "short": "Linnea", "age": 25, "hometown": "Kearny, NJ", "current": "Jersey City, NJ", "occupation": "Entrepreneur", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDI5/linnea-capobianco.jpg", "quote": "This life... is all I am certain of.", "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=5280s", "rhap_note": "RHAP Cast Preview Pt. 2", "wiki": "https://survivor.fandom.com/wiki/Linnea_Capobianco", "id": "linnea", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Linnea%20Capobianco", "twitter": "https://x.com/search?q=Linnea%20Capobianco&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Linnea%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "This life... is all I am certain of.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is my social game.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Maggie Nestor", "short": "Maggie", "age": 40, "hometown": "Middleway, WV", "current": "Charlestown, WV", "occupation": "Farmer", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDMy/maggie-nestor.jpg", "quote": "I've loved Survivor since I was 15. I've been watching for 25 years.", "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0", "rhap_note": "RHAP Cast Reveal First Reactions", "wiki": "https://survivor.fandom.com/wiki/Maggie_Nestor", "id": "maggie", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Maggie%20Nestor", "twitter": "https://x.com/search?q=Maggie%20Nestor&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Maggie%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I've loved Survivor since I was 15. I've been watching for 25 years.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is probably my social game and social read on people.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Mike Pinsky", "short": "Mike", "age": 32, "hometown": "New York, NY", "current": "New York, NY", "occupation": "Baseball Executive", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDM2/mike-pinsky.jpg", "quote": "My marriage proposal to my wife Becky incorporated a Probst catchphrase.", "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0", "rhap_note": "RHAP Cast Reveal First Reactions", "wiki": "https://survivor.fandom.com/wiki/Mike_Pinsky", "id": "mike", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Mike%20Pinsky", "twitter": "https://x.com/search?q=Mike%20Pinsky&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Mike%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "My marriage proposal to my wife Becky incorporated a Probst catchphrase.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My superpower is that I have a well-rounded skill set \u2014 social without being just a charisma machine.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}, {"q": "What are you expecting from this season's twists?", "a": "I know that Jeff is going to throw some weird stuff at us. I know it's going to be interesting.", "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists", "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"}]}, {"name": "Ori Jean-Charles", "short": "Ori", "age": 27, "hometown": "Spring Valley, NY", "current": "Spring Valley, NY", "occupation": "Personal Trainer", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDQx/ori-jean-charles.jpg", "quote": "I owe them everything and that's why I am here. To change my family's lives.", "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0", "rhap_note": "RHAP Cast Reveal First Reactions", "wiki": "https://survivor.fandom.com/wiki/Ori_Jean-Charles", "id": "ori", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Ori%20Jean-Charles", "twitter": "https://x.com/search?q=Ori%20Jean-Charles&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Ori%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I owe them everything and that's why I am here. To change my family's lives.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is my ability to connect and just make people comfortable.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Patt Cannaday", "short": "Patt", "age": 33, "hometown": "Tampa, FL", "current": "Washington, D.C.", "occupation": "Federal Prosecutor", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDQ1/patt-cannaday-on-survivor-51.jpg", "quote": "I love challenge and new adventures. This show is the challenge of a lifetime.", "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0", "rhap_note": "RHAP Cast Reveal First Reactions", "wiki": "https://survivor.fandom.com/wiki/Patt_Cannaday", "id": "patt", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Patt%20Cannaday", "twitter": "https://x.com/search?q=Patt%20Cannaday&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Patt%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I love challenge and new adventures. This show is the challenge of a lifetime.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower... is maybe my ability to stay under the radar.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}, {"q": "What are you expecting from this season's twists?", "a": "Season 50 was amazing, it was so fun to watch, so I want us to match that energy \u2014 I am ready for things to get shook up.", "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists", "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"}]}, {"name": "Rob Antonson", "short": "Rob", "age": 40, "hometown": "Johnston, RI", "current": "Cumberland, RI", "occupation": "Airline Gate Agent", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDQ3/rob-antonson.jpg", "quote": "I want to show my three young kids that you can get out of your comfort zone.", "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0", "rhap_note": "RHAP Cast Reveal First Reactions", "wiki": "https://survivor.fandom.com/wiki/Rob_Antonson", "id": "rob", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Rob%20Antonson", "twitter": "https://x.com/search?q=Rob%20Antonson&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Rob%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I want to show my three young kids that you can get out of your comfort zone.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My superpower is making relationships with everybody... I got the gift of gab.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}, {"q": "What are you expecting from this season's twists?", "a": "This is like a new era now... I'm here for the chaos, baby.", "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists", "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"}]}, {"name": "Sharonda Cox", "short": "Sharonda", "age": 34, "hometown": "Pompano Beach, FL", "current": "Richmond, KY", "occupation": "OBGYN Resident", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDQ5/sharonda-cox.jpg", "quote": "Life has trained me for this very moment!", "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0", "rhap_note": "RHAP Cast Reveal First Reactions", "wiki": "https://survivor.fandom.com/wiki/Sharonda_Cox", "id": "sharonda", "instagram": "https://www.instagram.com/sharonda_renee_/", "twitter": "https://x.com/SharondaRenee", "tiktok": "https://www.tiktok.com/search/user?q=Sharonda%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "Life has trained me for this very moment!", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My superpower is that I'm a chameleon. So I can adapt to any environment.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}]
+;
+</script>
+<!-- app.js content is injected below at build time -->
+<script>
+/* =========================================================================
+   SURVIVOR 51 FANTASY DRAFT — app.js
+   Single-file app logic: castaway profiles, mock draft, live Firebase draft.
+   ========================================================================= */
+
+/* =========================================================================
+   FIREBASE SETUP — paste your own project's config below.
+   1. Go to https://console.firebase.google.com -> Add project (free "Spark" plan is fine)
+   2. Build > Realtime Database -> Create Database -> start in TEST MODE
+      (or use the rules snippet in the deployment instructions you were given)
+   3. Project settings (gear icon) > General > "Your apps" > Add app > Web (</>)
+   4. Copy the firebaseConfig object it gives you and paste it in place of the
+      placeholder values below, then re-deploy / re-upload this file.
+   Until you do this, the "Live Draft" tab will show setup instructions instead
+   of a live draft room. The "Castaways" and "Mock Draft" tabs work immediately
+   with no setup at all.
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyClsZf681GWG0Nd9MdXc0JlUMhXQW-RUIk",
+  authDomain: "survivor-51.firebaseapp.com",
+  databaseURL: "https://survivor-51-default-rtdb.firebaseio.com",
+  projectId: "survivor-51",
+  storageBucket: "survivor-51.firebasestorage.app",
+  messagingSenderId: "872888490500",
+  appId: "1:872888490500:web:094b9b8baf854d886c7351",
+  measurementId: "G-9EKGXNRKS8"
+};
+
+/* ---------- tiny helpers ---------- */
+function $(sel, root){ return (root||document).querySelector(sel); }
+function $all(sel, root){ return Array.from((root||document).querySelectorAll(sel)); }
+function el(tag, attrs, ...kids){
+  const n = document.createElement(tag);
+  if(attrs) for(const k in attrs){
+    if(k === 'class') n.className = attrs[k];
+    else if(k === 'html') n.innerHTML = attrs[k];
+    else if(k.startsWith('on') && typeof attrs[k]==='function') n.addEventListener(k.slice(2), attrs[k]);
+    else n.setAttribute(k, attrs[k]);
+  }
+  kids.flat().forEach(k=>{
+    if(k==null) return;
+    n.appendChild(typeof k === 'string' ? document.createTextNode(k) : k);
+  });
+  return n;
+}
+function initials(name){
+  return name.replace(/"[^"]*"/g,'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
+function byId(id){ return CASTAWAYS.find(c=>c.id===id); }
+function safeLS(){
+  try{ const k='__t'; localStorage.setItem(k,'1'); localStorage.removeItem(k); return localStorage; }
+  catch(e){ return null; }
+}
+const LS = safeLS();
+function lsGet(key, fallback){ if(!LS) return fallback; try{ const v=LS.getItem(key); return v?JSON.parse(v):fallback; }catch(e){ return fallback; } }
+function lsSet(key, val){ if(!LS) return; try{ LS.setItem(key, JSON.stringify(val)); }catch(e){} }
+function uid(){ return 'p' + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4); }
+function roomCode(){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<5;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return s; }
+
+function toast(msg){
+  const stack = $('#toastStack');
+  const t = el('div',{class:'toast'}, msg);
+  stack.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); }, 3200);
+}
+
+/* client identity, persisted per-browser */
+let CLIENT_ID = lsGet('s51_client_id', null);
+if(!CLIENT_ID){ CLIENT_ID = uid(); lsSet('s51_client_id', CLIENT_ID); }
+
+/* =========================================================================
+   AUDIO — all sound effects are synthesized (no external audio files)
+   ========================================================================= */
+const AudioFX = (() => {
+  let ctx;
+  function getCtx(){
+    if(!ctx) ctx = new (window.AudioContext||window.webkitAudioContext)();
+    if(ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  let muted = lsGet('s51_muted', false);
+  function setMuted(v){ muted = v; lsSet('s51_muted', v); }
+  function isMuted(){ return muted; }
+  function noiseBuffer(duration){
+    const c = getCtx();
+    const buf = c.createBuffer(1, Math.max(1, Math.floor(c.sampleRate*duration)), c.sampleRate);
+    const data = buf.getChannelData(0);
+    for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * Math.pow(1-i/data.length, 2);
+    return buf;
+  }
+  function drum(){
+    if(muted) return;
+    const c = getCtx(); const t=c.currentTime;
+    const o = c.createOscillator(); const g = c.createGain();
+    o.type='sine'; o.frequency.setValueAtTime(190,t); o.frequency.exponentialRampToValueAtTime(58,t+0.16);
+    g.gain.setValueAtTime(0.9,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.32);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+0.33);
+    const n = c.createBufferSource(); n.buffer = noiseBuffer(0.05);
+    const ng = c.createGain(); ng.gain.value=0.35;
+    n.connect(ng); ng.connect(c.destination); n.start(t);
+  }
+  function horn(){
+    if(muted) return;
+    const c = getCtx(); const t=c.currentTime;
+    [220,221.5].forEach((f)=>{
+      const o=c.createOscillator(); const g=c.createGain(); const filt=c.createBiquadFilter();
+      o.type='sawtooth'; filt.type='lowpass'; filt.frequency.value=1000;
+      o.frequency.setValueAtTime(f*0.55,t); o.frequency.linearRampToValueAtTime(f,t+0.45);
+      g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.22,t+0.3); g.gain.exponentialRampToValueAtTime(0.001,t+1.3);
+      o.connect(filt); filt.connect(g); g.connect(c.destination); o.start(t); o.stop(t+1.35);
+    });
+  }
+  function gong(){
+    if(muted) return;
+    const c = getCtx(); const t=c.currentTime;
+    [110,164.81,220,329.63].forEach((f,i)=>{
+      const o=c.createOscillator(); const g=c.createGain();
+      o.type='sine'; o.frequency.value=f;
+      g.gain.setValueAtTime(0.26/(i+1),t); g.gain.exponentialRampToValueAtTime(0.001,t+2.4);
+      o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+2.4);
+    });
+  }
+  function tick(){
+    if(muted) return;
+    const c = getCtx(); const t=c.currentTime;
+    const o=c.createOscillator(); const g=c.createGain();
+    o.type='square'; o.frequency.value=880;
+    g.gain.setValueAtTime(0.13,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.08);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+0.08);
+  }
+  function whoosh(){
+    if(muted) return;
+    const c = getCtx(); const t=c.currentTime;
+    const n=c.createBufferSource(); n.buffer=noiseBuffer(0.55);
+    const filt=c.createBiquadFilter(); filt.type='bandpass';
+    filt.frequency.setValueAtTime(400,t); filt.frequency.exponentialRampToValueAtTime(2200,t+0.5);
+    const g=c.createGain(); g.gain.setValueAtTime(0.3,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.55);
+    n.connect(filt); filt.connect(g); g.connect(c.destination); n.start(t);
+  }
+  function success(){
+    if(muted) return;
+    const c = getCtx();
+    [523.25,659.25,783.99].forEach((f,i)=>{
+      const t0 = c.currentTime + i*0.09;
+      const o=c.createOscillator(); const g=c.createGain();
+      o.type='triangle'; o.frequency.value=f;
+      g.gain.setValueAtTime(0.0001,t0); g.gain.linearRampToValueAtTime(0.24,t0+0.02); g.gain.exponentialRampToValueAtTime(0.001,t0+0.5);
+      o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0+0.55);
+    });
+  }
+  return { drum, horn, gong, tick, whoosh, success, setMuted, isMuted, unlock:getCtx };
+})();
+/* unlock audio context on first interaction (autoplay policies) */
+document.addEventListener('click', function once(){ AudioFX.unlock(); document.removeEventListener('click', once); }, {once:true});
+
+/* =========================================================================
+   CASTAWAY CARD / GRID / PROFILE MODAL  (shared by all three tabs)
+   ========================================================================= */
+function photoBlock(c, extraClass){
+  const wrap = el('div',{class:'photo-wrap ' + (extraClass||'')});
+  wrap.appendChild(el('div',{class:'fallback'}, initials(c.name)));
+  const img = el('img',{alt:c.name, loading:'lazy'});
+  img.src = c.photo;
+  img.onerror = function(){ this.style.display='none'; };
+  wrap.appendChild(img);
+  return wrap;
+}
+function castawayCard(c, opts){
+  opts = opts || {};
+  const card = el('div',{class:'card' + (opts.drafted?' drafted':'')});
+  card.appendChild(photoBlock(c));
+  if(opts.badge) card.appendChild(el('div',{class:'badge'}, opts.badge));
+  card.appendChild(el('div',{class:'info'},
+    el('div',{class:'nm'}, c.short),
+    el('div',{class:'oc'}, c.occupation)
+  ));
+  card.addEventListener('click', ()=>{
+    if(opts.drafted) return;
+    if(opts.onPick){ opts.onPick(c); return; }
+    openProfile(c.id);
+  });
+  return card;
+}
+function renderCastawayGrid(){
+  const grid = $('#castawayGrid');
+  grid.innerHTML='';
+  CASTAWAYS.forEach(c => grid.appendChild(castawayCard(c)));
+}
+function icon(path){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`; }
+const ICONS = {
+  ig: icon('<rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.6" fill="currentColor" stroke="none"/>'),
+  x: icon('<path d="M4 4l16 16M20 4L4 20"/>'),
+  tt: icon('<path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/>'),
+  play: icon('<polygon points="6 3 20 12 6 21 6 3"/>'),
+  close: icon('<path d="M6 6l12 12M18 6L6 18"/>'),
+  wiki: icon('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'),
+  qa: icon('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>')
+};
+function openProfile(castawayId){
+  const c = byId(castawayId);
+  if(!c) return;
+  AudioFX.whoosh();
+  const modal = $('#profileModal');
+  modal.innerHTML='';
+  const head = el('div',{class:'modal-head'});
+  head.appendChild(photoBlock(c));
+  const closeBtn = el('button',{class:'modal-close', html:ICONS.close});
+  closeBtn.addEventListener('click', closeProfile);
+  head.appendChild(closeBtn);
+  modal.appendChild(head);
+
+  const body = el('div',{class:'modal-body'});
+  body.appendChild(el('h2',{}, c.name));
+  body.appendChild(el('div',{class:'modal-meta'}, `Age ${c.age} &middot; ${c.occupation} &middot; From ${c.hometown}${c.current && c.current!==c.hometown ? ' &middot; Now living in '+c.current : ''}`.replace(/&middot;/g,'·')));
+  body.appendChild(el('div',{class:'modal-quote'}, '"' + c.quote + '"'));
+
+  const btns = el('div',{class:'btn-row'});
+  const rhap = el('a',{class:'btn primary', href:c.rhap, target:'_blank', rel:'noopener', html: ICONS.play + ' ' + (c.rhap_note || 'RHAP Pregame Interview')});
+  btns.appendChild(rhap);
+  btns.appendChild(el('a',{class:'btn', href:c.wiki, target:'_blank', rel:'noopener', html: ICONS.wiki + ' Survivor Wiki'}));
+  btns.appendChild(el('a',{class:'btn', href:c.instagram, target:'_blank', rel:'noopener', html: ICONS.ig + ' Instagram'}));
+  btns.appendChild(el('a',{class:'btn', href:c.twitter, target:'_blank', rel:'noopener', html: ICONS.x + ' X / Twitter'}));
+  btns.appendChild(el('a',{class:'btn', href:c.tiktok, target:'_blank', rel:'noopener', html: ICONS.tt + ' TikTok'}));
+  body.appendChild(btns);
+  body.appendChild(el('p',{style:'margin:10px 0 0;font-size:0.74rem;color:var(--sand-dim)'},
+    'Social links search each platform for ' + c.short + ' — verify the right account before following, since exact handles aren\'t always public pre-season.'));
+
+  if(c.qa && c.qa.length){
+    const qaSection = el('div',{class:'qa-section'});
+    qaSection.appendChild(el('h3',{class:'qa-head', html: ICONS.qa + ' Pregame Media Q&amp;A'}));
+    c.qa.forEach(item=>{
+      const row = el('div',{class:'qa-item'});
+      row.appendChild(el('div',{class:'qa-q'}, item.q));
+      row.appendChild(el('div',{class:'qa-a'}, '"' + item.a + '"'));
+      row.appendChild(el('a',{class:'qa-source', href:item.sourceUrl, target:'_blank', rel:'noopener'}, '— ' + item.source));
+      qaSection.appendChild(row);
+    });
+    body.appendChild(qaSection);
+  }
+
+  modal.appendChild(body);
+
+  $('#profileOverlay').classList.add('open');
+}
+function closeProfile(){ $('#profileOverlay').classList.remove('open'); }
+$('#profileOverlay').addEventListener('click', (e)=>{ if(e.target.id==='profileOverlay') closeProfile(); });
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeProfile(); });
+
+/* =========================================================================
+   TABS
+   ========================================================================= */
+$all('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    $all('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    $all('.panel').forEach(p=>p.classList.remove('active'));
+    $('#panel-' + btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab === 'scoring' && typeof renderScoring === 'function') renderScoring();
+  });
+});
+
+renderCastawayGrid();
+
+/* =========================================================================
+   MOCK DRAFT (solo / pass-and-play, no internet required)
+   ========================================================================= */
+const TRIBE_COLORS = ['var(--torch)','var(--tribe-purple)','var(--tribe-yellow)','#4dd0a5','#ff6ea8','#6fb1ff','#c98bff','#ffce54','#ff8a65','#80cbc4','#f06292','#90a4ae'];
+
+let mockState = lsGet('s51_mock', null);
+let mockSetup = lsGet('s51_mock_setup', { teamCount:6, rounds:1, snake:true, names:[] });
+
+function defaultMockNames(n){
+  const names = [];
+  for(let i=0;i<n;i++) names.push(mockSetup.names[i] || ('Team ' + (i+1)));
+  return names;
+}
+function computeOrder(teamIds, rounds, snake){
+  const order = [];
+  for(let r=0;r<rounds;r++){
+    const seq = (snake && r % 2 === 1) ? [...teamIds].reverse() : [...teamIds];
+    order.push(...seq);
+  }
+  return order;
+}
+function saveMock(){ lsSet('s51_mock', mockState); }
+function saveMockSetup(){ lsSet('s51_mock_setup', mockSetup); }
+
+function renderMockSetup(root){
+  root.innerHTML = '';
+  const box = el('div',{class:'card-box'});
+  box.appendChild(el('h2',{style:'margin:0 0 4px'}, 'Set Up a Mock Draft'));
+  box.appendChild(el('p',{style:'margin:0 0 4px;color:var(--sand-dim);font-size:0.88rem'}, 'Solo pass-and-play — great for testing draft strategy before your real live draft. Runs entirely in this browser.'));
+
+  const grid = el('div',{class:'setup-grid'});
+  const teamCountInput = el('input',{type:'number', min:'2', max:'12', value:String(mockSetup.teamCount)});
+  const roundsInput = el('input',{type:'number', min:'1', max:'3', value:String(mockSetup.rounds)});
+  grid.appendChild(el('div',{}, el('label',{class:'field'},'Number of Teams'), teamCountInput));
+  grid.appendChild(el('div',{}, el('label',{class:'field'},'Rounds (picks per team)'), roundsInput));
+  box.appendChild(grid);
+
+  const snakeWrap = el('label',{class:'checkline', style:'margin:6px 0 16px'});
+  const snakeCheck = el('input',{type:'checkbox'});
+  snakeCheck.checked = mockSetup.snake;
+  snakeWrap.appendChild(snakeCheck);
+  snakeWrap.appendChild(document.createTextNode('Snake draft order (reverses each round)'));
+  box.appendChild(snakeWrap);
+
+  const namesHead = el('label',{class:'field'}, 'Team Names');
+  box.appendChild(namesHead);
+  const namesWrap = el('div',{id:'mockNamesWrap'});
+  box.appendChild(namesWrap);
+
+  function renderNameInputs(){
+    namesWrap.innerHTML = '';
+    const n = Math.max(2, Math.min(12, parseInt(teamCountInput.value)||6));
+    const names = defaultMockNames(n);
+    names.forEach((nm,i)=>{
+      const row = el('div',{class:'team-name-row'});
+      row.appendChild(el('span',{class:'swatch', style:'background:' + TRIBE_COLORS[i%TRIBE_COLORS.length]}));
+      const inp = el('input',{type:'text', value:nm, style:'flex:1'});
+      inp.addEventListener('input', ()=>{ mockSetup.names[i] = inp.value; });
+      row.appendChild(inp);
+      namesWrap.appendChild(row);
+    });
+  }
+  teamCountInput.addEventListener('input', renderNameInputs);
+  renderNameInputs();
+
+  const startBtn = el('button',{class:'btn primary', style:'margin-top:16px'}, '🔥 Start Mock Draft');
+  startBtn.addEventListener('click', ()=>{
+    const n = Math.max(2, Math.min(12, parseInt(teamCountInput.value)||6));
+    const rounds = Math.max(1, Math.min(3, parseInt(roundsInput.value)||1));
+    mockSetup.teamCount = n; mockSetup.rounds = rounds; mockSetup.snake = snakeCheck.checked;
+    saveMockSetup();
+    const names = defaultMockNames(n);
+    const teams = names.map((nm,i)=>({ id:'t'+i, name:nm, color:TRIBE_COLORS[i%TRIBE_COLORS.length], picks:[] }));
+    const order = computeOrder(teams.map(t=>t.id), rounds, mockSetup.snake);
+    mockState = { teams, order, pickIndex:0, pool: CASTAWAYS.map(c=>c.id), status:'drafting', history:[] };
+    saveMock();
+    AudioFX.horn();
+    renderMock();
+  });
+  box.appendChild(startBtn);
+
+  if(lsGet('s51_mock', null)){
+    const resumeBtn = el('button',{class:'btn', style:'margin-top:16px;margin-left:8px'}, 'Resume Saved Draft');
+    resumeBtn.addEventListener('click', ()=>{ mockState = lsGet('s51_mock', null); renderMock(); });
+    box.appendChild(resumeBtn);
+  }
+
+  root.appendChild(box);
+}
+
+function teamBoardCard(team, isCurrent){
+  const card = el('div',{class:'team-card' + (isCurrent?' current':'')});
+  card.appendChild(el('div',{class:'tname'}, el('span',{class:'dot', style:'background:'+team.color}), team.name));
+  const picksWrap = el('div',{class:'picks'});
+  if(!team.picks.length) picksWrap.appendChild(el('div',{class:'empty-slot'}, 'No picks yet'));
+  team.picks.forEach(pid=>{
+    const c = byId(pid);
+    const chip = el('div',{class:'mini-chip'});
+    const wrap = el('span',{});
+    const img = el('img',{src:c.photo, alt:c.short});
+    img.onerror = function(){ this.replaceWith(el('div',{class:'mini-fallback'}, initials(c.name))); };
+    chip.appendChild(img);
+    chip.appendChild(document.createTextNode(c.short));
+    picksWrap.appendChild(chip);
+  });
+  card.appendChild(picksWrap);
+  return card;
+}
+
+function renderMockDrafting(root){
+  root.innerHTML = '';
+  const layout = el('div',{class:'draft-layout'});
+  const main = el('div',{});
+
+  const draftedIds = new Set(mockState.teams.flatMap(t=>t.picks));
+  const totalPicks = mockState.order.length;
+
+  if(mockState.status === 'drafting'){
+    const teamId = mockState.order[mockState.pickIndex];
+    const team = mockState.teams.find(t=>t.id===teamId);
+    const banner = el('div',{class:'turn-banner'});
+    banner.appendChild(el('div',{},
+      el('div',{class:'who'}, '🔥 ' + team.name + ' is on the clock'),
+      el('div',{class:'sub'}, 'Pick ' + (mockState.pickIndex+1) + ' of ' + totalPicks)
+    ));
+    const controls = el('div',{class:'btn-row'});
+    const undoBtn = el('button',{class:'btn'}, '↶ Undo');
+    undoBtn.disabled = !mockState.history.length;
+    undoBtn.addEventListener('click', mockUndo);
+    const autoBtn = el('button',{class:'btn'}, '🎲 Autopick');
+    autoBtn.addEventListener('click', mockAutopick);
+    const resetBtn = el('button',{class:'btn danger'}, 'Reset');
+    resetBtn.addEventListener('click', mockReset);
+    controls.appendChild(undoBtn); controls.appendChild(autoBtn); controls.appendChild(resetBtn);
+    banner.appendChild(controls);
+    main.appendChild(banner);
+  } else if(mockState.status === 'complete'){
+    const banner = el('div',{class:'turn-banner'});
+    banner.appendChild(el('div',{}, el('div',{class:'who'}, '🏆 Draft Complete!'), el('div',{class:'sub'}, 'All ' + totalPicks + ' picks are in.')));
+    const controls = el('div',{class:'btn-row'});
+    const undoBtn = el('button',{class:'btn'}, '↶ Undo Last Pick');
+    undoBtn.addEventListener('click', mockUndo);
+    const newBtn = el('button',{class:'btn primary'}, 'Start New Mock Draft');
+    newBtn.addEventListener('click', ()=>{ mockState=null; lsSet('s51_mock', null); renderMock(); });
+    controls.appendChild(undoBtn); controls.appendChild(newBtn);
+    banner.appendChild(controls);
+    main.appendChild(banner);
+  }
+
+  const grid = el('div',{class:'grid'});
+  CASTAWAYS.forEach(c=>{
+    const drafted = draftedIds.has(c.id);
+    grid.appendChild(castawayCard(c, {
+      drafted: drafted || mockState.status==='complete',
+      onPick: mockState.status==='drafting' ? (cc)=>mockPick(cc.id) : null
+    }));
+  });
+  main.appendChild(grid);
+  layout.appendChild(main);
+
+  const side = el('div',{class:'board-list'});
+  mockState.teams.forEach((t,i)=>{
+    const isCurrent = mockState.status==='drafting' && mockState.order[mockState.pickIndex]===t.id;
+    side.appendChild(teamBoardCard(t, isCurrent));
+  });
+  layout.appendChild(side);
+
+  root.appendChild(layout);
+}
+
+function mockPick(castawayId){
+  if(!mockState || mockState.status !== 'drafting') return;
+  const teamId = mockState.order[mockState.pickIndex];
+  const team = mockState.teams.find(t=>t.id===teamId);
+  team.picks.push(castawayId);
+  mockState.pool = mockState.pool.filter(id=>id!==castawayId);
+  mockState.history.push({ teamId, castawayId });
+  mockState.pickIndex++;
+  AudioFX.drum();
+  if(mockState.pickIndex >= mockState.order.length){
+    mockState.status = 'complete';
+    setTimeout(()=>AudioFX.gong(), 300);
+  } else {
+    setTimeout(()=>AudioFX.horn(), 200);
+  }
+  saveMock();
+  renderMock();
+}
+function mockUndo(){
+  if(!mockState || !mockState.history.length) return;
+  const last = mockState.history.pop();
+  const team = mockState.teams.find(t=>t.id===last.teamId);
+  team.picks.pop();
+  mockState.pool.push(last.castawayId);
+  mockState.pickIndex--;
+  if(mockState.status === 'complete') mockState.status = 'drafting';
+  saveMock();
+  renderMock();
+}
+function mockAutopick(){
+  if(!mockState || mockState.status !== 'drafting' || !mockState.pool.length) return;
+  const id = mockState.pool[Math.floor(Math.random()*mockState.pool.length)];
+  mockPick(id);
+}
+function mockReset(){
+  if(!confirm('Reset the mock draft? This clears all picks.')) return;
+  mockState = null;
+  lsSet('s51_mock', null);
+  renderMock();
+}
+function renderMock(){
+  const root = $('#mockRoot');
+  if(!mockState){ renderMockSetup(root); }
+  else { renderMockDrafting(root); }
+}
+renderMock();
+
+/* =========================================================================
+   LIVE DRAFT (multiplayer via Firebase Realtime Database)
+   ========================================================================= */
+let fbApp = null, fbDb = null, firebaseReady = false;
+try{
+  if(typeof firebase !== 'undefined' && firebaseConfig.apiKey && firebaseConfig.apiKey !== 'YOUR_API_KEY'){
+    fbApp = firebase.initializeApp(firebaseConfig);
+    fbDb = firebase.database();
+    firebaseReady = true;
+  }
+}catch(e){ console.error('Firebase init failed', e); firebaseReady = false; }
+
+let myRoomCode = lsGet('s51_live_room', null);
+let liveRoomState = null;
+let liveRoomListener = null;
+let liveTimerInterval = null;
+let lastKnownPickCount = -1;
+
+function roomRef(code){ return fbDb.ref('rooms/' + code); }
+function isHostOfRoom(room){ return room && room.hostClientId === CLIENT_ID; }
+function myTeamInRoom(room){ if(!room || !room.teams) return null; return room.teams.find(t=>t.ownerId===CLIENT_ID) || null; }
+
+function firebaseSetupNotice(){
+  const box = el('div',{class:'card-box'});
+  box.appendChild(el('h2',{style:'margin:0 0 8px'}, '⚠️ Live Draft Needs a Quick Firebase Setup'));
+  box.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.9rem'},
+    'Live multiplayer drafting is ready to go, it just needs your own free Firebase project so picks sync in real time between everyone\'s browsers. This only takes about 5 minutes and only has to be done once.'));
+  const notice = el('div',{class:'notice warn'});
+  notice.innerHTML = `
+    <b>Setup steps:</b><br>
+    1. Go to <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a> and create a free project.<br>
+    2. In the left sidebar: Build &rarr; Realtime Database &rarr; Create Database &rarr; start in <b>test mode</b>.<br>
+    3. Project settings (gear icon, top left) &rarr; scroll to "Your apps" &rarr; click the Web icon <code>&lt;/&gt;</code> &rarr; register an app (nickname doesn't matter).<br>
+    4. Firebase will show you a <code>firebaseConfig</code> object. Copy it.<br>
+    5. Open this file's HTML source, find the block near the top labeled <code>FIREBASE SETUP</code>, and paste your values in over the <code>YOUR_...</code> placeholders.<br>
+    6. Save, re-upload to GitHub, and this tab will turn into a live draft room automatically.
+  `;
+  box.appendChild(notice);
+  box.appendChild(el('p',{style:'margin-top:14px;font-size:0.82rem;color:var(--sand-dim)'},
+    'In the meantime, the Mock Draft tab works fully offline for solo pass-and-play drafting.'));
+  return box;
+}
+
+function liveEntryScreen(){
+  const wrap = el('div',{});
+  const grid = el('div',{style:'display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px'});
+
+  /* create */
+  const createBox = el('div',{class:'card-box'});
+  createBox.appendChild(el('h3',{style:'margin:0 0 6px'}, '🏝️ Start a New Draft Room'));
+  createBox.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.85rem;margin:0 0 10px'}, 'You\'ll be the host / commissioner.'));
+  const yourName = el('input',{type:'text', placeholder:'Your name'});
+  const teamCount = el('input',{type:'number', min:'2', max:'16', value:'6'});
+  const rounds = el('input',{type:'number', min:'1', max:'3', value:'1'});
+  const timerSec = el('input',{type:'number', min:'0', max:'600', value:'60'});
+  const snakeCheck = el('input',{type:'checkbox'}); snakeCheck.checked = true;
+  createBox.appendChild(el('div',{class:'setup-grid'},
+    el('div',{}, el('label',{class:'field'},'Your Name'), yourName),
+    el('div',{}, el('label',{class:'field'},'Number of Drafters'), teamCount),
+    el('div',{}, el('label',{class:'field'},'Rounds'), rounds),
+    el('div',{}, el('label',{class:'field'},'Pick Timer (seconds, 0 = off)'), timerSec)
+  ));
+  const snakeWrap = el('label',{class:'checkline', style:'margin:10px 0'});
+  snakeWrap.appendChild(snakeCheck); snakeWrap.appendChild(document.createTextNode('Snake draft order'));
+  createBox.appendChild(snakeWrap);
+  const createBtn = el('button',{class:'btn primary'}, '🔥 Create Room');
+  createBtn.addEventListener('click', ()=>{
+    const name = yourName.value.trim();
+    if(!name){ toast('Enter your name first'); return; }
+    createRoom(name, {
+      teamCount: Math.max(2, Math.min(16, parseInt(teamCount.value)||6)),
+      rounds: Math.max(1, Math.min(3, parseInt(rounds.value)||1)),
+      timerSeconds: Math.max(0, Math.min(600, parseInt(timerSec.value)||0)),
+      snake: snakeCheck.checked
+    });
+  });
+  createBox.appendChild(createBtn);
+  grid.appendChild(createBox);
+
+  /* join */
+  const joinBox = el('div',{class:'card-box'});
+  joinBox.appendChild(el('h3',{style:'margin:0 0 6px'}, '🎟️ Join a Draft Room'));
+  joinBox.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.85rem;margin:0 0 10px'}, 'Ask your commissioner for the 5-letter room code.'));
+  const joinName = el('input',{type:'text', placeholder:'Your name'});
+  const joinCode = el('input',{type:'text', placeholder:'ROOM CODE', style:'text-transform:uppercase;letter-spacing:0.1em'});
+  const params = new URLSearchParams(location.search);
+  if(params.get('room')) joinCode.value = params.get('room').toUpperCase();
+  joinBox.appendChild(el('div',{class:'setup-grid'},
+    el('div',{}, el('label',{class:'field'},'Your Name'), joinName),
+    el('div',{}, el('label',{class:'field'},'Room Code'), joinCode)
+  ));
+  const joinBtn = el('button',{class:'btn primary', style:'margin-top:10px'}, 'Join Room');
+  joinBtn.addEventListener('click', ()=>{
+    const name = joinName.value.trim();
+    const code = joinCode.value.trim().toUpperCase();
+    if(!name || !code){ toast('Enter your name and the room code'); return; }
+    joinRoom(code, name);
+  });
+  joinBox.appendChild(joinBtn);
+  grid.appendChild(joinBox);
+
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+function createRoom(hostName, settings){
+  const code = roomCode();
+  const teams = [];
+  for(let i=0;i<settings.teamCount;i++) teams.push({ id:'t'+i, name:(i===0?hostName+"'s Team":'Team '+(i+1)), ownerId: i===0?CLIENT_ID:null, ownerName: i===0?hostName:null, color: TRIBE_COLORS[i%TRIBE_COLORS.length] });
+  const room = {
+    createdAt: Date.now(),
+    hostClientId: CLIENT_ID,
+    settings: settings,
+    teams: teams,
+    order: [],
+    pool: CASTAWAYS.map(c=>c.id),
+    picks: [],
+    currentPickIndex: 0,
+    pickDeadline: null,
+    status: 'lobby',
+    chat: []
+  };
+  roomRef(code).set(room).then(()=>{
+    AudioFX.success();
+    toast('Room ' + code + ' created!');
+    enterRoom(code);
+  }).catch(err=>{ toast('Could not create room: ' + err.message); });
+}
+
+function joinRoom(code, name){
+  const ref = roomRef(code);
+  ref.get().then(snap=>{
+    if(!snap.exists()){ toast('No room found with code ' + code); return; }
+    const room = snap.val();
+    let myTeam = (room.teams||[]).find(t=>t.ownerId===CLIENT_ID);
+    if(!myTeam) myTeam = (room.teams||[]).find(t=>!t.ownerId);
+    if(!myTeam){ toast('That room is full.'); return; }
+    ref.child('teams/' + room.teams.indexOf(myTeam)).update({ ownerId: CLIENT_ID, ownerName: name }).then(()=>{
+      AudioFX.success();
+      enterRoom(code);
+    });
+  }).catch(err=>{ toast('Could not join room: ' + err.message); });
+}
+
+function enterRoom(code){
+  myRoomCode = code;
+  lsSet('s51_live_room', code);
+  const url = new URL(location.href);
+  url.searchParams.set('room', code);
+  history.replaceState(null, '', url.toString());
+  listenRoom(code);
+}
+
+function leaveRoom(){
+  if(liveRoomListener && fbDb && myRoomCode) roomRef(myRoomCode).off('value', liveRoomListener);
+  liveRoomListener = null;
+  myRoomCode = null;
+  liveRoomState = null;
+  lastKnownPickCount = -1;
+  lsSet('s51_live_room', null);
+  const url = new URL(location.href);
+  url.searchParams.delete('room');
+  history.replaceState(null, '', url.toString());
+  clearInterval(liveTimerInterval);
+  renderLive();
+}
+
+function listenRoom(code){
+  if(liveRoomListener) roomRef(code).off('value', liveRoomListener);
+  liveRoomListener = roomRef(code).on('value', snap=>{
+    const room = snap.val();
+    if(!room){ toast('This room no longer exists.'); leaveRoom(); return; }
+    const newPickCount = (room.picks||[]).length;
+    if(lastKnownPickCount >= 0 && newPickCount > lastKnownPickCount){
+      AudioFX.drum();
+      if(room.status === 'complete') setTimeout(()=>AudioFX.gong(), 300);
+      else setTimeout(()=>AudioFX.horn(), 200);
+    }
+    lastKnownPickCount = newPickCount;
+    liveRoomState = room;
+    renderLive();
+    if(document.getElementById('panel-scoring') && document.getElementById('panel-scoring').classList.contains('active') && typeof renderScoring === 'function') renderScoring();
+  });
+}
+
+function liveLobbyScreen(){
+  const room = liveRoomState;
+  const host = isHostOfRoom(room);
+  const wrap = el('div',{});
+  const codeBox = el('div',{class:'card-box', style:'display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px'});
+  const shareUrl = location.href;
+  const left = el('div',{});
+  left.appendChild(el('div',{style:'font-size:0.78rem;color:var(--sand-dim);text-transform:uppercase;letter-spacing:0.08em'}, 'Room Code'));
+  left.appendChild(el('div',{class:'lobby-code'}, myRoomCode));
+  codeBox.appendChild(left);
+  const btns = el('div',{class:'btn-row'});
+  const copyBtn = el('button',{class:'btn'}, '📋 Copy Invite Link');
+  copyBtn.addEventListener('click', ()=>{
+    navigator.clipboard && navigator.clipboard.writeText(shareUrl).then(()=>toast('Invite link copied!')).catch(()=>toast(shareUrl));
+  });
+  const leaveBtn = el('button',{class:'btn ghost'}, 'Leave Room');
+  leaveBtn.addEventListener('click', leaveRoom);
+  btns.appendChild(copyBtn); btns.appendChild(leaveBtn);
+  codeBox.appendChild(btns);
+  wrap.appendChild(codeBox);
+
+  const teamsBox = el('div',{class:'card-box'});
+  teamsBox.appendChild(el('h3',{style:'margin:0 0 10px'}, 'Drafters (' + room.teams.filter(t=>t.ownerId).length + '/' + room.teams.length + ' joined)'));
+  room.teams.forEach((t, i)=>{
+    const row = el('div',{style:'display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)'});
+    row.appendChild(el('span',{class:'swatch', style:'width:10px;height:10px;border-radius:50%;background:'+t.color+';flex:none'}));
+    if(host){
+      const nameInput = el('input',{type:'text', value:t.name, style:'flex:1;max-width:220px'});
+      nameInput.addEventListener('change', ()=> roomRef(myRoomCode).child('teams/'+i+'/name').set(nameInput.value || t.name));
+      row.appendChild(nameInput);
+    } else {
+      row.appendChild(el('div',{style:'flex:1'}, t.name));
+    }
+    row.appendChild(el('div',{style:'font-size:0.8rem;color:var(--sand-dim)'}, t.ownerName ? ('👤 ' + t.ownerName) : 'Waiting for a player…'));
+    if(host && !t.ownerName && room.teams.length>2){
+      const rmBtn = el('button',{class:'btn ghost', style:'padding:4px 10px'}, 'Remove slot');
+      rmBtn.addEventListener('click', ()=>{
+        const newTeams = room.teams.slice(); newTeams.splice(i,1);
+        roomRef(myRoomCode).child('teams').set(newTeams);
+      });
+      row.appendChild(rmBtn);
+    }
+    teamsBox.appendChild(row);
+  });
+  if(host){
+    const addBtn = el('button',{class:'btn', style:'margin-top:10px'}, '+ Add Drafter Slot');
+    addBtn.addEventListener('click', ()=>{
+      if(room.teams.length>=16) return;
+      const i = room.teams.length;
+      const newTeams = room.teams.concat([{ id:'t'+i, name:'Team '+(i+1), ownerId:null, ownerName:null, color:TRIBE_COLORS[i%TRIBE_COLORS.length] }]);
+      roomRef(myRoomCode).child('teams').set(newTeams);
+    });
+    teamsBox.appendChild(addBtn);
+  }
+  wrap.appendChild(teamsBox);
+
+  if(host){
+    const settingsBox = el('div',{class:'card-box', style:'margin-top:16px'});
+    settingsBox.appendChild(el('h3',{style:'margin:0 0 10px'}, 'Draft Settings'));
+    const roundsInput = el('input',{type:'number', min:'1', max:'3', value:String(room.settings.rounds)});
+    const timerInput = el('input',{type:'number', min:'0', max:'600', value:String(room.settings.timerSeconds)});
+    const snakeInput = el('input',{type:'checkbox'}); snakeInput.checked = room.settings.snake;
+    settingsBox.appendChild(el('div',{class:'setup-grid'},
+      el('div',{}, el('label',{class:'field'},'Rounds'), roundsInput),
+      el('div',{}, el('label',{class:'field'},'Pick Timer (sec, 0=off)'), timerInput)
+    ));
+    const snakeWrap = el('label',{class:'checkline', style:'margin:10px 0'});
+    snakeWrap.appendChild(snakeInput); snakeWrap.appendChild(document.createTextNode('Snake draft order'));
+    settingsBox.appendChild(snakeWrap);
+    const saveBtn = el('button',{class:'btn'}, 'Save Settings');
+    saveBtn.addEventListener('click', ()=>{
+      roomRef(myRoomCode).child('settings').update({
+        rounds: Math.max(1, Math.min(3, parseInt(roundsInput.value)||1)),
+        timerSeconds: Math.max(0, Math.min(600, parseInt(timerInput.value)||0)),
+        snake: snakeInput.checked
+      });
+      toast('Settings saved');
+    });
+    settingsBox.appendChild(saveBtn);
+
+    const allJoined = room.teams.every(t=>t.ownerId);
+    const startBtn = el('button',{class:'btn primary', style:'margin-top:14px;margin-left:8px'}, '🔥 Start the Draft');
+    startBtn.disabled = !allJoined;
+    startBtn.addEventListener('click', startLiveDraft);
+    settingsBox.appendChild(startBtn);
+    if(!allJoined) settingsBox.appendChild(el('p',{style:'font-size:0.78rem;color:var(--sand-dim);margin-top:8px'}, 'Every slot needs a player before you can start (or remove empty slots above).'));
+    wrap.appendChild(settingsBox);
+  } else {
+    wrap.appendChild(el('div',{class:'notice', style:'margin-top:16px'}, 'Waiting for the host to start the draft…'));
+  }
+
+  return wrap;
+}
+
+function startLiveDraft(){
+  roomRef(myRoomCode).transaction(room=>{
+    if(!room || room.status !== 'lobby') return room;
+    const teamIds = room.teams.map(t=>t.id);
+    room.order = computeOrder(teamIds, room.settings.rounds, room.settings.snake);
+    room.currentPickIndex = 0;
+    room.status = 'drafting';
+    room.pickDeadline = room.settings.timerSeconds>0 ? (Date.now() + room.settings.timerSeconds*1000) : null;
+    return room;
+  });
+}
+
+function livePick(castawayId, force){
+  roomRef(myRoomCode).transaction(room=>{
+    if(!room || room.status !== 'drafting') return;
+    const idx = room.currentPickIndex;
+    if(idx >= (room.order||[]).length) return;
+    const teamId = room.order[idx];
+    const team = (room.teams||[]).find(t=>t.id===teamId);
+    if(!team) return;
+    if(!force && team.ownerId !== CLIENT_ID) return;
+    if(force && room.hostClientId !== CLIENT_ID) return;
+    if(!room.pool || room.pool.indexOf(castawayId) === -1) return;
+    room.pool = room.pool.filter(id=>id!==castawayId);
+    if(!room.picks) room.picks = [];
+    room.picks.push({ teamId, castawayId, pickNo: idx+1, round: Math.floor(idx/room.teams.length)+1, ts: Date.now() });
+    room.currentPickIndex = idx+1;
+    if(room.currentPickIndex >= room.order.length){ room.status='complete'; room.pickDeadline=null; }
+    else { room.pickDeadline = room.settings.timerSeconds>0 ? (Date.now() + room.settings.timerSeconds*1000) : null; }
+    return room;
+  });
+}
+
+function liveDraftingScreen(){
+  const room = liveRoomState;
+  const myTeam = myTeamInRoom(room);
+  const wrap = el('div',{});
+  const layout = el('div',{class:'draft-layout'});
+  const main = el('div',{});
+
+  const totalPicks = room.order.length;
+  const draftedIds = new Set((room.picks||[]).map(p=>p.castawayId));
+
+  if(room.status === 'drafting'){
+    const idx = room.currentPickIndex;
+    const teamId = room.order[idx];
+    const team = room.teams.find(t=>t.id===teamId);
+    const isMe = myTeam && myTeam.id === teamId;
+    const banner = el('div',{class:'turn-banner'});
+    banner.appendChild(el('div',{},
+      el('div',{class:'who'}, isMe ? '🔥 YOUR PICK — ' + team.name : '🔥 ' + team.name + ' is on the clock'),
+      el('div',{class:'sub'}, 'Pick ' + (idx+1) + ' of ' + totalPicks + (isMe? ' — choose a castaway below':''))
+    ));
+    if(room.settings.timerSeconds>0 && room.pickDeadline){
+      banner.appendChild(el('div',{class:'timer-chip', id:'liveTimerChip'}, '--'));
+    }
+    if(isHostOfRoom(room)){
+      const forceBtn = el('button',{class:'btn ghost'}, 'Force Random Pick');
+      forceBtn.addEventListener('click', ()=>{
+        if(!room.pool.length) return;
+        const id = room.pool[Math.floor(Math.random()*room.pool.length)];
+        livePick(id, true);
+      });
+      banner.appendChild(forceBtn);
+    }
+    main.appendChild(banner);
+  } else if(room.status === 'complete'){
+    main.appendChild(el('div',{class:'turn-banner'}, el('div',{}, el('div',{class:'who'}, '🏆 Draft Complete!'), el('div',{class:'sub'}, 'All ' + totalPicks + ' picks are in — good luck out there.'))));
+  }
+
+  const grid = el('div',{class:'grid'});
+  const activeTeamId = room.status==='drafting' ? room.order[room.currentPickIndex] : null;
+  const canPick = room.status==='drafting' && myTeam && myTeam.id === activeTeamId;
+  CASTAWAYS.forEach(c=>{
+    grid.appendChild(castawayCard(c, {
+      drafted: draftedIds.has(c.id) || !canPick,
+      onPick: canPick ? (cc)=>livePick(cc.id) : null
+    }));
+  });
+  main.appendChild(grid);
+  layout.appendChild(main);
+
+  const side = el('div',{class:'board-list'});
+  room.teams.forEach(t=>{
+    const picks = (room.picks||[]).filter(p=>p.teamId===t.id).map(p=>p.castawayId);
+    const fakeTeam = { name: t.name + (t.ownerName ? ' (' + t.ownerName + ')' : ''), color: t.color, picks };
+    side.appendChild(teamBoardCard(fakeTeam, room.status==='drafting' && activeTeamId===t.id));
+  });
+
+  const chatBox = el('div',{class:'card-box'});
+  chatBox.appendChild(el('h3',{style:'margin:0 0 8px;font-size:1rem'}, '💬 Room Chat'));
+  const chatWrap = el('div',{class:'chat-box'});
+  const msgsWrap = el('div',{class:'chat-msgs'});
+  const chatMsgs = room.chat ? Object.values(room.chat) : [];
+  chatMsgs.slice(-50).forEach(m=>{
+    msgsWrap.appendChild(el('div',{class:'m'}, el('b',{},m.name + ': '), m.text));
+  });
+  chatWrap.appendChild(msgsWrap);
+  const form = el('div',{class:'chat-form'});
+  const input = el('input',{type:'text', placeholder: myTeam ? 'Say something…' : 'Join a team to chat'});
+  const sendBtn = el('button',{}, 'Send');
+  function send(){
+    const text = input.value.trim();
+    if(!text || !myTeam) return;
+    roomRef(myRoomCode).child('chat').push({ name: myTeam.ownerName || 'Someone', text, ts: Date.now() });
+    input.value='';
+  }
+  sendBtn.addEventListener('click', send);
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') send(); });
+  form.appendChild(input); form.appendChild(sendBtn);
+  chatWrap.appendChild(form);
+  chatBox.appendChild(chatWrap);
+  side.appendChild(chatBox);
+
+  const leaveBtn2 = el('button',{class:'btn ghost', style:'width:100%'}, 'Leave Room');
+  leaveBtn2.addEventListener('click', leaveRoom);
+  side.appendChild(leaveBtn2);
+
+  layout.appendChild(side);
+  wrap.appendChild(layout);
+  setTimeout(startLiveTimerTick, 0);
+  return wrap;
+}
+
+function startLiveTimerTick(){
+  clearInterval(liveTimerInterval);
+  const chip = $('#liveTimerChip');
+  if(!chip) return;
+  function tick(){
+    const room = liveRoomState;
+    if(!room || room.status!=='drafting' || !room.pickDeadline){ clearInterval(liveTimerInterval); return; }
+    const chipEl = $('#liveTimerChip');
+    if(!chipEl){ clearInterval(liveTimerInterval); return; }
+    const remaining = Math.max(0, Math.round((room.pickDeadline - Date.now())/1000));
+    chipEl.textContent = remaining + 's';
+    chipEl.classList.toggle('low', remaining<=10);
+    if(remaining<=5 && remaining>0) AudioFX.tick();
+    if(remaining<=0){
+      const myTeam = myTeamInRoom(room);
+      const activeTeamId = room.order[room.currentPickIndex];
+      if(myTeam && myTeam.id===activeTeamId && room.pool.length){
+        const id = room.pool[Math.floor(Math.random()*room.pool.length)];
+        livePick(id);
+      }
+    }
+  }
+  tick();
+  liveTimerInterval = setInterval(tick, 1000);
+}
+
+function renderLive(){
+  const root = $('#liveRoot');
+  if(!root) return;
+  root.innerHTML = '';
+  if(!firebaseReady){ root.appendChild(firebaseSetupNotice()); return; }
+  if(!myRoomCode){ root.appendChild(liveEntryScreen()); return; }
+  if(!liveRoomState){ root.appendChild(el('div',{class:'card-box'}, 'Connecting to room ' + myRoomCode + '…')); return; }
+  if(liveRoomState.status === 'lobby') root.appendChild(liveLobbyScreen());
+  else root.appendChild(liveDraftingScreen());
+}
+
+if(myRoomCode && firebaseReady) listenRoom(myRoomCode);
+renderLive();
+
+/* =========================================================================
+   SCORING — post-draft weekly points, same category/weight system as the
+   Survivor 50 fantasy app, fully editable & customizable in-app.
+   ========================================================================= */
+const DEFAULT_CATEGORIES = [
+  { key:'team_reward', label:'Team Reward', weight:1 },
+  { key:'team_immunity', label:'Team Immunity', weight:2 },
+  { key:'given_advantage', label:'Given Advantage', weight:2 },
+  { key:'found_idol', label:'Found Idol', weight:5 },
+  { key:'individual_reward', label:'Individual Reward', weight:3 },
+  { key:'individual_immunity', label:'Immunity (Individual)', weight:5 },
+  { key:'advantage_used', label:'Advantage Used Correctly', weight:5 },
+  { key:'merge', label:'Merge', weight:2 },
+  { key:'top3', label:'Top 3', weight:5 },
+  { key:'shot_in_dark', label:'Shot in the Dark', weight:4 },
+  { key:'survival', label:'Survival (still in the game)', weight:1 },
+];
+function newCatKey(label){ return 'c_' + label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,24) + '_' + Math.random().toString(36).slice(2,6); }
+function defaultScoring(){
+  return { categories: DEFAULT_CATEGORIES.map(c=>({...c})), weeks:['1'], entries:{}, steals:{}, eliminated:{}, winnerId:null };
+}
+function scoringSource(){
+  if(myRoomCode && firebaseReady && liveRoomState && liveRoomState.status==='complete'){
+    const teams = liveRoomState.teams.map(t=>({
+      id:t.id, name:t.name, color:t.color, ownerName:t.ownerName,
+      picks:(liveRoomState.picks||[]).filter(p=>p.teamId===t.id).map(p=>p.castawayId)
+    }));
+    return {
+      type:'live', teams,
+      isAdmin: isHostOfRoom(liveRoomState),
+      scoring: liveRoomState.scoring || defaultScoring(),
+      save(newScoring){ roomRef(myRoomCode).child('scoring').set(newScoring); }
+    };
+  }
+  if(mockState && mockState.status==='complete'){
+    const teams = mockState.teams.map(t=>({ id:t.id, name:t.name, color:t.color, picks:t.picks }));
+    return {
+      type:'mock', teams,
+      isAdmin:true,
+      scoring: lsGet('s51_mock_scoring', null) || defaultScoring(),
+      save(newScoring){ lsSet('s51_mock_scoring', newScoring); }
+    };
+  }
+  return null;
+}
+function castawayWeekPoints(scoring, castawayId, week){
+  const row = (scoring.entries[week]||{})[castawayId];
+  if(!row) return 0;
+  return scoring.categories.reduce((sum,c)=> sum + (Number(row[c.key])||0) * (Number(c.weight)||0), 0);
+}
+function castawaySeasonPoints(scoring, castawayId){
+  return (scoring.weeks||[]).reduce((sum,w)=> sum + castawayWeekPoints(scoring, castawayId, w), 0);
+}
+function stealBonusForWeek(scoring, teamId, week){
+  return ((scoring.steals||{})[week]||[]).filter(s=>s.teamId===teamId).reduce((s,x)=>s+(Number(x.pts)||0),0);
+}
+function stealBonusSeason(scoring, teamId){
+  return (scoring.weeks||[]).reduce((sum,w)=> sum + stealBonusForWeek(scoring, teamId, w), 0);
+}
+function teamWeekPoints(scoring, picks, week){
+  return picks.reduce((s,cid)=> s + castawayWeekPoints(scoring, cid, week), 0);
+}
+function teamSeasonPoints(scoring, picks){
+  return (scoring.weeks||[]).reduce((sum,w)=> sum + teamWeekPoints(scoring, picks, w), 0);
+}
+
+let scoringSubTab = 'standings';
+let scoringLeaderView = 'team';
+let scoringSelectedWeek = null;
+
+function scoringNoDraftPrompt(){
+  const box = el('div',{class:'card-box'});
+  box.appendChild(el('h2',{style:'margin:0 0 8px'}, '🏆 Scoring Opens After a Draft'));
+  box.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.9rem'},
+    'Finish a Live Draft (recommended for tracking a real season with your league) or a Mock Draft, and this tab turns into a full scoring hub — the same category-based point system as your Survivor 50 app, fully editable and customizable right here.'));
+  const btns = el('div',{class:'btn-row'});
+  const liveBtn = el('button',{class:'btn primary'}, 'Go to Live Draft');
+  liveBtn.addEventListener('click', ()=> $('nav.tabs button[data-tab=live]').click());
+  const mockBtn = el('button',{class:'btn'}, 'Go to Mock Draft');
+  mockBtn.addEventListener('click', ()=> $('nav.tabs button[data-tab=mock]').click());
+  btns.appendChild(liveBtn); btns.appendChild(mockBtn);
+  box.appendChild(btns);
+  return box;
+}
+
+function scoringSubnav(active){
+  const nav = el('div',{class:'subtabs'});
+  const tabs = [['standings','🏅 Standings'],['weekly','📅 Weekly Breakdown'],['enter','✏️ Enter Scores'],['categories','⚙️ Categories'],['champions','👑 Champions']];
+  tabs.forEach(([id,label])=>{
+    const b = el('button',{class: active===id ? 'on' : ''}, label);
+    b.addEventListener('click', ()=>{ scoringSubTab = id; renderScoring(); });
+    nav.appendChild(b);
+  });
+  return nav;
+}
+
+function pointsByWeekChart(source){
+  const { teams, scoring } = source;
+  const weeks = scoring.weeks || [];
+  if(!weeks.length) return el('p',{style:'color:var(--sand-dim);font-size:0.85rem'}, 'No weeks scored yet.');
+  const weekTotals = weeks.map(w => teams.map(t => teamWeekPoints(scoring, t.picks, w) + stealBonusForWeek(scoring, t.id, w)));
+  const maxVal = Math.max(1, ...weekTotals.flat());
+  const wrap = el('div',{class:'chart-wrap'});
+  weeks.forEach((w,i)=>{
+    const row = el('div',{class:'chart-row'});
+    row.appendChild(el('div',{class:'chart-wk'}, 'Wk ' + w));
+    const bars = el('div',{class:'chart-bars'});
+    teams.forEach((t,ti)=>{
+      const val = weekTotals[i][ti];
+      const pct = Math.max(val>0?6:0, (val/maxVal)*100);
+      if(val>0) bars.appendChild(el('div',{class:'chart-seg', style:`width:${pct}%;background:${t.color}`}, String(val)));
+    });
+    row.appendChild(bars);
+    wrap.appendChild(row);
+  });
+  const legend = el('div',{class:'chart-legend'});
+  teams.forEach(t=> legend.appendChild(el('span',{}, el('span',{class:'sw', style:'background:'+t.color}), t.name)));
+  const holder = el('div',{});
+  holder.appendChild(wrap);
+  holder.appendChild(legend);
+  return holder;
+}
+
+function scoringStandings(source){
+  const { teams, scoring } = source;
+  const wrap = el('div',{});
+  wrap.appendChild(el('h3',{style:'margin:0 0 10px'}, 'Points by Week'));
+  wrap.appendChild(pointsByWeekChart(source));
+
+  const toggle = el('div',{class:'stand-toggle'});
+  const teamBtn = el('button',{class:scoringLeaderView==='team'?'on':''}, 'Team Standings');
+  const playerBtn = el('button',{class:scoringLeaderView==='player'?'on':''}, 'Player Leaderboard');
+  teamBtn.addEventListener('click', ()=>{ scoringLeaderView='team'; renderScoring(); });
+  playerBtn.addEventListener('click', ()=>{ scoringLeaderView='player'; renderScoring(); });
+  toggle.appendChild(teamBtn); toggle.appendChild(playerBtn);
+  wrap.appendChild(toggle);
+
+  if(scoringLeaderView==='team'){
+    const ranked = teams.map(t=>({ ...t, total: teamSeasonPoints(scoring,t.picks) + stealBonusSeason(scoring,t.id) }))
+      .sort((a,b)=>b.total-a.total);
+    ranked.forEach((t,i)=>{
+      const card = el('div',{class:'team-standing-card'});
+      const head = el('div',{class:'team-standing-head'});
+      head.appendChild(el('div',{},
+        el('div',{class:'team-standing-name', style:'color:'+t.color}, (i===0?'🏆 ':'') + t.name),
+        el('div',{style:'font-size:0.78rem;color:var(--sand-dim)'}, t.ownerName ? ('👤 '+t.ownerName) : '')
+      ));
+      head.appendChild(el('div',{class:'team-standing-pts', style:'color:'+t.color}, String(t.total)));
+      card.appendChild(head);
+      const roster = t.picks.map(cid=>byId(cid)).filter(Boolean).sort((a,b)=>castawaySeasonPoints(scoring,b.id)-castawaySeasonPoints(scoring,a.id));
+      roster.forEach(c=>{
+        const row = el('div',{class:'lb-row', style:'margin-bottom:5px;padding:6px 10px'});
+        const thumb = el('div',{class:'lb-thumb', style:'width:28px;height:28px'});
+        const imgEl = el('img',{src:c.photo, style:'width:100%;height:100%;border-radius:50%;object-fit:cover'});
+        imgEl.onerror=function(){this.remove();};
+        thumb.appendChild(imgEl);
+        row.appendChild(thumb);
+        const nameLine = el('div',{class:'lb-name'}, c.short);
+        if(scoring.eliminated && scoring.eliminated[c.id]) nameLine.appendChild(el('span',{class:'elim-tag'}, 'OUT wk ' + scoring.eliminated[c.id]));
+        row.appendChild(el('div',{class:'lb-info'}, nameLine));
+        row.appendChild(el('div',{class:'lb-pts'}, el('b',{style:'font-size:1rem'}, String(castawaySeasonPoints(scoring,c.id)))));
+        row.addEventListener('click', ()=>openProfile(c.id));
+        card.appendChild(row);
+      });
+      wrap.appendChild(card);
+    });
+  } else {
+    const allPicks = teams.flatMap(t=>t.picks.map(cid=>({cid, team:t})));
+    const ranked = allPicks.map(({cid,team})=>({ c: byId(cid), team, total: castawaySeasonPoints(scoring, cid) }))
+      .filter(x=>x.c).sort((a,b)=>b.total-a.total);
+    ranked.forEach((r,i)=>{
+      const row = el('div',{class:'lb-row ' + (i===0?'r1':i===1?'r2':i===2?'r3':'')});
+      row.appendChild(el('div',{class:'lb-rank'}, String(i+1)));
+      const img = el('img',{class:'lb-thumb', src:r.c.photo, alt:r.c.short});
+      img.onerror = function(){ this.style.display='none'; };
+      row.appendChild(img);
+      const nameLine = el('div',{class:'lb-name'}, r.c.short);
+      if(scoring.eliminated && scoring.eliminated[r.c.id]) nameLine.appendChild(el('span',{class:'elim-tag'}, 'OUT wk ' + scoring.eliminated[r.c.id]));
+      row.appendChild(el('div',{class:'lb-info'}, nameLine, el('div',{class:'lb-sub'}, r.team.name)));
+      row.appendChild(el('div',{class:'lb-pts'}, el('b',{}, String(r.total)), el('span',{}, 'pts')));
+      row.addEventListener('click', ()=>openProfile(r.c.id));
+      wrap.appendChild(row);
+    });
+  }
+  return wrap;
+}
+
+function scoringWeekly(source){
+  const { teams, scoring } = source;
+  const weeks = scoring.weeks || [];
+  const wrap = el('div',{});
+  const picker = el('div',{class:'week-picker'});
+  if(scoringSelectedWeek===null) scoringSelectedWeek = weeks[weeks.length-1] || null;
+  weeks.forEach(w=>{
+    const b = el('button',{class: scoringSelectedWeek===w?'on':''}, 'Week ' + w);
+    b.addEventListener('click', ()=>{ scoringSelectedWeek=w; renderScoring(); });
+    picker.appendChild(b);
+  });
+  wrap.appendChild(picker);
+
+  if(!weeks.length){ wrap.appendChild(el('p',{style:'color:var(--sand-dim)'}, 'No weeks yet — add one in Enter Scores.')); return wrap; }
+  const w = scoringSelectedWeek;
+
+  const teamRow = el('div',{style:'display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px'});
+  teams.forEach(t=>{
+    const pts = teamWeekPoints(scoring, t.picks, w) + stealBonusForWeek(scoring, t.id, w);
+    teamRow.appendChild(el('div',{class:'card-box', style:'padding:12px 14px'},
+      el('div',{style:'font-family:\'Bebas Neue\';font-size:1.1rem;color:'+t.color}, t.name),
+      el('div',{style:'font-family:\'Bebas Neue\';font-size:1.8rem;color:'+t.color}, String(pts))
+    ));
+  });
+  wrap.appendChild(teamRow);
+
+  const allPicks = teams.flatMap(t=>t.picks.map(cid=>({cid,team:t})));
+  const ranked = allPicks.map(({cid,team})=>({c:byId(cid), team, pts:castawayWeekPoints(scoring,cid,w)}))
+    .filter(x=>x.c).sort((a,b)=>b.pts-a.pts);
+  ranked.forEach(r=>{
+    const row = el('div',{class:'week-scorecard'});
+    const img = el('img',{src:r.c.photo, alt:r.c.short});
+    img.onerror=function(){this.style.display='none';};
+    row.appendChild(img);
+    const cats = ((scoring.entries[w]||{})[r.c.id])||{};
+    const chips = scoring.categories.filter(cat=>Number(cats[cat.key])>0)
+      .map(cat=>el('span',{class:'chip'}, cat.label + ' ×' + cats[cat.key]));
+    const nameLine = el('div',{class:'wsname'}, r.c.short + ' · ' + r.team.name);
+    if(scoring.eliminated && scoring.eliminated[r.c.id]===w) nameLine.appendChild(el('span',{class:'elim-tag'}, 'VOTED OUT'));
+    row.appendChild(el('div',{class:'wsinfo'},
+      nameLine,
+      el('div',{}, chips.length ? chips : el('span',{style:'font-size:0.74rem;color:var(--sand-dim)'}, 'No points this week'))
+    ));
+    row.appendChild(el('div',{class:'wspts'}, String(r.pts)));
+    row.addEventListener('click', ()=>openProfile(r.c.id));
+    wrap.appendChild(row);
+  });
+  return wrap;
+}
+
+function scoringEnter(source){
+  const { teams, scoring, isAdmin } = source;
+  const wrap = el('div',{});
+  if(!isAdmin){
+    wrap.appendChild(el('div',{class:'notice'}, 'Only the commissioner (draft host) can enter scores for this room. Everyone can still view Standings and the Weekly Breakdown.'));
+    return wrap;
+  }
+  const weeks = scoring.weeks || [];
+  if(scoringSelectedWeek===null || !weeks.includes(scoringSelectedWeek)) scoringSelectedWeek = weeks[weeks.length-1] || null;
+
+  const picker = el('div',{class:'week-picker'});
+  weeks.forEach(w=>{
+    const b = el('button',{class: scoringSelectedWeek===w?'on':''}, 'Week ' + w);
+    b.addEventListener('click', ()=>{ scoringSelectedWeek=w; renderScoring(); });
+    picker.appendChild(b);
+  });
+  const addBtn = el('button',{class:'add'}, '+ Add Week');
+  addBtn.addEventListener('click', ()=>{
+    const next = weeks.length ? String(weeks.length+1) : '1';
+    const label = prompt('Week label (e.g. 8, 12A, 13B):', next);
+    if(!label) return;
+    if(weeks.includes(label)){ toast('That week already exists'); return; }
+    const updated = { ...scoring, weeks:[...weeks, label], entries:{...scoring.entries} };
+    source.save(updated);
+    scoringSelectedWeek = label;
+    toast('Week ' + label + ' added');
+    setTimeout(renderScoring, 150);
+  });
+  picker.appendChild(addBtn);
+  wrap.appendChild(picker);
+
+  if(!scoringSelectedWeek){ wrap.appendChild(el('p',{style:'color:var(--sand-dim)'}, 'Add a week above to start entering scores.')); return wrap; }
+  const w = scoringSelectedWeek;
+
+  const table = el('table',{class:'score-table'});
+  const thead = el('thead',{});
+  const headRow = el('tr',{});
+  headRow.appendChild(el('th',{}, 'Castaway'));
+  scoring.categories.forEach(cat=> headRow.appendChild(el('th',{title:cat.label+' (×'+cat.weight+')'}, cat.label)));
+  headRow.appendChild(el('th',{}, 'Out?'));
+  headRow.appendChild(el('th',{}, 'Week Pts'));
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+  const tbody = el('tbody',{});
+  const allPicks = teams.flatMap(t=>t.picks.map(cid=>({cid,team:t})));
+  allPicks.forEach(({cid,team})=>{
+    const c = byId(cid);
+    if(!c) return;
+    const row = el('tr',{});
+    const nameCell = el('td',{});
+    const nameWrap = el('div',{class:'snm-cell'});
+    const img = el('img',{src:c.photo, alt:c.short});
+    img.onerror=function(){this.style.display='none';};
+    nameWrap.appendChild(img);
+    nameWrap.appendChild(el('span',{}, c.short + ' (' + team.name + ')'));
+    nameCell.appendChild(nameWrap);
+    row.appendChild(nameCell);
+    const existing = ((scoring.entries[w]||{})[cid])||{};
+    scoring.categories.forEach(cat=>{
+      const td = el('td',{});
+      const inp = el('input',{type:'number', min:'0', step:'1', value:String(existing[cat.key]||0)});
+      inp.dataset.castaway = cid; inp.dataset.cat = cat.key;
+      td.appendChild(inp);
+      row.appendChild(td);
+    });
+    const outTd = el('td',{});
+    const outChk = el('input',{type:'checkbox'});
+    outChk.dataset.elim = cid;
+    outChk.checked = scoring.eliminated && scoring.eliminated[cid] === w;
+    outTd.appendChild(outChk);
+    row.appendChild(outTd);
+    row.appendChild(el('td',{style:'font-family:\'Bebas Neue\';color:var(--torch)'}, String(castawayWeekPoints(scoring,cid,w))));
+    tbody.appendChild(row);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+
+  const saveBtn = el('button',{class:'btn primary', style:'margin-top:16px'}, '💾 Save Week ' + w);
+  saveBtn.addEventListener('click', ()=>{
+    const entries = { ...(scoring.entries[w]||{}) };
+    $all('input[type=number]', table).forEach(inp=>{
+      const cid = inp.dataset.castaway, cat = inp.dataset.cat;
+      const v = Math.max(0, parseInt(inp.value)||0);
+      if(!entries[cid]) entries[cid] = {};
+      entries[cid][cat] = v;
+    });
+    const eliminated = { ...(scoring.eliminated||{}) };
+    $all('input[type=checkbox]', table).forEach(chk=>{
+      const cid = chk.dataset.elim;
+      if(chk.checked) eliminated[cid] = w;
+      else if(eliminated[cid]===w) delete eliminated[cid];
+    });
+    const updated = { ...scoring, entries: { ...scoring.entries, [w]: entries }, eliminated };
+    source.save(updated);
+    AudioFX.success();
+    toast('Week ' + w + ' scores saved');
+    setTimeout(renderScoring, 150);
+  });
+  wrap.appendChild(saveBtn);
+  return wrap;
+}
+
+function scoringCategories(source){
+  const { scoring, isAdmin } = source;
+  const wrap = el('div',{});
+  if(!isAdmin){
+    wrap.appendChild(el('div',{class:'notice'}, 'Only the commissioner can edit categories.'));
+    return wrap;
+  }
+  wrap.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.85rem;margin:0 0 14px'},
+    'Pre-loaded with the same category & point-weight system as your Survivor 50 app. Edit weights, rename, delete, or add your own for this season\'s twists.'));
+  const listWrap = el('div',{id:'catList'});
+  function renderList(){
+    listWrap.innerHTML='';
+    scoring.categories.forEach((cat,i)=>{
+      const row = el('div',{class:'cat-row'});
+      const labelInp = el('input',{type:'text', value:cat.label});
+      const weightInp = el('input',{type:'number', step:'1', value:String(cat.weight)});
+      const delBtn = el('button',{class:'btn ghost', style:'padding:6px 10px'}, '✕');
+      labelInp.addEventListener('change', ()=>{ cat.label = labelInp.value || cat.label; });
+      weightInp.addEventListener('change', ()=>{ cat.weight = Number(weightInp.value)||0; });
+      delBtn.addEventListener('click', ()=>{
+        if(!confirm('Delete category "'+cat.label+'"? Existing entries for it are kept but will no longer count.')) return;
+        scoring.categories.splice(i,1);
+        renderList();
+      });
+      row.appendChild(el('span',{style:'width:26px;color:var(--sand-dim);font-size:0.8rem'}, '×'+cat.weight));
+      row.appendChild(labelInp);
+      row.appendChild(weightInp);
+      row.appendChild(delBtn);
+      listWrap.appendChild(row);
+    });
+  }
+  renderList();
+  wrap.appendChild(listWrap);
+
+  const addRow = el('div',{class:'cat-row', style:'margin-top:10px'});
+  const newLabel = el('input',{type:'text', placeholder:'New category name'});
+  const newWeight = el('input',{type:'number', value:'1'});
+  const addBtn = el('button',{class:'btn'}, '+ Add');
+  addBtn.addEventListener('click', ()=>{
+    if(!newLabel.value.trim()) return;
+    scoring.categories.push({ key:newCatKey(newLabel.value), label:newLabel.value.trim(), weight:Number(newWeight.value)||1 });
+    newLabel.value=''; newWeight.value='1';
+    renderList();
+  });
+  addRow.appendChild(newLabel); addRow.appendChild(newWeight); addRow.appendChild(addBtn);
+  wrap.appendChild(addRow);
+
+  const btnRow = el('div',{class:'btn-row', style:'margin-top:18px'});
+  const saveBtn = el('button',{class:'btn primary'}, '💾 Save Categories');
+  saveBtn.addEventListener('click', ()=>{
+    source.save({ ...scoring, categories: scoring.categories });
+    AudioFX.success();
+    toast('Categories saved');
+  });
+  const resetBtn = el('button',{class:'btn danger'}, 'Reset to Survivor 50 Defaults');
+  resetBtn.addEventListener('click', ()=>{
+    if(!confirm('Reset all categories to the Survivor 50 defaults? Your custom categories will be removed.')) return;
+    source.save({ ...scoring, categories: DEFAULT_CATEGORIES.map(c=>({...c})) });
+    toast('Categories reset');
+    setTimeout(renderScoring, 150);
+  });
+  btnRow.appendChild(saveBtn); btnRow.appendChild(resetBtn);
+  wrap.appendChild(btnRow);
+  return wrap;
+}
+
+function scoringChampions(source){
+  const { teams, scoring, isAdmin } = source;
+  const wrap = el('div',{});
+  const ranked = teams.map(t=>({ ...t, total: teamSeasonPoints(scoring,t.picks) + stealBonusSeason(scoring,t.id) })).sort((a,b)=>b.total-a.total);
+  const fantasyChamp = ranked[0];
+  const winner = scoring.winnerId ? byId(scoring.winnerId) : null;
+
+  if(isAdmin){
+    const picker = el('div',{class:'card-box', style:'margin-bottom:18px'});
+    picker.appendChild(el('h3',{style:'margin:0 0 10px'}, '👑 Declare the Sole Survivor'));
+    const sel = el('select',{});
+    sel.appendChild(el('option',{value:''}, '— Select the season winner —'));
+    CASTAWAYS.forEach(c=>{
+      const opt = el('option',{value:c.id}, c.name);
+      if(scoring.winnerId===c.id) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    const setBtn = el('button',{class:'btn primary', style:'margin-left:8px'}, 'Set Winner');
+    setBtn.addEventListener('click', ()=>{
+      source.save({ ...scoring, winnerId: sel.value || null });
+      if(sel.value){ AudioFX.gong(); toast('Sole Survivor set!'); }
+      setTimeout(renderScoring, 150);
+    });
+    picker.appendChild(sel); picker.appendChild(setBtn);
+    wrap.appendChild(picker);
+  }
+
+  if(!fantasyChamp || !fantasyChamp.total){
+    wrap.appendChild(el('div',{class:'notice'}, 'Once scores are entered, your fantasy champion and season stats will show up here — same layout as your Survivor 50 champions page.'));
+    return wrap;
+  }
+
+  const hero = el('div',{style:'text-align:center;padding:30px 10px 10px'});
+  hero.appendChild(el('div',{style:'font-size:2.6rem'}, '🏆'));
+  hero.appendChild(el('div',{class:'display', style:'font-size:2.2rem;color:var(--sand)'}, 'Fantasy Champions'));
+  wrap.appendChild(hero);
+
+  const grid = el('div',{style:'display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:24px'});
+  const champCard = el('div',{class:'card-box'});
+  champCard.appendChild(el('div',{style:'color:var(--ember);font-size:0.8rem;font-weight:700;margin-bottom:8px'}, '🥇 FANTASY CHAMPION'));
+  champCard.appendChild(el('div',{style:'font-family:\'Bebas Neue\';font-size:1.8rem;color:'+fantasyChamp.color}, fantasyChamp.name));
+  if(fantasyChamp.ownerName) champCard.appendChild(el('div',{style:'color:var(--sand-dim);font-size:0.85rem'}, '👤 ' + fantasyChamp.ownerName));
+  champCard.appendChild(el('div',{style:'font-family:\'Bebas Neue\';font-size:2.4rem;color:var(--torch);margin-top:8px'}, String(fantasyChamp.total)));
+  champCard.appendChild(el('div',{style:'font-size:0.72rem;color:var(--sand-dim);text-transform:uppercase'}, 'Total Points'));
+  grid.appendChild(champCard);
+
+  if(winner){
+    const survCard = el('div',{class:'card-box'});
+    survCard.appendChild(photoBlock(winner, ''));
+    survCard.appendChild(el('div',{style:'color:var(--ember);font-size:0.8rem;font-weight:700;margin:10px 0 4px'}, '🌴 SOLE SURVIVOR'));
+    survCard.appendChild(el('div',{style:'font-family:\'Bebas Neue\';font-size:1.8rem'}, winner.name));
+    survCard.appendChild(el('div',{style:'font-family:\'Bebas Neue\';font-size:2.4rem;color:var(--torch);margin-top:8px'}, String(castawaySeasonPoints(scoring,winner.id))));
+    survCard.appendChild(el('div',{style:'font-size:0.72rem;color:var(--sand-dim);text-transform:uppercase'}, 'Fantasy Points Scored'));
+    grid.appendChild(survCard);
+  }
+  wrap.appendChild(grid);
+
+  wrap.appendChild(el('h3',{style:'margin:20px 0 10px'}, 'Final Standings'));
+  ranked.forEach((t,i)=>{
+    wrap.appendChild(el('div',{class:'lb-row ' + (i===0?'r1':i===1?'r2':i===2?'r3':'')},
+      el('div',{class:'lb-rank'}, String(i+1)),
+      el('div',{class:'lb-info'}, el('div',{class:'lb-name', style:'color:'+t.color}, t.name), el('div',{class:'lb-sub'}, t.ownerName||'')),
+      el('div',{class:'lb-pts'}, el('b',{}, String(t.total)), el('span',{}, 'pts'))
+    ));
+  });
+  return wrap;
+}
+
+function renderScoring(){
+  const root = $('#scoringRoot');
+  if(!root) return;
+  root.innerHTML='';
+  const source = scoringSource();
+  if(!source){ root.appendChild(scoringNoDraftPrompt()); return; }
+  root.appendChild(scoringSubnav(scoringSubTab));
+  let content;
+  if(scoringSubTab==='standings') content = scoringStandings(source);
+  else if(scoringSubTab==='weekly') content = scoringWeekly(source);
+  else if(scoringSubTab==='enter') content = scoringEnter(source);
+  else if(scoringSubTab==='categories') content = scoringCategories(source);
+  else content = scoringChampions(source);
+  root.appendChild(content);
+}
+renderScoring();
+
+/* mute toggle in header */
+(function addMuteToggle(){
+  const nav = document.querySelector('.top-inner');
+  if(!nav) return;
+  const btn = el('button',{id:'muteToggle', class:'btn ghost', style:'padding:8px 12px;margin-left:6px'}, AudioFX.isMuted() ? '🔇' : '🔊');
+  btn.addEventListener('click', ()=>{
+    AudioFX.setMuted(!AudioFX.isMuted());
+    btn.textContent = AudioFX.isMuted() ? '🔇' : '🔊';
+  });
+  nav.appendChild(btn);
+})();
+
+</script>
+</body>
+</html>
