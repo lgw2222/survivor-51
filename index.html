@@ -94,10 +94,15 @@ nav.tabs button.active{background:linear-gradient(135deg,var(--torch),var(--flam
 .section-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:14px;flex-wrap:wrap;}
 .section-head h2{margin:0;font-size:1.9rem;color:var(--sand);}
 .section-head p{margin:2px 0 0;color:var(--sand-dim);font-size:0.9rem;}
-.pill-row{display:flex;gap:8px;flex-wrap:wrap;}
-.pill{font-size:0.72rem;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--sand-dim);}
+.pill-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.pill{font-size:0.72rem;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--sand-dim);background:transparent;font-family:inherit;}
 .pill.purple{border-color:var(--tribe-purple);color:var(--tribe-purple);}
 .pill.yellow{border-color:var(--tribe-yellow);color:var(--tribe-yellow);}
+button.pill{cursor:pointer;transition:background .15s, transform .15s;}
+button.pill:hover{transform:translateY(-1px);}
+button.pill.purple.active{background:rgba(155,107,255,0.22);}
+button.pill.yellow.active{background:rgba(232,197,61,0.22);}
+.pill.tbd-note{border-style:dashed;font-size:0.66rem;opacity:0.75;}
 
 /* ===== Castaway grid ===== */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;}
@@ -117,6 +122,23 @@ nav.tabs button.active{background:linear-gradient(135deg,var(--torch),var(--flam
 .card .info .nm{font-family:'Bebas Neue';font-size:1.15rem;letter-spacing:0.02em;line-height:1;color:var(--sand);}
 .card .info .oc{font-size:0.72rem;color:var(--sand-dim);margin-top:3px;}
 .card .badge{position:absolute;top:8px;left:8px;background:rgba(10,23,18,0.75);border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:0.68rem;color:var(--ember);}
+.card .tribe-badge{position:absolute;top:8px;right:8px;border-radius:999px;padding:2px 9px;font-size:0.62rem;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;backdrop-filter:blur(2px);}
+.card .tribe-badge.purple{background:rgba(155,107,255,0.85);color:#fff;}
+.card .tribe-badge.yellow{background:rgba(232,197,61,0.9);color:#1a1400;}
+.card .tribe-badge.tbd{background:rgba(10,23,18,0.7);border:1px dashed var(--line);color:var(--sand-dim);}
+.card.tribe-dimmed{opacity:0.3;}
+
+/* ===== Rankings page ===== */
+.rank-table{display:flex;flex-direction:column;gap:8px;}
+.rank-row{display:flex;align-items:center;gap:14px;background:linear-gradient(160deg, var(--jungle), var(--night2));border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px;cursor:pointer;transition:border-color .15s, transform .15s;}
+.rank-row:hover{border-color:var(--torch);transform:translateX(3px);}
+.rank-num-big{font-family:'Bebas Neue';font-size:1.6rem;color:var(--torch);width:52px;flex:0 0 auto;text-align:center;}
+.rank-row .photo-wrap{width:52px;height:69px;flex:0 0 auto;border-radius:8px;overflow:hidden;aspect-ratio:auto;}
+.rank-info{flex:1;min-width:0;}
+.rank-name{font-family:'Bebas Neue';font-size:1.05rem;letter-spacing:0.02em;color:var(--sand);}
+.rank-reason{font-size:0.8rem;color:var(--sand-dim);margin-top:2px;}
+.analyst-rank-chip{display:inline-flex;align-items:center;gap:4px;margin-top:8px;font-size:0.78rem;color:var(--sand-dim);background:rgba(255,255,255,0.04);border:1px solid var(--line);border-radius:999px;padding:4px 12px;}
+.analyst-rank-chip .rank-num{font-family:'Bebas Neue';color:var(--torch);font-size:0.95rem;}
 
 /* ===== Modal ===== */
 .overlay{position:fixed;inset:0;background:rgba(4,10,8,0.78);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:100;padding:18px;}
@@ -302,6 +324,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
       <button data-tab="mock">Mock Draft</button>
       <button data-tab="live">Live Draft</button>
       <button data-tab="scoring">Scoring</button>
+      <button data-tab="rankings">Rankings</button>
     </nav>
   </div>
 </header>
@@ -316,9 +339,10 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
         <h2>Meet the Cast 🥥</h2>
         <p>21 new castaways &middot; The Open Era &middot; Click anyone for their full profile</p>
       </div>
-      <div class="pill-row">
-        <span class="pill purple">Purple Tribe</span>
-        <span class="pill yellow">Yellow Tribe</span>
+      <div class="pill-row" id="tribeFilterRow">
+        <button type="button" class="pill purple" data-tribe="purple">🟣 Purple Tribe</button>
+        <button type="button" class="pill yellow" data-tribe="yellow">🟡 Yellow Tribe</button>
+        <span class="pill tbd-note">Tribes reveal at the Sept 23 premiere — click a color to filter once assigned</span>
       </div>
     </div>
     <div class="grid" id="castawayGrid"></div>
@@ -337,6 +361,11 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
   <!-- SCORING -->
   <section id="panel-scoring" class="panel">
     <div id="scoringRoot"></div>
+  </section>
+
+  <!-- RANKINGS -->
+  <section id="panel-rankings" class="panel">
+    <div id="rankingsRoot"></div>
   </section>
 
 </div>
@@ -374,23 +403,67 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Preview Pt. 1",
     "wiki": "https://survivor.fandom.com/wiki/Aaliyah_Puglia",
     "id": "aaliyah",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Aaliyah%20Puglia",
+    "instagram": "https://www.instagram.com/aaliyah.makes.menus/",
     "twitter": "https://x.com/search?q=Aaliyah%20Puglia&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Aaliyah%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "I'm used to being adaptable, flexible and for things to change without notice.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My superpower is my adaptability and being able to think on the fly with very little.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Confident, wise, sportic.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/aaliyah_puglia.htm"
+      },
+      {
+        "q": "Why do you want to be part of Survivor?",
+        "a": "Survivor is a show where the impossible happens and it gives everyday people the opportunity to be themselves entrapped in a twisted, chaotic and thrilling game of strategy...",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/aaliyah_puglia.htm"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "My constant pursuit for change has prepared me to win, from living in a small town in Jersey to then moving to Miami at 13...",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/aaliyah_puglia.htm"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "I identify the most with Yam Yam, someone who makes jokes naturally, can be loud but calculated...",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/aaliyah_puglia.htm"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "High-energy, talkative style — hosts note her background as a chef for the New England Patriots as a fun wildcard credential.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-1/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #7 of 21 overall: Young chef provides goodwill through feeding the tribe; her age creates underestimation potential.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 7,
+      "source": "Survivor Tribes",
+      "reasoning": "Young chef provides goodwill through feeding the tribe; her age creates underestimation potential.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   },
   {
     "name": "Alexis Levine",
@@ -405,23 +478,103 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Preview Pt. 1",
     "wiki": "https://survivor.fandom.com/wiki/Alexis_Levine",
     "id": "alexis",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Alexis%20Levine",
+    "instagram": "https://www.instagram.com/alexisalevine/",
     "twitter": "https://x.com/search?q=Alexis%20Levine&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Alexis%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "10 years of sobriety from drugs and alcohol.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My biggest superpower is the ability to remain calm amongst chaos.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Outgoing, thoughtful, determined.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/alexis_levine.htm"
+      },
+      {
+        "q": "Why do you want to be part of Survivor?",
+        "a": "Survivor represents the best of the human spirit – physical endurance, mental toughness and social awareness.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/alexis_levine.htm"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "Being a criminal defense attorney – defending the little guy from the all-powerful government means constantly being 'on the bottom' and how to think creatively.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/alexis_levine.htm"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "I identify most with Kyle Fraser. Most like him with a touch of Rachel, and, of course, Parvati!",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/alexis_levine.htm"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "Someone who thinks and plays differently than me – diversity is the best asset.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/alexis_levine.htm"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "Gardening, reading, going on long walks with my husband, and daughter and our two poodles.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/alexis_levine.htm"
+      },
+      {
+        "q": "Pet Peeves",
+        "a": "People who are ruled by their emotions and misogyny.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/alexis_levine.htm"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "I am Iranian – my dad came here when he was 18 and never went back. I hope to visit one day!",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/alexis_levine.htm"
+      },
+      {
+        "q": "Who in your life is your biggest inspiration and why?",
+        "a": "My daughter, Lyla, inspires me every day to be better, push harder, and have fun!",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/alexis_levine.htm"
+      },
+      {
+        "q": "Why will you be the Sole Survivor?",
+        "a": "Every lesson I've learned in my life brings me to this moment and I plan on capitalizing on that momentum and grit to outwit, outplay and outlast!",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/alexis_levine.htm"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "Pegged for a “secret lawyer strategy” — a candid approach that could let her exploit emotional game moments better than most.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-1/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #19 of 21 overall: Defense attorney's persuasion mirrors Final Tribal Council skills, yet invites early targeting regardless of strategy.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 19,
+      "source": "Survivor Tribes",
+      "reasoning": "Defense attorney's persuasion mirrors Final Tribal Council skills, yet invites early targeting regardless of strategy.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   },
   {
     "name": "An \"Thien An\" Nguyen",
@@ -436,23 +589,103 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Reveal First Reactions",
     "wiki": "https://survivor.fandom.com/wiki/Thien_An_Nguyen",
     "id": "thien-an",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=An%20\"Thien%20An\"%20Nguyen",
+    "instagram": "https://www.instagram.com/_thienannguyen/",
     "twitter": "https://x.com/search?q=An%20\"Thien%20An\"%20Nguyen&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Thien%20An%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "Coming in at 5 feet strong, I will be LURKING incognito-ly until it's time to strike.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "I think my heart is my biggest superpower... being able to empathize with people.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Quick-witted, empathetic, outgoing.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/thien-an_nguyen.htm"
+      },
+      {
+        "q": "Why do you want to be part of Survivor?",
+        "a": "Since watching, I knew I wanted to be on Survivor. Very few opportunities in life let you connect to life in such a raw and authentic way. It's everything I love! New friends and the outdoors.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/thien-an_nguyen.htm"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "Spending time with loved ones, whatever it may be like, exploring the world, running marathon on a whim, or making insultingly low trades in Catan.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/thien-an_nguyen.htm"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "Doing Boy Scouts as a kid (yes, Boy Scouts) exposed me early on to outdoors and survival skills.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "Thien An identifies with Kenzie, describing her as \"a firecracker\" who played strategically while staying true to her values.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "PLEASE someone that won't stab me in the back (well, first at least!).",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Pet Peeves",
+        "a": "Anything that seems unfair, Fake people – yuck!, People who can't separate 'your' versus 'you're.'",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "During COVID isolation, Thien An made a friend who later wrote: \"You taught me what being happy truly means.\"",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "I am a back-to-back all-around intramural champ.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Who in your life is your biggest inspiration and why?",
+        "a": "My mom and dad! (I'm smart enough to not choose favorites!). They are my rocks, role models, best friends.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "Discussed as the “final castaway” of the preview — a medical student hosts see as more of a wildcard given limited pre-season buzz.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-3/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #12 of 21 overall: Medical student supplies camp utility and sleep-deprivation stamina; outcome depends heavily on tribe assignment.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 12,
+      "source": "Survivor Tribes",
+      "reasoning": "Medical student supplies camp utility and sleep-deprivation stamina; outcome depends heavily on tribe assignment.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   },
   {
     "name": "Ana Sani",
@@ -467,29 +700,109 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Preview Pt. 1",
     "wiki": "https://survivor.fandom.com/wiki/Ana_Sani",
     "id": "ana",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Ana%20Sani",
+    "instagram": "https://www.instagram.com/anasani14/",
     "twitter": "https://x.com/search?q=Ana%20Sani&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Ana%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "I've done voices for over 60 animated shows and a ton of commercials.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My biggest superpower is definitely that I'm going to be able to build relationships and bonds quite easily.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
       },
       {
         "q": "What are you expecting from this season's twists?",
         "a": "I expect a lot more twists... allowing for the players to make more moves.",
-        "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists",
+        "source": "Reality Blurred — Survivor 51's Cast Talks Twists",
         "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Goofy, ambitious, chaotic.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/ana_sani.htm"
+      },
+      {
+        "q": "Why do you want to be part of Survivor?",
+        "a": "Survivor is the perfect opportunity to lock into my competitive side. I love games, and who doesn't want to lie and deceive in a setting where it's totally acceptable to do so?",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/ana_sani.htm"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "Being an actor means you need to have really thick skin. I've had extremely down moments, but I've always picked myself up.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/ana_sani.htm"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "I identify with Tony cause he's chaotic like me; never know what to expect. I would love to play most like Ricard who is severely underrated.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/ana_sani.htm"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "If an alliance partner is willing to divulge others' secrets to me, I feel like they have put their trust in me.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/ana_sani.htm"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "I enjoy playing video games (league, anyone?), exploring new coffee shops, playing the piano and have recently become a gym rat!",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/ana_sani.htm"
+      },
+      {
+        "q": "Pet Peeves",
+        "a": "Transition lenses (they're weird and aesthetically, it's a no for me). People who enter the subway and don't go all the way into the train.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/ana_sani.htm"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "I'm most proud of the career I've built in voiceover. I worked my butt off to get to where I am.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/ana_sani.htm"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "That I have an honors degree in Political Science (specifically Political Theory). I enjoy reading about the dynamics of power.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/ana_sani.htm"
+      },
+      {
+        "q": "Why will you be the Sole Survivor?",
+        "a": "Because I'm hopefully not going to be afraid to take some creative liberties to either build more trust or cause some chaos.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/ana_sani.htm"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "Her animated-industry career (including time as Strawberry Shortcake and a cameo on The Boys) has hosts curious how that performer instinct translates to social game.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-1/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #11 of 21 overall: Performer's likability skills transfer well, yet entertainers either excel or get blindsided early.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 11,
+      "source": "Survivor Tribes",
+      "reasoning": "Performer's likability skills transfer well, yet entertainers either excel or get blindsided early.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   },
   {
     "name": "Angelica \"Jelly\" Loblack",
@@ -504,21 +817,115 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Preview Pt. 2",
     "wiki": "https://survivor.fandom.com/wiki/Jelly_Loblack",
     "id": "jelly",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Angelica%20\"Jelly\"%20Loblack",
+    "instagram": "https://www.instagram.com/whyso__jelly/",
     "twitter": "https://x.com/search?q=Angelica%20\"Jelly\"%20Loblack&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Jelly%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "There's nobody better equipped to win a social game than the sociologists who study them.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My biggest superpower is definitely my ability to get people to open up to me.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Curious, Multifaceted, and Passionate.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Why do you want to be part of Survivor?",
+        "a": "Survivor has been a part of my family and life for as long as I can remember. It was my first exposure to the sociological questions and experiments that would later lead to an entire career.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "Her PhD journey in Sociology provided training in interviews, ethnographic observation, and critical thinking skills she considers her “greatest weapon.”",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "She identifies most with Katurah Topps and plans to play similarly to Shan from Season 41.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "In an ally, I will value transparency and innovation. I want a ride-or-die who's not afraid to brainstorm and risk-take, creatively, of course.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "Volleyball, running, writing, binge-watching dystopian sci-fi series, debating, and rapping.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Pet Peeves",
+        "a": "I can't stand overly boastful people…people who can brag about themselves all day, every day.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "I'm most proud of earning my PhD under the age of 30 and writing a dissertation I can be proud of.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "She once won most comedic mascot at mascot camp, portraying Webber the Bear.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Who in your life is your biggest inspiration and why?",
+        "a": "My grandma, hands down! We're talking about a woman who was queer in a time where you could be imprisoned…a two-time breast cancer survivor.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Why will you be the Sole Survivor?",
+        "a": "Being a sociologist, I'm not only an expert on all things social but I'm literally trained to immerse myself in any environment and social dynamic.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      }
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "Sociology-professor energy and a tendency to be the center of attention — hosts debate whether that visibility puts an early target on her back.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-2/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #1 of 21 overall: A sociology professor studies group dynamics for a living, which is the closest thing on this cast to a degree in Survivor.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 1,
+      "source": "Survivor Tribes",
+      "reasoning": "A sociology professor studies group dynamics for a living, which is the closest thing on this cast to a degree in Survivor.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": [
+      {
+        "source": "RHAP Survivor 51 Draft (podcast)",
+        "pickedBy": "Shannon Guss",
+        "pickNum": null,
+        "note": "Called a “heart pick” — a personal connection plus hope to see an academic finally win the game.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-draft/"
       }
     ]
   },
@@ -535,23 +942,97 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Preview Pt. 1",
     "wiki": "https://survivor.fandom.com/wiki/Brady_Booker",
     "id": "brady",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Brady%20Booker",
+    "instagram": "https://www.instagram.com/bradybooker_/",
     "twitter": "https://x.com/search?q=Brady%20Booker&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Brady%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "I am comfortable being uncomfortable. I am used to falling on my face.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My biggest superpower is the way I interact with people... I engulf them in my personality.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Enthusiastic, Intense, Fun.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/brady_booker.htm"
+      },
+      {
+        "q": "Why do you want to be part of Survivor?",
+        "a": "Growing up my family loved watching the show together. I love adventure in the outdoors. I love competition. I love being pushed to my limit to show what I am truly capable of doing.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/brady_booker.htm"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "My job experience has prepared me to play because it involves long days, minimal sleep and food, along with being able to politick your own social game.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/brady_booker.htm"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "I identify most with Jonathan. From our size, ability, and our loyal vibe, I believe we are two peas in a pod. I hope to model my game after him as the laid-back provider, until it is time to STRIKE!",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/brady_booker.htm"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "The biggest value I look for in an alliance is trust.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/brady_booker.htm"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "Fun in the outdoors (hunting, fishing, hiking, camping), working out (weightlifting, trail runs, jujitsu).",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/brady_booker.htm"
+      },
+      {
+        "q": "Pet Peeves",
+        "a": "Overly judgmental, lying, bad hygiene, bad manners.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/brady_booker.htm"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "I am most proud of where I have gotten in my career. Although it's just started, I have made a place for myself in professional wrestling.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/brady_booker.htm"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "I did gymnastics throughout my years of youth sports.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/brady_booker.htm"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "Pro wrestling background and wild early-life stories stand out — hosts like his stated plan to build alliances with people unlike himself.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-1/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #18 of 21 overall: Pro wrestler's physicality creates pre-merge challenge value but guarantees a mid-season cliff.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 18,
+      "source": "Survivor Tribes",
+      "reasoning": "Pro wrestler's physicality creates pre-merge challenge value but guarantees a mid-season cliff.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   },
   {
     "name": "Carter Krull",
@@ -566,29 +1047,109 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Preview Pt. 1",
     "wiki": "https://survivor.fandom.com/wiki/Carter_Krull",
     "id": "carter",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Carter%20Krull",
+    "instagram": "https://www.instagram.com/carter.krull/",
     "twitter": "https://x.com/search?q=Carter%20Krull&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Carter%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "Survivor has been on my bucket list. You never know when your last day will be.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My biggest superpower is that I can work hard. I will outwork any person out here.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
       },
       {
         "q": "What are you expecting from this season's twists?",
         "a": "Survivor's always changing... it's the most crazy, changing game of all time.",
-        "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists",
+        "source": "Reality Blurred — Survivor 51's Cast Talks Twists",
         "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Adventurous, Competitive, Determined.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "Opened a snow cone truck, kind of put me in a tropical mood.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "It's a toss-up who I'll play like given the game's situational nature — he aims to blend aspects of Rob, Ozzy, Tony, and Sam Phalen.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "I'll value communication. I've got your back if you've got mine. The bottom layer of flooring in this game is trust.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "I've always had a passion for woodworking…My high school shop teacher, Grant Engel, showed me how to work with epoxy. I love making epoxy river/resin tables!",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Pet Peeves",
+        "a": "If you chew with your mouth open – you just as well pack your bags and head home – life's too short for that.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "Starting a moving company from scratch with a friend, eventually expanding across the U.S.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "I can make a really weird whistling noise with the back of my throat – not sure why?",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Who in your life is your biggest inspiration and why?",
+        "a": "My Mom and Dad, and it's not up for debate. They've each taught me from a young age how to work hard, chase your dreams.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Why will you be the Sole Survivor?",
+        "a": "It's gotta be one of us roundheads… Why not me?",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "“Old-school farmer work ethic” with what hosts call JT-like potential — a physical, likable underdog profile.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-1/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #4 of 21 overall: Young livestock farmer brings early usefulness but risks becoming expendable once numbers matter more than strength.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 4,
+      "source": "Survivor Tribes",
+      "reasoning": "Young livestock farmer brings early usefulness but risks becoming expendable once numbers matter more than strength.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   },
   {
     "name": "Cristian Chavez",
@@ -603,23 +1164,97 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Preview Pt. 1",
     "wiki": "https://survivor.fandom.com/wiki/Cristian_Chavez",
     "id": "cristian",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Cristian%20Chavez",
+    "instagram": "https://www.instagram.com/cristian.chavezzz/",
     "twitter": "https://x.com/search?q=Cristian%20Chavez&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Cristian%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "If I'm not winning, I'll do whatever it takes to make everyone else lose.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My biggest superpower is definitely the way people underestimate me.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Fun, Chaotic, Loud.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/cristian_chavez.htm"
+      },
+      {
+        "q": "Why do you want to be part of Survivor?",
+        "a": "I LOVE competition! I also want to test my limits in this game and be pushed past my breaking point just to experience it.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/cristian_chavez.htm"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "Definitely practicing small challenges with my dad growing up. He would put together little activities just like smaller Survivor challenges and it was always so fun.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/cristian_chavez.htm"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "I identify the most with Tai. I want to play as a weird mix of Tai, Cirie, Tony and Carolyn.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/cristian_chavez.htm"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "Someone who thinks differently than me, but can also hear my side. Predictability, I want to be able to predict their motivation.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/cristian_chavez.htm"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "Baking; being with family; philosophy; playing with my son; feeding ducks.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/cristian_chavez.htm"
+      },
+      {
+        "q": "Pet Peeves",
+        "a": "Being mean to animals, logical inconsistencies, people getting upset/mad at someone crying or showing emotion.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/cristian_chavez.htm"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "Getting my master's degree at 21 yrs old.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/cristian_chavez.htm"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "I'm a dad, I can be cutthroat when I need to be. I have a very LOUD laugh. I have a very strong aversion to worms.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/cristian_chavez.htm"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "HR expertise plus personal ties to Survivor history give him a leg up reading people and the show itself.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-1/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #6 of 21 overall: Conflict-mediation skills help with split votes, but his “Head of” title invites leadership scrutiny.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 6,
+      "source": "Survivor Tribes",
+      "reasoning": "Conflict-mediation skills help with split votes, but his “Head of” title invites leadership scrutiny.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   },
   {
     "name": "Danny \"Kilby\" Kilby",
@@ -634,27 +1269,115 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Preview Pt. 2",
     "wiki": "https://survivor.fandom.com/wiki/Danny_Kilby",
     "id": "kilby",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Danny%20\"Kilby\"%20Kilby",
+    "instagram": "https://www.instagram.com/kilbysworld/",
     "twitter": "https://x.com/search?q=Danny%20\"Kilby\"%20Kilby&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Kilby%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "Biggest dream of my whole life. When I was a kid, Survivor was my favorite show.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My biggest superpower coming into Survivor is I can make anybody laugh.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
       },
       {
         "q": "What are you expecting from this season's twists?",
         "a": "Having seen Survivor 50, I have empirical evidence that fans like twists, so I'm expecting Survivor to throw some crazy stuff at us.",
-        "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists",
+        "source": "Reality Blurred — Survivor 51's Cast Talks Twists",
         "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Wacky, Chaotic, Playful.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/dan_kilby.htm"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "Student government really taught me to delegate tasks, manage a bunch of different groups and egos. All my weird hobbies, honestly prepared me to think quickly, connect with people and be confident. Board games (the nerdy/strategic ones) taught me to execute complex plans fast. My whole life has been training for today.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/dan_kilby.htm"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "Most identify with Todd Herzog or Ben Katzman. I'm a good vibes guy, and when 46 aired I got 9000 messages of people telling me I remind them of Ben. I'll play the most like David Wright. Aggressive, bold, moves built on empathetic, deep bonds.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/dan_kilby.htm"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "I look for someone I have fun playing with. I want to know someone's \"real laugh\" before I lock in, so I know when they're lying in the future. Fun, loyal, smart, and connects with the people I don't. Someone I can emotionally manipulate if I need to (sorry!)",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/dan_kilby.htm"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "Video games, volleyball, soccer, filmmaking/watching films, WWE events, online reality games, Blood on the Clocktower, board games, karaoke, dancing, performing improv, Lego, puzzles, kayaking, dodgeball.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/dan_kilby.htm"
+      },
+      {
+        "q": "Pet Peeves",
+        "a": "When people say an obvious thing but act like it's brilliant. Rich people who want to act like they've had a hard life. When people tell you 'wrestling is fake'. Complainers, why can't we just make the most of it?",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/dan_kilby.htm"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "I'm the first in my family to graduate high school and go to university. I got straight A's, and my mom graduated and got a degree after I did. Her success is my proudest accomplishment. She didn't go because she was a teen mom and had to raise me. She gave the biggest sacrifices so I could be the happiest, goofy kid. Also, I won a cool filmmaking competition and got a sick trophy.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/dan_kilby.htm"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "I come off as a happy go lucky, oddball hippie, and that's true. But I've suffered a lot. There's a lot more to me than meets the eye (like a transformer).",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/dan_kilby.htm"
+      },
+      {
+        "q": "Who in your life is your biggest inspiration and why?",
+        "a": "My stepdad Bruce. No one I've ever met has always been so positive, friendly, funny. Anywhere we go he meets a new friend, and he worked my whole childhood to take care of me and my mom. It's not often your dad gets to CHOOSE you, and mine did. While we didn't have the most, I think I had the best childhood ever because my parents were silly, loving and curious about everything.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/dan_kilby.htm"
+      },
+      {
+        "q": "Why will you be the Sole Survivor?",
+        "a": "I can make anyone love me and feel like the most special person in the world. My social game is bomb. I have grit like no one else and I'll never stop smiling. I'm a strategic crazy mad scientist.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/dan_kilby.htm"
+      }
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "Superfan and game designer credentials (plus ORG/sequester experience) cut both ways — hosts wonder if his deception gets exposed or his flashier moves actually survive.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-2/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #20 of 21 overall: Game-designer reputation announces systems knowledge immediately, making the first three days dangerously difficult.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 20,
+      "source": "Survivor Tribes",
+      "reasoning": "Game-designer reputation announces systems knowledge immediately, making the first three days dangerously difficult.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": [
+      {
+        "source": "RHAP Survivor 51 Draft (podcast)",
+        "pickedBy": "Chappell",
+        "pickNum": null,
+        "note": "Drafted on a superfan strategy — podcasting experience, sequester background, and classic-gameplay knowledge.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-draft/"
       }
     ]
   },
@@ -671,21 +1394,109 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Preview Pt. 1",
     "wiki": "https://survivor.fandom.com/wiki/Devin_Way",
     "id": "devin",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Devin%20Way",
+    "instagram": "https://www.instagram.com/thedevinway/",
     "twitter": "https://x.com/search?q=Devin%20Way&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Devin%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "There is nothing else like this in the world.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My biggest superpower is that I can make friends with a rock. I can talk to anybody.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Charming, Playful, Loyal.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "I play Dungeons & Dragons every week and the game teaches you to roll the dice and no matter what happens (with the help of your team) you can figure it out!",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "Devin identifies with Joe for his integrity and family devotion, though he aspires to play like Rick Devens for his joy and enthusiasm.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "Loyalty and honesty will keep me. The second I find out you lied or betrayed me in some way I'll be looking for a new alliance.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "Line dancing, Dungeons & Dragons, spoken word, game nights, karaoke, reading comics, going to the gym, and sitting in the park.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Pet Peeves",
+        "a": "People who look down on others or treat people less than.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "In this moment, I am the proudest of making it on Survivor 51!!",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "That I have 12 brothers and sisters. I'm number 7 in the group.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Who in your life is your biggest inspiration and why?",
+        "a": "My MoeMoe (Grandma). She's the strongest, most loyal, loving, fighter of a woman that I've ever met.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Why will you be the Sole Survivor?",
+        "a": "Because 'Ways Always Win'.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      }
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "His “no lies, no backstabs” philosophy is framed as a real risk/reward bet — hosts are intrigued by his knack for creative gameplay despite the vow.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-1/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #14 of 21 overall: Actor draws screen time (which correlates with longevity) but risks appearing too theatrical.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 14,
+      "source": "Survivor Tribes",
+      "reasoning": "Actor draws screen time (which correlates with longevity) but risks appearing too theatrical.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": [
+      {
+        "source": "RHAP Survivor 51 Draft (podcast)",
+        "pickedBy": "Taran Armstrong",
+        "pickNum": 1,
+        "note": "Taken #1 overall for his charisma and “strong Dungeons & Dragons energy.”",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-draft/"
       }
     ]
   },
@@ -702,23 +1513,103 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Preview Pt. 2",
     "wiki": "https://survivor.fandom.com/wiki/Eric_Macksoud",
     "id": "eric",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Eric%20Macksoud",
+    "instagram": "https://www.instagram.com/emack401/",
     "twitter": "https://x.com/search?q=Eric%20Macksoud&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Eric%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "Survivor is the ultimate celebration of the human experience.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My greatest superpower is my ability to empathize with others and my high emotional intelligence.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Animated, Charismatic, Empathic.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "His involvement in community theater has equipped him to form quick bonds with diverse groups and work effectively under pressure, similar to how tribes must function.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "Eric identifies with Dominick Abbate, appreciating his charm, strategic gameplay, and honest approach to expressing emotions with allies.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "He seeks partners displaying continuous trust and loyalty, with whom he can joke and confide, describing an ideal ally as both confidant and friend.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "Community theater, jamming on the electric guitar, going on adventures with my fiancé, watching horror movies, swimming, playing board games with friends, and petting my cats.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Pet Peeves",
+        "a": "People with low emotional intelligence/maturity, people who take themselves too seriously, super machismo type guys, reckless drivers, and bad grammar.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "Passing his mental health counselor licensing exam after four attempts, demonstrating his perseverance and dedication.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "He's trained in Muay Thai kickboxing and was a competitive swimmer through college, despite not appearing athletic.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Who in your life is your biggest inspiration and why?",
+        "a": "His fiancée Gina inspires him daily through her strength, hard work, and unconditional support through life's challenges.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Why will you be the Sole Survivor?",
+        "a": "Eric believes his emotional intelligence enables quick trust-building and people-reading skills essential for strategic maneuvering under pressure.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "Therapy skills and a Muay Thai background make for an interesting combo — hosts note his “open heart could be a blessing or a curse.”",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-2/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #2 of 21 overall: Mental health counselor may be the single best-disguised social résumé in the cast.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 2,
+      "source": "Survivor Tribes",
+      "reasoning": "Mental health counselor may be the single best-disguised social résumé in the cast.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   },
   {
     "name": "Jenna Doore",
@@ -733,29 +1624,109 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Preview Pt. 2",
     "wiki": "https://survivor.fandom.com/wiki/Jenna_Doore",
     "id": "jenna",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Jenna%20Doore",
+    "instagram": "https://www.instagram.com/jennadoorephoto/",
     "twitter": "https://x.com/search?q=Jenna%20Doore&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Jenna%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "It's about being able to perform and create when the stakes are high.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My biggest superpower... is my empathy. I'm a deep feeler.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
       },
       {
         "q": "What are you expecting from this season's twists?",
-        "a": "It's a whole new era of Survivor \u2014 there's going to be so much thrown our way that we can't possibly predict or plan for.",
-        "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists",
+        "a": "It's a whole new era of Survivor — there's going to be so much thrown our way that we can't possibly predict or plan for.",
+        "source": "Reality Blurred — Survivor 51's Cast Talks Twists",
         "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Empathetic. Determined. And energetic.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Why do you want to be part of Survivor?",
+        "a": "It's my lifelong dream — and the show offers a chance to discover who you become outside your comfort zone.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "Wedding photography has taught her adaptability and mental toughness when performing under pressure.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "She identifies with Charlie and Kenzie, admiring their social skills and strategic gameplay.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "I want to work with people I genuinely connect with on a human level.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "I love writing! Mostly I write poetry — and she enjoys running and hiking.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "Building my business — by purchasing her first camera at 15 and photographing her first wedding at 18.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "She has a strategic side and included a “Survivor Clause” in wedding contracts for years.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Who in your life is your biggest inspiration and why?",
+        "a": "Her parents inspire her — her father for creative problem-solving and her mother for reminding her nothing needs proving.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Why will you be the Sole Survivor?",
+        "a": "She has “an army of people who are believing in it” with her, playing for them all.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "Framed as playing a “poetic strategy,” using her photographer's people-reading skills to “harness empathy” in the game.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-2/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #5 of 21 overall: Wedding photographers spend every weekend reading a room full of stressed people and staying invisible.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 5,
+      "source": "Survivor Tribes",
+      "reasoning": "Wedding photographers spend every weekend reading a room full of stressed people and staying invisible.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   },
   {
     "name": "Kristin Flickinger",
@@ -770,23 +1741,103 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Preview Pt. 2",
     "wiki": "https://survivor.fandom.com/wiki/Kristin_Flickinger",
     "id": "kristin",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Kristin%20Flickinger",
+    "instagram": "https://www.instagram.com/kflickin/",
     "twitter": "https://x.com/search?q=Kristin%20Flickinger&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Kristin%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "I have been applying for Survivor since the middle of Season 1.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My biggest superpower coming into the game is flexibility and being able to read the room.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Determined, Joyful.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "My entire existence has prepared me for the game. Growing up in the mountains of Idaho, navigating the world as a queer woman leading teams, finding and sometimes making community, and turning my traumas into a career serving LGBTQ+ community especially in moments of crisis.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "I identify with Rachel LaMont. She's the first player who played the way I think about the game. She was quirky, likable, smart, innovative, and lucky.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "My dream alliance partner is someone I can know in my bones wants to go to the end with me and has the ability to think innovatively through complex situations quickly.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "Road cycling, training my husky dog to talk with buttons, applying for Survivor (I'm on the hunt for a new hobby…).",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Pet Peeves",
+        "a": "Crumbs on the kitchen counter – really any surface – send me.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "Creating an intergenerational culinary arts program for LGBTQ+ youth and seniors. Thousands of people have had their lives touched by that program.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "I carry rocks in my bra usually for protection, but it changes based on my mood, and any particular meetings I have that day.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Who in your life is your biggest inspiration and why?",
+        "a": "Honestly, a long time ago, I decided to be my own inspiration. I draw strength from nature, family, friends, ancestors and the connection we all have.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Why will you be the Sole Survivor?",
+        "a": "The stars are literally aligned for an Aries, for the next 26 days. Like for real. The sun, planets, everything.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "Crisis-management background is a clear asset, but hosts flag her leadership style and age as variables to watch early.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-2/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #13 of 21 overall: Crisis-management expertise paired with oldest-player status creates an unpredictable trajectory.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 13,
+      "source": "Survivor Tribes",
+      "reasoning": "Crisis-management expertise paired with oldest-player status creates an unpredictable trajectory.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   },
   {
     "name": "Lewis Kelly",
@@ -801,29 +1852,103 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Preview Pt. 2",
     "wiki": "https://survivor.fandom.com/wiki/Lewis_Kelly",
     "id": "lewis",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Lewis%20Kelly",
+    "instagram": "https://www.instagram.com/lewisskellyy/",
     "twitter": "https://x.com/search?q=Lewis%20Kelly&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Lewis%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "I probably won't be the Sole Survivor... but if I do, the game is won.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My superpower in this game is my Irish charm.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
       },
       {
         "q": "What are you expecting from this season's twists?",
-        "a": "There's no rules, no concrete things set in stone \u2014 I could make up a million things and nobody's going to know any better.",
-        "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists",
+        "a": "There's no rules, no concrete things set in stone — I could make up a million things and nobody's going to know any better.",
+        "source": "Reality Blurred — Survivor 51's Cast Talks Twists",
         "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Cheeky, devilish, charming.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Why do you want to be part of Survivor?",
+        "a": "I love the show. Once I became a US citizen, I owed it to myself to apply, to take this new opportunity and really live and be an example of my American dream.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "My trip a few months ago to North Korea. At times we were isolated, unable to leave our rooms, no communication with the outside world, no phones, uncomfortable rock hard beds, never knowing what's coming the following day, not knowing if one wrong move is going to get you… voted out!",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "I identify with Venus. She's just out here trying to represent and handle the chaos as best she can. She's funny and not afraid to say what's on her mind and stands 10 toes down. I also feel like I'm a better, cooler, version of Tyson.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "Someone that's there to cause chaos and have fun. Someone that won't rat me out. Snitches get their torches snuffed.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "Lying! What do you mean I can go on a show where it's okay to deceive people?! I also love traveling and charting the unknown — my wife and I traveled the US renovating a school bus that we now call our beautiful home.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "I've been to 40+ countries, I've seen the good, bad and ugly and I have appreciation for it all. I love travel so much I live in a school bus!",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "I feel I'm more intelligent than people take me for. I might sound a bit rough around the edges, but on Survivor, every blunder, every mistake I make publicly is probably a very thought out and deliberately executed move.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Who in your life is your biggest inspiration and why?",
+        "a": "My beautiful wife Andrea. She's a partner that is just as bold and daring as me. She keeps me on my toes and makes my life so spontaneous and magical. She's the only reason I'd even be half decent at Survivor.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "An adventurer with a big following and a self-described “boredom equals chaos” philosophy — expect early risk-taking.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-2/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #9 of 21 overall: Farmer with a charm factor, though his international-cast status becomes memorable enough to target post-merge.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 9,
+      "source": "Survivor Tribes",
+      "reasoning": "Farmer with a charm factor, though his international-cast status becomes memorable enough to target post-merge.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   },
   {
     "name": "Linnea Capobianco",
@@ -838,23 +1963,103 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Preview Pt. 2",
     "wiki": "https://survivor.fandom.com/wiki/Linnea_Capobianco",
     "id": "linnea",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Linnea%20Capobianco",
+    "instagram": "https://www.instagram.com/lin_nay_uh/",
     "twitter": "https://x.com/search?q=Linnea%20Capobianco&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Linnea%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "This life... is all I am certain of.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My biggest superpower is my social game.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Rational, outgoing and optimistic.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "Studying and working in Washington D.C. where networking is imperative to your success, helped prepare me for the complex social politics of Survivor.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "Kyle F., due to his ability to build strong relationships and lead votes without being the over leader.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "True friendship, positive attitude, doesn't freak out / get overly paranoid, rational (most important).",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "Street photography, Lagree fitness classes, and attending jazz performances.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Pet Peeves",
+        "a": "When people ask me my zodiac sign, when people exclude others in convo, e.g., standing in a circle that doesn't make everyone feel a part of it.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "Being a successful business owner in NYC!",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "I have a laughing problem. I've had countless uncontrollable laughing attacks (funerals, church, class, during a presentation, etc).",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Who in your life is your biggest inspiration and why?",
+        "a": "Lyndsey Addario (conflict/war photographer). Risks her life to be the voice of the voiceless and follows her true passion.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Why will you be the Sole Survivor?",
+        "a": "I'm highly skilled at reading people, persuading people, and being a leader that doesn't come off as threatening. In addition to my grit, determination, and athletic abilities.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "Entrepreneurial drive and an honest, bold approach give her a business edge hosts think could help her navigate alliances.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-2/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #15 of 21 overall: Entrepreneurial persuasion works initially; tribes may later recognize the pitch itself.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 15,
+      "source": "Survivor Tribes",
+      "reasoning": "Entrepreneurial persuasion works initially; tribes may later recognize the pitch itself.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   },
   {
     "name": "Maggie Nestor",
@@ -869,23 +2074,97 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Reveal First Reactions",
     "wiki": "https://survivor.fandom.com/wiki/Maggie_Nestor",
     "id": "maggie",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Maggie%20Nestor",
+    "instagram": "https://www.instagram.com/w.v.maggie/",
     "twitter": "https://x.com/search?q=Maggie%20Nestor&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Maggie%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "I've loved Survivor since I was 15. I've been watching for 25 years.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My biggest superpower is probably my social game and social read on people.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Joyful, intentional, Redneck.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "Growing up in West Virginia.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "I most identify with Parvati! I don't know who I'm going to play most like.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "Someone who is creative, open, happy, and willing to make bold moves.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "Farming, gardening, fishing, hunting, exploring, running, lifting, pole vaulting, reading, teaching, singing, cooking, playing guitar.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "The life my husband and I created.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "I'm a mom of three AMAZING MARVELOUS children who MERIT me more love than I deserve.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Who in your life is your biggest inspiration and why?",
+        "a": "Jesus because He saved me.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Why will you be the Sole Survivor?",
+        "a": "I truly believe my entire life has prepared me to outwit, outlast, and outplay.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "Survivor's first-ever contestant from West Virginia — hosts like her outdoor capability and call her a “social wildcard.”",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-3/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #3 of 21 overall: Farmers have one of the quietly strongest track records on this show — camp utility with minimal early threat perception.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 3,
+      "source": "Survivor Tribes",
+      "reasoning": "Farmers have one of the quietly strongest track records on this show — camp utility with minimal early threat perception.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   },
   {
     "name": "Mike Pinsky",
@@ -900,29 +2179,109 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Reveal First Reactions",
     "wiki": "https://survivor.fandom.com/wiki/Mike_Pinsky",
     "id": "mike",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Mike%20Pinsky",
+    "instagram": "https://www.instagram.com/mikepinsky/",
     "twitter": "https://x.com/search?q=Mike%20Pinsky&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Mike%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "My marriage proposal to my wife Becky incorporated a Probst catchphrase.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
-        "a": "My superpower is that I have a well-rounded skill set \u2014 social without being just a charisma machine.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "a": "My superpower is that I have a well-rounded skill set — social without being just a charisma machine.",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
       },
       {
         "q": "What are you expecting from this season's twists?",
         "a": "I know that Jeff is going to throw some weird stuff at us. I know it's going to be interesting.",
-        "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists",
+        "source": "Reality Blurred — Survivor 51's Cast Talks Twists",
         "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Enthusiastic, strategic, driven.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/mike_pinsky.htm"
+      },
+      {
+        "q": "Why do you want to be part of Survivor?",
+        "a": "Getting to actually live this dream for real is a one-of-one life experience, and the thrill of this type of adventure sets my heart on fire!",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/mike_pinsky.htm"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "I lost my mom to metastatic breast cancer when I was 24...it forged the resilience that I possess today.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/mike_pinsky.htm"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "Kyle Fraser, Charlie Davis, and Adam Klein...remind me a bit of myself. But I ultimately hope to be this season's Rachel LaMont.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/mike_pinsky.htm"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "I want allies who can help me gather that intel: who's working with whom; who has what advantages?",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/mike_pinsky.htm"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "I'm the best home cook you'll ever meet! Also, a big fan of pickup basketball, improv comedy, tennis, and playing with my dachshund Pookie.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/mike_pinsky.htm"
+      },
+      {
+        "q": "Pet Peeves",
+        "a": "Misused words, overused words, under seasoned food.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/mike_pinsky.htm"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "Marrying my high school crush, Becky.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/mike_pinsky.htm"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "Inside me is a burning desire to be the one playing.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/mike_pinsky.htm"
+      },
+      {
+        "q": "Why will you be the Sole Survivor?",
+        "a": "I have the right cocktail of qualities to take this thing to the end!",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/mike_pinsky.htm"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "A self-proclaimed “average guy” and Yankees baseball executive who hosts suspect is more cunning than he lets on, with an analytical, negotiation-driven approach.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-3/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #17 of 21 overall: Negotiation skills and an analytical approach are legible to the tribe from day one.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 17,
+      "source": "Survivor Tribes",
+      "reasoning": "Negotiation skills and an analytical approach are legible to the tribe from day one.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   },
   {
     "name": "Ori Jean-Charles",
@@ -937,23 +2296,103 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Reveal First Reactions",
     "wiki": "https://survivor.fandom.com/wiki/Ori_Jean-Charles",
     "id": "ori",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Ori%20Jean-Charles",
+    "instagram": "https://www.instagram.com/coachojc/",
     "twitter": "https://x.com/search?q=Ori%20Jean-Charles&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Ori%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "I owe them everything and that's why I am here. To change my family's lives.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My biggest superpower is my ability to connect and just make people comfortable.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Consistent – never too high or too low. Anomaly – I am more than what meets the eye. Hustler – I will find a way to make it happen!",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "Transferring colleges to care for his injured mother while maintaining an elite athletic career, driving eight hours every weekend — performing under pressure when motivated by family needs.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "Jeremy — I feel like I identify with and will play like him because he was strategic and was playing for his family.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "Loyalty first and foremost. There is no alliance without trust. People that are doers and not scared, people that will pull the trigger and make a move with me.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "Food – I LOVE TO EAT! Travel – I love to see new places and try different things. Fashion – I love to look and dress nice, I take pride in walking into a room and being the flyest dude there.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Pet Peeves",
+        "a": "I hate idiocy. I have no patience for people who lack common sense. My second pet peeve is someone that absolutely NEEDS attention.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "I am most proud of being the first in my family to get a college degree. And not only did I do that, I went and got my master's degree.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "I used to play the violin. I was pretty good at it. It's funny because I'm not an artist; the arts were never my thing. But somehow, I ended up First Chair in my 6th grade orchestra.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Who in your life is your biggest inspiration and why?",
+        "a": "My mom! My mother is not only my inspiration but my best friend. There have been so many times that she didn't eat so me and my siblings could. Didn't sleep so me and my siblings could.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Why will you be the Sole Survivor?",
+        "a": "I am book smart, I am street smart, and I am a former pro athlete. I am literally made for Survivor. But most importantly, I am here to win.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "Physical dominance is his calling card, but hosts raise real concern about “Survivor starvation risk” catching up to bigger frames.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-3/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #16 of 21 overall: Personal trainer dominates pre-merge challenges but becomes vulnerable upon reaching the merge.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 16,
+      "source": "Survivor Tribes",
+      "reasoning": "Personal trainer dominates pre-merge challenges but becomes vulnerable upon reaching the merge.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   },
   {
     "name": "Patt Cannaday",
@@ -968,29 +2407,97 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Reveal First Reactions",
     "wiki": "https://survivor.fandom.com/wiki/Patt_Cannaday",
     "id": "patt",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Patt%20Cannaday",
+    "instagram": "https://www.instagram.com/patt_atat/",
     "twitter": "https://x.com/search?q=Patt%20Cannaday&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Patt%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "I love challenge and new adventures. This show is the challenge of a lifetime.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My biggest superpower... is maybe my ability to stay under the radar.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
       },
       {
         "q": "What are you expecting from this season's twists?",
-        "a": "Season 50 was amazing, it was so fun to watch, so I want us to match that energy \u2014 I am ready for things to get shook up.",
-        "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists",
+        "a": "Season 50 was amazing, it was so fun to watch, so I want us to match that energy — I am ready for things to get shook up.",
+        "source": "Reality Blurred — Survivor 51's Cast Talks Twists",
         "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Goofy, loyal, intense.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/patt_cannaday.htm"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "A few years ago, in Brazil, my friends and I went on a hike. It was supposed to be three hours and ended up being six. None of us spoke fluent Portuguese. The end of the hike was actually a climb. We had to stumble our way back in the dark. Essentially, I'm used to adventures I'm fully unprepared for and get by solely through the power of friendship.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/patt_cannaday.htm"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "I love Amanda Kimmel and Rachel LaMont. Amanda played a loyal, resilient game with close allies, and Rachel played a scrappy, no-holds-barred climb to the top.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/patt_cannaday.htm"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "I want someone who is willing to take risks with me and engage in shenanigans.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/patt_cannaday.htm"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "Boxing, skydiving, hiking, dramatic reading nights, really whatever I've picked up this week.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/patt_cannaday.htm"
+      },
+      {
+        "q": "Pet Peeves",
+        "a": "White sunglasses, flip flops and jeans, when the least informed person is telling everyone else what to do.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/patt_cannaday.htm"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "My marriage to my husband.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/patt_cannaday.htm"
+      },
+      {
+        "q": "Why will you be the Sole Survivor?",
+        "a": "My sparkling personality, undeniable wit, and of course, my good looks.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/patt_cannaday.htm"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "A blend of military grit and self-described new-player naïveté — hosts see both a strength and a tell.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-3/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #21 of 21 overall: “Federal prosecutor is the most threatening job title on the cast, full stop” — a target from day one.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 21,
+      "source": "Survivor Tribes",
+      "reasoning": "“Federal prosecutor is the most threatening job title on the cast, full stop” — a target from day one.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   },
   {
     "name": "Rob Antonson",
@@ -1005,29 +2512,103 @@ const CASTAWAYS = [
     "rhap_note": "RHAP Cast Reveal First Reactions",
     "wiki": "https://survivor.fandom.com/wiki/Rob_Antonson",
     "id": "rob",
-    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Rob%20Antonson",
+    "instagram": "https://www.instagram.com/realrobshow/",
     "twitter": "https://x.com/search?q=Rob%20Antonson&src=typed_query&f=user",
     "tiktok": "https://www.tiktok.com/search/user?q=Rob%20survivor51",
     "qa": [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "I want to show my three young kids that you can get out of your comfort zone.",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My superpower is making relationships with everybody... I got the gift of gab.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
       },
       {
         "q": "What are you expecting from this season's twists?",
         "a": "This is like a new era now... I'm here for the chaos, baby.",
-        "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists",
+        "source": "Reality Blurred — Survivor 51's Cast Talks Twists",
         "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Competitive, funny, loving.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/rob_antonson.htm"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "I think working at the airport has prepared me for the game of Survivor. At the end of the day, Survivor is a huge social game.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/rob_antonson.htm"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "Boston Rob because he's from the New England area and is a Sox fan like myself. He carries himself with this swagger of not caring what others think.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/rob_antonson.htm"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "I will value someone who is an open book to me, not someone who acts shady at times.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/rob_antonson.htm"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "Coaching my sons' sports teams (baseball, football, soccer). Traveling with my family, game night with my buddies, karaoke, videoing podcasts and video editing.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/rob_antonson.htm"
+      },
+      {
+        "q": "Pet Peeves",
+        "a": "Miserable people, bad hygiene (bad breath), the pouring of soda (I have no clue why!).",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/rob_antonson.htm"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "Helping to create my three children. Being a dad is the best thing in the world.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/rob_antonson.htm"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "I am a huge reality TV junkie. I watch Real Housewives, Traitors, Love Island, MTV's The Challenge.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/rob_antonson.htm"
+      },
+      {
+        "q": "Why will you be the Sole Survivor?",
+        "a": "I feel like I can be a social chameleon in the game. I can fit into any crowd due to my life experience.",
+        "source": "Official CBS Bio — Survivor 51 Press Kit (via True Dork Times)",
+        "sourceUrl": "https://www.truedorktimes.com/survivor/cast/rob_antonson.htm"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "Filed under “the Podcaster and Party Guy” archetype — sociable, but hosts didn't peg him as an early strategic frontrunner.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-3/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #8 of 21 overall: De-escalation skills prepare him for stress, yet 40-year-olds face early vulnerability when tribes panic.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 8,
+      "source": "Survivor Tribes",
+      "reasoning": "De-escalation skills prepare him for stress, yet 40-year-olds face early vulnerability when tribes panic.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   },
   {
     "name": "Sharonda Cox",
@@ -1049,18 +2630,99 @@ const CASTAWAYS = [
       {
         "q": "What about your life so far makes you feel ready for Survivor?",
         "a": "Life has trained me for this very moment!",
-        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "source": "Parade — Meet the Survivor 51 Cast",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       },
       {
         "q": "What's your biggest superpower coming into the game?",
         "a": "My superpower is that I'm a chameleon. So I can adapt to any environment.",
-        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "source": "Parade — Cast Reveals Their Greatest Strengths",
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "3 Words to Describe You",
+        "a": "Charismatic, Resilient, Reliable.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Why do you want to be part of Survivor?",
+        "a": "Cox seeks to inspire underprivileged communities by demonstrating resilience and vulnerability through the game's transformative experience.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's one life experience you feel has prepared you for the game?",
+        "a": "Growing up in Pompano Beach in a single-parent household taught me that you have to work hard for everything you want.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Which previous player do you identify with the most?",
+        "a": "Cox identifies with Cirie, citing her strength and accomplishments as a Black woman in the competition.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What will you value in an alliance partner?",
+        "a": "Loyalty but adaptability. If plans change 5 mins before Tribal, you need to be both and ready to make it happen.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Favorite hobbies",
+        "a": "Fishing, reading, and watching sports with her husband.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Pet Peeves",
+        "a": "Loud chewers. I cannot stand the sound of someone chewing with their mouth open.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is the accomplishment you are most proud of?",
+        "a": "Cox takes pride in making her family proud through both professional and personal achievements.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What is something we would never know from looking at you?",
+        "a": "She was first chair in orchestra, performed violin at Disney, and was a science enthusiast fascinated by NASA.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "Who in your life is your biggest inspiration and why?",
+        "a": "Her maternal grandparents inspire her through their sacrifices and loving support despite adversity.",
+        "source": "Parade — Meet the Survivor 51 Cast (Full Bio)",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
-    ]
+    ],
+    "tribe": null,
+    "analystTakes": [
+      {
+        "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
+        "take": "Hosts explore the tension in her game between empathy, self-interest, and cold strategic gameplay — worried too much empathy could cost her key moves.",
+        "sourceUrl": "https://robhasawebsite.com/survivor-51-cast-preview-part-3/"
+      },
+      {
+        "channel": "Survivor Tribes — Preseason Power Rankings",
+        "take": "Ranked #10 of 21 overall: Medical calm under pressure creates a natural alliance draw, but doctor status triggers threat responses.",
+        "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+      }
+    ],
+    "powerRank": {
+      "rank": 10,
+      "source": "Survivor Tribes",
+      "reasoning": "Medical calm under pressure creates a natural alliance draw, but doctor status triggers threat responses.",
+      "sourceUrl": "https://survivortribes.com/season-51/power-rankings"
+    },
+    "otherDrafts": []
   }
-];
+]
+;
 </script>
 <!-- app.js content is injected below at build time -->
 <script>
@@ -1231,11 +2893,18 @@ function photoBlock(c, extraClass){
   wrap.appendChild(img);
   return wrap;
 }
+function tribeLabel(t){
+  return t==='purple' ? '🟣 Purple' : t==='yellow' ? '🟡 Yellow' : 'Tribe TBD';
+}
 function castawayCard(c, opts){
   opts = opts || {};
   const card = el('div',{class:'card' + (opts.drafted?' drafted':'')});
   card.appendChild(photoBlock(c));
   if(opts.badge) card.appendChild(el('div',{class:'badge'}, opts.badge));
+  if(opts.showTribe !== false){
+    card.appendChild(el('div',{class:'tribe-badge ' + (c.tribe || 'tbd')}, tribeLabel(c.tribe)));
+    card.dataset.tribe = c.tribe || '';
+  }
   card.appendChild(el('div',{class:'info'},
     el('div',{class:'nm'}, c.short),
     el('div',{class:'oc'}, c.occupation)
@@ -1247,11 +2916,24 @@ function castawayCard(c, opts){
   });
   return card;
 }
+let castawayTribeFilter = null;
 function renderCastawayGrid(){
   const grid = $('#castawayGrid');
   grid.innerHTML='';
-  CASTAWAYS.forEach(c => grid.appendChild(castawayCard(c)));
+  CASTAWAYS.forEach(c => {
+    const card = castawayCard(c);
+    if(castawayTribeFilter && c.tribe !== castawayTribeFilter) card.classList.add('tribe-dimmed');
+    grid.appendChild(card);
+  });
 }
+$all('#tribeFilterRow button[data-tribe]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const t = btn.dataset.tribe;
+    castawayTribeFilter = (castawayTribeFilter === t) ? null : t;
+    $all('#tribeFilterRow button[data-tribe]').forEach(b=>b.classList.toggle('active', b.dataset.tribe===castawayTribeFilter));
+    renderCastawayGrid();
+  });
+});
 function icon(path){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`; }
 const ICONS = {
   ig: icon('<rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.6" fill="currentColor" stroke="none"/>'),
@@ -1289,7 +2971,41 @@ function openProfile(castawayId){
   btns.appendChild(el('a',{class:'btn', href:c.tiktok, target:'_blank', rel:'noopener', html: ICONS.tt + ' TikTok'}));
   body.appendChild(btns);
   body.appendChild(el('p',{style:'margin:10px 0 0;font-size:0.74rem;color:var(--sand-dim)'},
-    'Social links search each platform for ' + c.short + ' — verify the right account before following, since exact handles aren\'t always public pre-season.'));
+    'Instagram links to ' + c.short + '\'s real profile. X/Twitter and TikTok open a search for their name — exact handles on those platforms aren\'t always confirmed pre-season, so double-check before following.'));
+
+  if(c.powerRank){
+    const pr = el('div',{class:'analyst-rank-chip'},
+      el('span',{class:'rank-num'}, '#' + c.powerRank.rank + ' of 21'),
+      el('span',{}, ' — ' + c.powerRank.source + ' preseason power ranking')
+    );
+    body.appendChild(pr);
+  }
+
+  if(c.analystTakes && c.analystTakes.length){
+    const takeSection = el('div',{class:'qa-section'});
+    takeSection.appendChild(el('h3',{class:'qa-head'}, '📺 Analyst Takes'));
+    c.analystTakes.forEach(item=>{
+      const row = el('div',{class:'qa-item'});
+      row.appendChild(el('div',{class:'qa-q'}, item.channel));
+      row.appendChild(el('div',{class:'qa-a'}, item.take));
+      row.appendChild(el('a',{class:'qa-source', href:item.sourceUrl, target:'_blank', rel:'noopener'}, '— view source'));
+      takeSection.appendChild(row);
+    });
+    body.appendChild(takeSection);
+  }
+
+  if(c.otherDrafts && c.otherDrafts.length){
+    const draftSection = el('div',{class:'qa-section'});
+    draftSection.appendChild(el('h3',{class:'qa-head'}, '🎯 Drafted Elsewhere'));
+    c.otherDrafts.forEach(item=>{
+      const row = el('div',{class:'qa-item'});
+      row.appendChild(el('div',{class:'qa-q'}, item.source + (item.pickedBy ? ' — picked by ' + item.pickedBy : '') + (item.pickNum ? ' (Pick #' + item.pickNum + ')' : '')));
+      row.appendChild(el('div',{class:'qa-a'}, item.note));
+      row.appendChild(el('a',{class:'qa-source', href:item.sourceUrl, target:'_blank', rel:'noopener'}, '— view source'));
+      draftSection.appendChild(row);
+    });
+    body.appendChild(draftSection);
+  }
 
   if(c.qa && c.qa.length){
     const qaSection = el('div',{class:'qa-section'});
@@ -1322,6 +3038,7 @@ $all('nav.tabs button').forEach(btn=>{
     $all('.panel').forEach(p=>p.classList.remove('active'));
     $('#panel-' + btn.dataset.tab).classList.add('active');
     if(btn.dataset.tab === 'scoring' && typeof renderScoring === 'function') renderScoring();
+    if(btn.dataset.tab === 'rankings' && typeof renderRankings === 'function') renderRankings();
   });
 });
 
@@ -2664,6 +4381,65 @@ renderScoring();
   });
   nav.appendChild(btn);
 })();
+
+/* =========================================================================
+   RANKINGS — consensus power rankings + where other podcasts drafted them
+   ========================================================================= */
+function renderRankings(){
+  const root = $('#rankingsRoot');
+  root.innerHTML = '';
+
+  const head = el('div',{class:'section-head'},
+    el('div',{},
+      el('h2',{}, '📊 Analyst Power Rankings'),
+      el('p',{}, 'How the biggest Survivor podcasts/YouTube channels see this cast pre-premiere — plus where a couple of them landed in other outlets’ own fantasy drafts.')
+    )
+  );
+  root.appendChild(head);
+
+  const ranked = CASTAWAYS.filter(c=>c.powerRank).slice().sort((a,b)=>a.powerRank.rank - b.powerRank.rank);
+  const table = el('div',{class:'rank-table'});
+  ranked.forEach(c=>{
+    const row = el('div',{class:'rank-row'});
+    row.appendChild(el('div',{class:'rank-num-big'}, '#' + c.powerRank.rank));
+    const photo = photoBlock(c, 'rank-photo');
+    row.appendChild(photo);
+    const info = el('div',{class:'rank-info'},
+      el('div',{class:'rank-name'}, c.name + ' — ' + c.occupation),
+      el('div',{class:'rank-reason'}, c.powerRank.reasoning),
+      el('a',{class:'qa-source', href:c.powerRank.sourceUrl, target:'_blank', rel:'noopener'}, '— ' + c.powerRank.source + ' Power Rankings')
+    );
+    row.appendChild(info);
+    row.addEventListener('click', ()=>openProfile(c.id));
+    table.appendChild(row);
+  });
+  root.appendChild(table);
+
+  const otherDrafted = CASTAWAYS.filter(c=>c.otherDrafts && c.otherDrafts.length);
+  if(otherDrafted.length){
+    const otherHead = el('div',{class:'section-head', style:'margin-top:26px'},
+      el('div',{},
+        el('h2',{}, '🎯 Where Other Shows Drafted Them'),
+        el('p',{}, 'A few confirmed picks from other podcasts’ own preseason fantasy drafts, for comparison against the power rankings above.')
+      )
+    );
+    root.appendChild(otherHead);
+    const grid = el('div',{class:'grid'});
+    otherDrafted.forEach(c=>{
+      const od = c.otherDrafts[0];
+      const card = el('div',{class:'card-box'});
+      card.appendChild(el('h3',{style:'margin:0 0 6px;font-size:1rem'}, c.short));
+      card.appendChild(el('div',{class:'rank-reason'}, od.source + (od.pickedBy ? ' — picked by ' + od.pickedBy : '') + (od.pickNum ? ' (Pick #' + od.pickNum + ')' : '')));
+      card.appendChild(el('div',{class:'rank-reason', style:'margin-top:4px'}, od.note));
+      card.appendChild(el('a',{class:'qa-source', href:od.sourceUrl, target:'_blank', rel:'noopener'}, '— view source'));
+      grid.appendChild(card);
+    });
+    root.appendChild(grid);
+  }
+
+  root.appendChild(el('p',{style:'margin-top:22px;font-size:0.74rem;color:var(--sand-dim)'},
+    'Rankings and takes are pulled from public preseason commentary (podcasts/YouTube channels), not from anything that has aired — treat them as pundit opinion, not spoilers.'));
+}
 
 </script>
 </body>
