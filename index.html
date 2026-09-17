@@ -24,6 +24,10 @@
   --line:rgba(236,223,192,0.14);
   --shadow:0 10px 30px rgba(0,0,0,0.45);
   --radius:14px;
+  --bamboo:#c9a668;
+  --bamboo-dark:#8a6d3f;
+  --coconut:#6b4a2f;
+  --coconut-dark:#4a3220;
 }
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
@@ -31,6 +35,7 @@ body{
   background:
     radial-gradient(1200px 600px at 10% -10%, rgba(255,122,51,0.10), transparent 60%),
     radial-gradient(900px 500px at 90% 0%, rgba(155,107,255,0.08), transparent 55%),
+    radial-gradient(rgba(236,223,192,0.05) 1px, transparent 1.5px) 0 0/14px 14px repeat,
     linear-gradient(180deg, var(--night) 0%, var(--night2) 100%);
   color:var(--sand);
   font-family:'Inter',system-ui,sans-serif;
@@ -54,6 +59,15 @@ header.top{
 .brand h1{font-size:1.7rem;margin:0;color:var(--sand);text-transform:uppercase;}
 .brand h1 span{color:var(--torch);}
 .brand small{display:block;font-family:'Inter';font-size:0.68rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--sand-dim);margin-top:-4px;}
+.tiki-torch{display:inline-flex;align-items:flex-end;}
+.tiki-torch svg{width:20px;height:32px;animation:tikiFlicker 2.2s ease-in-out infinite;transform-origin:50% 75%;}
+.tiki-torch.right svg{animation-delay:0.6s;}
+@keyframes tikiFlicker{
+  0%,100%{opacity:1;transform:scale(1) rotate(0deg);}
+  25%{opacity:0.92;transform:scale(1.03) rotate(-1deg);}
+  50%{opacity:0.86;transform:scale(0.97) rotate(1deg);}
+  75%{opacity:0.96;transform:scale(1.02) rotate(-0.5deg);}
+}
 nav.tabs{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;}
 nav.tabs button{
   font-family:'Bebas Neue';font-size:1rem;letter-spacing:0.06em;
@@ -62,6 +76,15 @@ nav.tabs button{
 }
 nav.tabs button:hover{border-color:var(--torch);color:var(--sand);}
 nav.tabs button.active{background:linear-gradient(135deg,var(--torch),var(--flame-red));border-color:transparent;color:#1a0a04;font-weight:700;}
+
+/* ===== Beach decor: bamboo dividers, sand texture, tiki/coconut accents ===== */
+.bamboo-divider{
+  height:9px;
+  background:repeating-linear-gradient(90deg, var(--bamboo) 0 28px, var(--bamboo-dark) 28px 34px);
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,0.28), inset 0 2px 0 rgba(255,255,255,0.15);
+}
+.bamboo-divider.bottom{margin:44px auto 0;max-width:1180px;border-radius:6px;opacity:0.85;}
+.beach-strip{display:flex;align-items:center;justify-content:center;gap:14px;font-size:1.35rem;margin-bottom:8px;opacity:0.92;}
 
 /* ===== Panels ===== */
 .panel{display:none;padding-top:22px;}
@@ -140,8 +163,16 @@ nav.tabs button.active{background:linear-gradient(135deg,var(--torch),var(--flam
 .draft-layout{display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start;}
 @media (max-width:900px){.draft-layout{grid-template-columns:1fr;}}
 .card-box{
+  position:relative;
   background:linear-gradient(160deg, var(--jungle), var(--night2));
   border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;
+}
+.card-box::before{
+  content:'';
+  position:absolute;top:0;left:14px;right:14px;height:4px;
+  border-radius:0 0 3px 3px;
+  background:repeating-linear-gradient(90deg, var(--bamboo) 0 10px, var(--bamboo-dark) 10px 12px);
+  opacity:0.55;
 }
 .setup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:14px 0;}
 label.field{display:block;font-size:0.78rem;color:var(--sand-dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;}
@@ -258,11 +289,13 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <header class="top">
   <div class="top-inner">
     <div class="brand">
+      <span class="tiki-torch left" aria-hidden="true"><svg viewBox="0 0 40 60"><rect x="17" y="24" width="6" height="34" rx="2" fill="#6b4a2f"/><rect x="15" y="30" width="10" height="3" fill="#4a3220"/><rect x="15" y="40" width="10" height="3" fill="#4a3220"/><path d="M20 2 C11 11 9 21 20 27 C31 21 29 11 20 2Z" fill="#e0402a"/><path d="M20 8 C15 13 14 20 20 24 C26 20 25 13 20 8Z" fill="#ffb347"/></svg></span>
       <span class="flame">🔥</span>
       <div>
         <h1>SURVIVOR <span>51</span> DRAFT</h1>
         <small>Outwit &middot; Outplay &middot; Outdraft</small>
       </div>
+      <span class="tiki-torch right" aria-hidden="true"><svg viewBox="0 0 40 60"><rect x="17" y="24" width="6" height="34" rx="2" fill="#6b4a2f"/><rect x="15" y="30" width="10" height="3" fill="#4a3220"/><rect x="15" y="40" width="10" height="3" fill="#4a3220"/><path d="M20 2 C11 11 9 21 20 27 C31 21 29 11 20 2Z" fill="#e0402a"/><path d="M20 8 C15 13 14 20 20 24 C26 20 25 13 20 8Z" fill="#ffb347"/></svg></span>
     </div>
     <nav class="tabs">
       <button data-tab="castaways" class="active">Castaways</button>
@@ -272,6 +305,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
     </nav>
   </div>
 </header>
+<div class="bamboo-divider" aria-hidden="true"></div>
 
 <div class="wrap">
 
@@ -279,7 +313,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
   <section id="panel-castaways" class="panel active">
     <div class="section-head">
       <div>
-        <h2>Meet the Cast</h2>
+        <h2>Meet the Cast 🥥</h2>
         <p>21 new castaways &middot; The Open Era &middot; Click anyone for their full profile</p>
       </div>
       <div class="pill-row">
@@ -307,7 +341,11 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 
 </div>
 
-<footer class="note">Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.</footer>
+<div class="bamboo-divider bottom" aria-hidden="true"></div>
+<footer class="note">
+  <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
+  Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
+</footer>
 
 <!-- Profile Modal -->
 <div class="overlay" id="profileOverlay">
@@ -322,8 +360,707 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 
 <script>
-const CASTAWAYS = [{"name": "Aaliyah Puglia", "short": "Aaliyah", "age": 24, "hometown": "Gloucester City, NJ", "current": "Providence, RI", "occupation": "Chef", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwMzgx/aaliyah-puglia.jpg", "quote": "I'm used to being adaptable, flexible and for things to change without notice.", "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=409s", "rhap_note": "RHAP Cast Preview Pt. 1", "wiki": "https://survivor.fandom.com/wiki/Aaliyah_Puglia", "id": "aaliyah", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Aaliyah%20Puglia", "twitter": "https://x.com/search?q=Aaliyah%20Puglia&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Aaliyah%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I'm used to being adaptable, flexible and for things to change without notice.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My superpower is my adaptability and being able to think on the fly with very little.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Alexis Levine", "short": "Alexis", "age": 34, "hometown": "Atlanta, GA", "current": "Atlanta, GA", "occupation": "Criminal Defense Attorney", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwMzgz/alexis-levine.jpg", "quote": "10 years of sobriety from drugs and alcohol.", "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=1004s", "rhap_note": "RHAP Cast Preview Pt. 1", "wiki": "https://survivor.fandom.com/wiki/Alexis_Levine", "id": "alexis", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Alexis%20Levine", "twitter": "https://x.com/search?q=Alexis%20Levine&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Alexis%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "10 years of sobriety from drugs and alcohol.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is the ability to remain calm amongst chaos.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "An \"Thien An\" Nguyen", "short": "Thien An", "age": 24, "hometown": "Fort Worth, TX", "current": "Fort Worth, TX", "occupation": "Medical Student", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDUy/an-thien-an-nguyen.jpg", "quote": "Coming in at 5 feet strong, I will be LURKING incognito-ly until it's time to strike.", "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0", "rhap_note": "RHAP Cast Reveal First Reactions", "wiki": "https://survivor.fandom.com/wiki/Thien_An_Nguyen", "id": "thien-an", "instagram": "https://www.instagram.com/explore/search/keyword/?q=An%20\"Thien%20An\"%20Nguyen", "twitter": "https://x.com/search?q=An%20\"Thien%20An\"%20Nguyen&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Thien%20An%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "Coming in at 5 feet strong, I will be LURKING incognito-ly until it's time to strike.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "I think my heart is my biggest superpower... being able to empathize with people.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Ana Sani", "short": "Ana", "age": 34, "hometown": "Richmond Hill, ON", "current": "Toronto, ON", "occupation": "Voice Actress", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwMzg4/ana-sani.jpg", "quote": "I've done voices for over 60 animated shows and a ton of commercials.", "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=1455s", "rhap_note": "RHAP Cast Preview Pt. 1", "wiki": "https://survivor.fandom.com/wiki/Ana_Sani", "id": "ana", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Ana%20Sani", "twitter": "https://x.com/search?q=Ana%20Sani&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Ana%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I've done voices for over 60 animated shows and a ton of commercials.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is definitely that I'm going to be able to build relationships and bonds quite easily.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}, {"q": "What are you expecting from this season's twists?", "a": "I expect a lot more twists... allowing for the players to make more moves.", "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists", "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"}]}, {"name": "Angelica \"Jelly\" Loblack", "short": "Jelly", "age": 29, "hometown": "Garland, TX", "current": "Bloomington, IN", "occupation": "Sociology Professor", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwMzkz/angelica-jelly-loblack.jpg", "quote": "There's nobody better equipped to win a social game than the sociologists who study them.", "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=912s", "rhap_note": "RHAP Cast Preview Pt. 2", "wiki": "https://survivor.fandom.com/wiki/Jelly_Loblack", "id": "jelly", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Angelica%20\"Jelly\"%20Loblack", "twitter": "https://x.com/search?q=Angelica%20\"Jelly\"%20Loblack&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Jelly%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "There's nobody better equipped to win a social game than the sociologists who study them.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is definitely my ability to get people to open up to me.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Brady Booker", "short": "Brady", "age": 27, "hometown": "La Salle, IL", "current": "Knoxville, TN", "occupation": "Pro Wrestler", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwMzk3/brady-booker.jpg", "quote": "I am comfortable being uncomfortable. I am used to falling on my face.", "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=2117s", "rhap_note": "RHAP Cast Preview Pt. 1", "wiki": "https://survivor.fandom.com/wiki/Brady_Booker", "id": "brady", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Brady%20Booker", "twitter": "https://x.com/search?q=Brady%20Booker&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Brady%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I am comfortable being uncomfortable. I am used to falling on my face.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is the way I interact with people... I engulf them in my personality.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Carter Krull", "short": "Carter", "age": 24, "hometown": "Rock Rapids, IA", "current": "Sioux Falls, SD", "occupation": "Livestock Farmer", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDAw/carter-krull.jpg", "quote": "Survivor has been on my bucket list. You never know when your last day will be.", "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=2802s", "rhap_note": "RHAP Cast Preview Pt. 1", "wiki": "https://survivor.fandom.com/wiki/Carter_Krull", "id": "carter", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Carter%20Krull", "twitter": "https://x.com/search?q=Carter%20Krull&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Carter%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "Survivor has been on my bucket list. You never know when your last day will be.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is that I can work hard. I will outwork any person out here.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}, {"q": "What are you expecting from this season's twists?", "a": "Survivor's always changing... it's the most crazy, changing game of all time.", "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists", "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"}]}, {"name": "Cristian Chavez", "short": "Cristian", "age": 26, "hometown": "Salt Lake City, UT", "current": "Salt Lake City, UT", "occupation": "Head of HR", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDA0/cristian-chavez.jpg", "quote": "If I'm not winning, I'll do whatever it takes to make everyone else lose.", "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=3343s", "rhap_note": "RHAP Cast Preview Pt. 1", "wiki": "https://survivor.fandom.com/wiki/Cristian_Chavez", "id": "cristian", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Cristian%20Chavez", "twitter": "https://x.com/search?q=Cristian%20Chavez&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Cristian%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "If I'm not winning, I'll do whatever it takes to make everyone else lose.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is definitely the way people underestimate me.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Danny \"Kilby\" Kilby", "short": "Kilby", "age": 30, "hometown": "Mount Forest, ON", "current": "London, ON", "occupation": "Game Designer", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDA2/danny-kilby.jpg", "quote": "Biggest dream of my whole life. When I was a kid, Survivor was my favorite show.", "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=2623s", "rhap_note": "RHAP Cast Preview Pt. 2", "wiki": "https://survivor.fandom.com/wiki/Danny_Kilby", "id": "kilby", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Danny%20\"Kilby\"%20Kilby", "twitter": "https://x.com/search?q=Danny%20\"Kilby\"%20Kilby&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Kilby%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "Biggest dream of my whole life. When I was a kid, Survivor was my favorite show.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower coming into Survivor is I can make anybody laugh.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}, {"q": "What are you expecting from this season's twists?", "a": "Having seen Survivor 50, I have empirical evidence that fans like twists, so I'm expecting Survivor to throw some crazy stuff at us.", "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists", "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"}]}, {"name": "Devin Way", "short": "Devin", "age": 33, "hometown": "Lufkin, TX", "current": "Los Angeles, CA", "occupation": "Actor", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDEy/devin-way.jpg", "quote": "There is nothing else like this in the world.", "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=4151s", "rhap_note": "RHAP Cast Preview Pt. 1", "wiki": "https://survivor.fandom.com/wiki/Devin_Way", "id": "devin", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Devin%20Way", "twitter": "https://x.com/search?q=Devin%20Way&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Devin%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "There is nothing else like this in the world.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is that I can make friends with a rock. I can talk to anybody.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Eric Macksoud", "short": "Eric", "age": 34, "hometown": "Lincoln, RI", "current": "Windsor Locks, CT", "occupation": "Mental Health Counselor", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDE3/erick-macksoud.jpg", "quote": "Survivor is the ultimate celebration of the human experience.", "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=266s", "rhap_note": "RHAP Cast Preview Pt. 2", "wiki": "https://survivor.fandom.com/wiki/Eric_Macksoud", "id": "eric", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Eric%20Macksoud", "twitter": "https://x.com/search?q=Eric%20Macksoud&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Eric%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "Survivor is the ultimate celebration of the human experience.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My greatest superpower is my ability to empathize with others and my high emotional intelligence.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Jenna Doore", "short": "Jenna", "age": 30, "hometown": "Perrysburg, OH", "current": "Toledo, OH", "occupation": "Wedding Photographer", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDIx/survivor.jpg", "quote": "It's about being able to perform and create when the stakes are high.", "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=2104s", "rhap_note": "RHAP Cast Preview Pt. 2", "wiki": "https://survivor.fandom.com/wiki/Jenna_Doore", "id": "jenna", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Jenna%20Doore", "twitter": "https://x.com/search?q=Jenna%20Doore&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Jenna%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "It's about being able to perform and create when the stakes are high.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower... is my empathy. I'm a deep feeler.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}, {"q": "What are you expecting from this season's twists?", "a": "It's a whole new era of Survivor \u2014 there's going to be so much thrown our way that we can't possibly predict or plan for.", "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists", "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"}]}, {"name": "Kristin Flickinger", "short": "Kristin", "age": 49, "hometown": "Ketchum, ID", "current": "Santa Barbara, CA", "occupation": "Crisis Management", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDIz/kristin-flickinger.jpg", "quote": "I have been applying for Survivor since the middle of Season 1.", "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=3742s", "rhap_note": "RHAP Cast Preview Pt. 2", "wiki": "https://survivor.fandom.com/wiki/Kristin_Flickinger", "id": "kristin", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Kristin%20Flickinger", "twitter": "https://x.com/search?q=Kristin%20Flickinger&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Kristin%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I have been applying for Survivor since the middle of Season 1.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower coming into the game is flexibility and being able to read the room.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Lewis Kelly", "short": "Lewis", "age": 28, "hometown": "Dublin, Ireland", "current": "Puerto Rico", "occupation": "Farmer", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDI1/lewis-kelly.jpg", "quote": "I probably won't be the Sole Survivor... but if I do, the game is won.", "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=4462s", "rhap_note": "RHAP Cast Preview Pt. 2", "wiki": "https://survivor.fandom.com/wiki/Lewis_Kelly", "id": "lewis", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Lewis%20Kelly", "twitter": "https://x.com/search?q=Lewis%20Kelly&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Lewis%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I probably won't be the Sole Survivor... but if I do, the game is won.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My superpower in this game is my Irish charm.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}, {"q": "What are you expecting from this season's twists?", "a": "There's no rules, no concrete things set in stone \u2014 I could make up a million things and nobody's going to know any better.", "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists", "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"}]}, {"name": "Linnea Capobianco", "short": "Linnea", "age": 25, "hometown": "Kearny, NJ", "current": "Jersey City, NJ", "occupation": "Entrepreneur", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDI5/linnea-capobianco.jpg", "quote": "This life... is all I am certain of.", "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=5280s", "rhap_note": "RHAP Cast Preview Pt. 2", "wiki": "https://survivor.fandom.com/wiki/Linnea_Capobianco", "id": "linnea", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Linnea%20Capobianco", "twitter": "https://x.com/search?q=Linnea%20Capobianco&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Linnea%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "This life... is all I am certain of.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is my social game.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Maggie Nestor", "short": "Maggie", "age": 40, "hometown": "Middleway, WV", "current": "Charlestown, WV", "occupation": "Farmer", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDMy/maggie-nestor.jpg", "quote": "I've loved Survivor since I was 15. I've been watching for 25 years.", "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0", "rhap_note": "RHAP Cast Reveal First Reactions", "wiki": "https://survivor.fandom.com/wiki/Maggie_Nestor", "id": "maggie", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Maggie%20Nestor", "twitter": "https://x.com/search?q=Maggie%20Nestor&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Maggie%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I've loved Survivor since I was 15. I've been watching for 25 years.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is probably my social game and social read on people.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Mike Pinsky", "short": "Mike", "age": 32, "hometown": "New York, NY", "current": "New York, NY", "occupation": "Baseball Executive", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDM2/mike-pinsky.jpg", "quote": "My marriage proposal to my wife Becky incorporated a Probst catchphrase.", "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0", "rhap_note": "RHAP Cast Reveal First Reactions", "wiki": "https://survivor.fandom.com/wiki/Mike_Pinsky", "id": "mike", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Mike%20Pinsky", "twitter": "https://x.com/search?q=Mike%20Pinsky&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Mike%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "My marriage proposal to my wife Becky incorporated a Probst catchphrase.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My superpower is that I have a well-rounded skill set \u2014 social without being just a charisma machine.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}, {"q": "What are you expecting from this season's twists?", "a": "I know that Jeff is going to throw some weird stuff at us. I know it's going to be interesting.", "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists", "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"}]}, {"name": "Ori Jean-Charles", "short": "Ori", "age": 27, "hometown": "Spring Valley, NY", "current": "Spring Valley, NY", "occupation": "Personal Trainer", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDQx/ori-jean-charles.jpg", "quote": "I owe them everything and that's why I am here. To change my family's lives.", "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0", "rhap_note": "RHAP Cast Reveal First Reactions", "wiki": "https://survivor.fandom.com/wiki/Ori_Jean-Charles", "id": "ori", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Ori%20Jean-Charles", "twitter": "https://x.com/search?q=Ori%20Jean-Charles&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Ori%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I owe them everything and that's why I am here. To change my family's lives.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower is my ability to connect and just make people comfortable.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}, {"name": "Patt Cannaday", "short": "Patt", "age": 33, "hometown": "Tampa, FL", "current": "Washington, D.C.", "occupation": "Federal Prosecutor", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDQ1/patt-cannaday-on-survivor-51.jpg", "quote": "I love challenge and new adventures. This show is the challenge of a lifetime.", "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0", "rhap_note": "RHAP Cast Reveal First Reactions", "wiki": "https://survivor.fandom.com/wiki/Patt_Cannaday", "id": "patt", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Patt%20Cannaday", "twitter": "https://x.com/search?q=Patt%20Cannaday&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Patt%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I love challenge and new adventures. This show is the challenge of a lifetime.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My biggest superpower... is maybe my ability to stay under the radar.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}, {"q": "What are you expecting from this season's twists?", "a": "Season 50 was amazing, it was so fun to watch, so I want us to match that energy \u2014 I am ready for things to get shook up.", "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists", "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"}]}, {"name": "Rob Antonson", "short": "Rob", "age": 40, "hometown": "Johnston, RI", "current": "Cumberland, RI", "occupation": "Airline Gate Agent", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDQ3/rob-antonson.jpg", "quote": "I want to show my three young kids that you can get out of your comfort zone.", "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0", "rhap_note": "RHAP Cast Reveal First Reactions", "wiki": "https://survivor.fandom.com/wiki/Rob_Antonson", "id": "rob", "instagram": "https://www.instagram.com/explore/search/keyword/?q=Rob%20Antonson", "twitter": "https://x.com/search?q=Rob%20Antonson&src=typed_query&f=user", "tiktok": "https://www.tiktok.com/search/user?q=Rob%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "I want to show my three young kids that you can get out of your comfort zone.", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My superpower is making relationships with everybody... I got the gift of gab.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}, {"q": "What are you expecting from this season's twists?", "a": "This is like a new era now... I'm here for the chaos, baby.", "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists", "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"}]}, {"name": "Sharonda Cox", "short": "Sharonda", "age": 34, "hometown": "Pompano Beach, FL", "current": "Richmond, KY", "occupation": "OBGYN Resident", "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDQ5/sharonda-cox.jpg", "quote": "Life has trained me for this very moment!", "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0", "rhap_note": "RHAP Cast Reveal First Reactions", "wiki": "https://survivor.fandom.com/wiki/Sharonda_Cox", "id": "sharonda", "instagram": "https://www.instagram.com/sharonda_renee_/", "twitter": "https://x.com/SharondaRenee", "tiktok": "https://www.tiktok.com/search/user?q=Sharonda%20survivor51", "qa": [{"q": "What about your life so far makes you feel ready for Survivor?", "a": "Life has trained me for this very moment!", "source": "Parade \u2014 Meet the Survivor 51 Cast", "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"}, {"q": "What's your biggest superpower coming into the game?", "a": "My superpower is that I'm a chameleon. So I can adapt to any environment.", "source": "Parade \u2014 Cast Reveals Their Greatest Strengths", "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"}]}]
-;
+const CASTAWAYS = [
+  {
+    "name": "Aaliyah Puglia",
+    "short": "Aaliyah",
+    "age": 24,
+    "hometown": "Gloucester City, NJ",
+    "current": "Providence, RI",
+    "occupation": "Chef",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwMzgx/aaliyah-puglia.jpg",
+    "quote": "I'm used to being adaptable, flexible and for things to change without notice.",
+    "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=409s",
+    "rhap_note": "RHAP Cast Preview Pt. 1",
+    "wiki": "https://survivor.fandom.com/wiki/Aaliyah_Puglia",
+    "id": "aaliyah",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Aaliyah%20Puglia",
+    "twitter": "https://x.com/search?q=Aaliyah%20Puglia&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Aaliyah%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "I'm used to being adaptable, flexible and for things to change without notice.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My superpower is my adaptability and being able to think on the fly with very little.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      }
+    ]
+  },
+  {
+    "name": "Alexis Levine",
+    "short": "Alexis",
+    "age": 34,
+    "hometown": "Atlanta, GA",
+    "current": "Atlanta, GA",
+    "occupation": "Criminal Defense Attorney",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwMzgz/alexis-levine.jpg",
+    "quote": "10 years of sobriety from drugs and alcohol.",
+    "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=1004s",
+    "rhap_note": "RHAP Cast Preview Pt. 1",
+    "wiki": "https://survivor.fandom.com/wiki/Alexis_Levine",
+    "id": "alexis",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Alexis%20Levine",
+    "twitter": "https://x.com/search?q=Alexis%20Levine&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Alexis%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "10 years of sobriety from drugs and alcohol.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My biggest superpower is the ability to remain calm amongst chaos.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      }
+    ]
+  },
+  {
+    "name": "An \"Thien An\" Nguyen",
+    "short": "Thien An",
+    "age": 24,
+    "hometown": "Fort Worth, TX",
+    "current": "Fort Worth, TX",
+    "occupation": "Medical Student",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDUy/an-thien-an-nguyen.jpg",
+    "quote": "Coming in at 5 feet strong, I will be LURKING incognito-ly until it's time to strike.",
+    "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0",
+    "rhap_note": "RHAP Cast Reveal First Reactions",
+    "wiki": "https://survivor.fandom.com/wiki/Thien_An_Nguyen",
+    "id": "thien-an",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=An%20\"Thien%20An\"%20Nguyen",
+    "twitter": "https://x.com/search?q=An%20\"Thien%20An\"%20Nguyen&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Thien%20An%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "Coming in at 5 feet strong, I will be LURKING incognito-ly until it's time to strike.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "I think my heart is my biggest superpower... being able to empathize with people.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      }
+    ]
+  },
+  {
+    "name": "Ana Sani",
+    "short": "Ana",
+    "age": 34,
+    "hometown": "Richmond Hill, ON",
+    "current": "Toronto, ON",
+    "occupation": "Voice Actress",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwMzg4/ana-sani.jpg",
+    "quote": "I've done voices for over 60 animated shows and a ton of commercials.",
+    "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=1455s",
+    "rhap_note": "RHAP Cast Preview Pt. 1",
+    "wiki": "https://survivor.fandom.com/wiki/Ana_Sani",
+    "id": "ana",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Ana%20Sani",
+    "twitter": "https://x.com/search?q=Ana%20Sani&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Ana%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "I've done voices for over 60 animated shows and a ton of commercials.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My biggest superpower is definitely that I'm going to be able to build relationships and bonds quite easily.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "What are you expecting from this season's twists?",
+        "a": "I expect a lot more twists... allowing for the players to make more moves.",
+        "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists",
+        "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"
+      }
+    ]
+  },
+  {
+    "name": "Angelica \"Jelly\" Loblack",
+    "short": "Jelly",
+    "age": 29,
+    "hometown": "Garland, TX",
+    "current": "Bloomington, IN",
+    "occupation": "Sociology Professor",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwMzkz/angelica-jelly-loblack.jpg",
+    "quote": "There's nobody better equipped to win a social game than the sociologists who study them.",
+    "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=912s",
+    "rhap_note": "RHAP Cast Preview Pt. 2",
+    "wiki": "https://survivor.fandom.com/wiki/Jelly_Loblack",
+    "id": "jelly",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Angelica%20\"Jelly\"%20Loblack",
+    "twitter": "https://x.com/search?q=Angelica%20\"Jelly\"%20Loblack&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Jelly%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "There's nobody better equipped to win a social game than the sociologists who study them.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My biggest superpower is definitely my ability to get people to open up to me.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      }
+    ]
+  },
+  {
+    "name": "Brady Booker",
+    "short": "Brady",
+    "age": 27,
+    "hometown": "La Salle, IL",
+    "current": "Knoxville, TN",
+    "occupation": "Pro Wrestler",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwMzk3/brady-booker.jpg",
+    "quote": "I am comfortable being uncomfortable. I am used to falling on my face.",
+    "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=2117s",
+    "rhap_note": "RHAP Cast Preview Pt. 1",
+    "wiki": "https://survivor.fandom.com/wiki/Brady_Booker",
+    "id": "brady",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Brady%20Booker",
+    "twitter": "https://x.com/search?q=Brady%20Booker&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Brady%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "I am comfortable being uncomfortable. I am used to falling on my face.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My biggest superpower is the way I interact with people... I engulf them in my personality.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      }
+    ]
+  },
+  {
+    "name": "Carter Krull",
+    "short": "Carter",
+    "age": 24,
+    "hometown": "Rock Rapids, IA",
+    "current": "Sioux Falls, SD",
+    "occupation": "Livestock Farmer",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDAw/carter-krull.jpg",
+    "quote": "Survivor has been on my bucket list. You never know when your last day will be.",
+    "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=2802s",
+    "rhap_note": "RHAP Cast Preview Pt. 1",
+    "wiki": "https://survivor.fandom.com/wiki/Carter_Krull",
+    "id": "carter",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Carter%20Krull",
+    "twitter": "https://x.com/search?q=Carter%20Krull&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Carter%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "Survivor has been on my bucket list. You never know when your last day will be.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My biggest superpower is that I can work hard. I will outwork any person out here.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "What are you expecting from this season's twists?",
+        "a": "Survivor's always changing... it's the most crazy, changing game of all time.",
+        "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists",
+        "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"
+      }
+    ]
+  },
+  {
+    "name": "Cristian Chavez",
+    "short": "Cristian",
+    "age": 26,
+    "hometown": "Salt Lake City, UT",
+    "current": "Salt Lake City, UT",
+    "occupation": "Head of HR",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDA0/cristian-chavez.jpg",
+    "quote": "If I'm not winning, I'll do whatever it takes to make everyone else lose.",
+    "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=3343s",
+    "rhap_note": "RHAP Cast Preview Pt. 1",
+    "wiki": "https://survivor.fandom.com/wiki/Cristian_Chavez",
+    "id": "cristian",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Cristian%20Chavez",
+    "twitter": "https://x.com/search?q=Cristian%20Chavez&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Cristian%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "If I'm not winning, I'll do whatever it takes to make everyone else lose.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My biggest superpower is definitely the way people underestimate me.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      }
+    ]
+  },
+  {
+    "name": "Danny \"Kilby\" Kilby",
+    "short": "Kilby",
+    "age": 30,
+    "hometown": "Mount Forest, ON",
+    "current": "London, ON",
+    "occupation": "Game Designer",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDA2/danny-kilby.jpg",
+    "quote": "Biggest dream of my whole life. When I was a kid, Survivor was my favorite show.",
+    "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=2623s",
+    "rhap_note": "RHAP Cast Preview Pt. 2",
+    "wiki": "https://survivor.fandom.com/wiki/Danny_Kilby",
+    "id": "kilby",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Danny%20\"Kilby\"%20Kilby",
+    "twitter": "https://x.com/search?q=Danny%20\"Kilby\"%20Kilby&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Kilby%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "Biggest dream of my whole life. When I was a kid, Survivor was my favorite show.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My biggest superpower coming into Survivor is I can make anybody laugh.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "What are you expecting from this season's twists?",
+        "a": "Having seen Survivor 50, I have empirical evidence that fans like twists, so I'm expecting Survivor to throw some crazy stuff at us.",
+        "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists",
+        "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"
+      }
+    ]
+  },
+  {
+    "name": "Devin Way",
+    "short": "Devin",
+    "age": 33,
+    "hometown": "Lufkin, TX",
+    "current": "Los Angeles, CA",
+    "occupation": "Actor",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDEy/devin-way.jpg",
+    "quote": "There is nothing else like this in the world.",
+    "rhap": "https://www.youtube.com/watch?v=bmWaE-kNNMg&t=4151s",
+    "rhap_note": "RHAP Cast Preview Pt. 1",
+    "wiki": "https://survivor.fandom.com/wiki/Devin_Way",
+    "id": "devin",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Devin%20Way",
+    "twitter": "https://x.com/search?q=Devin%20Way&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Devin%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "There is nothing else like this in the world.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My biggest superpower is that I can make friends with a rock. I can talk to anybody.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      }
+    ]
+  },
+  {
+    "name": "Eric Macksoud",
+    "short": "Eric",
+    "age": 34,
+    "hometown": "Lincoln, RI",
+    "current": "Windsor Locks, CT",
+    "occupation": "Mental Health Counselor",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDE3/erick-macksoud.jpg",
+    "quote": "Survivor is the ultimate celebration of the human experience.",
+    "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=266s",
+    "rhap_note": "RHAP Cast Preview Pt. 2",
+    "wiki": "https://survivor.fandom.com/wiki/Eric_Macksoud",
+    "id": "eric",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Eric%20Macksoud",
+    "twitter": "https://x.com/search?q=Eric%20Macksoud&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Eric%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "Survivor is the ultimate celebration of the human experience.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My greatest superpower is my ability to empathize with others and my high emotional intelligence.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      }
+    ]
+  },
+  {
+    "name": "Jenna Doore",
+    "short": "Jenna",
+    "age": 30,
+    "hometown": "Perrysburg, OH",
+    "current": "Toledo, OH",
+    "occupation": "Wedding Photographer",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDIx/survivor.jpg",
+    "quote": "It's about being able to perform and create when the stakes are high.",
+    "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=2104s",
+    "rhap_note": "RHAP Cast Preview Pt. 2",
+    "wiki": "https://survivor.fandom.com/wiki/Jenna_Doore",
+    "id": "jenna",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Jenna%20Doore",
+    "twitter": "https://x.com/search?q=Jenna%20Doore&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Jenna%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "It's about being able to perform and create when the stakes are high.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My biggest superpower... is my empathy. I'm a deep feeler.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "What are you expecting from this season's twists?",
+        "a": "It's a whole new era of Survivor \u2014 there's going to be so much thrown our way that we can't possibly predict or plan for.",
+        "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists",
+        "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"
+      }
+    ]
+  },
+  {
+    "name": "Kristin Flickinger",
+    "short": "Kristin",
+    "age": 49,
+    "hometown": "Ketchum, ID",
+    "current": "Santa Barbara, CA",
+    "occupation": "Crisis Management",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDIz/kristin-flickinger.jpg",
+    "quote": "I have been applying for Survivor since the middle of Season 1.",
+    "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=3742s",
+    "rhap_note": "RHAP Cast Preview Pt. 2",
+    "wiki": "https://survivor.fandom.com/wiki/Kristin_Flickinger",
+    "id": "kristin",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Kristin%20Flickinger",
+    "twitter": "https://x.com/search?q=Kristin%20Flickinger&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Kristin%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "I have been applying for Survivor since the middle of Season 1.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My biggest superpower coming into the game is flexibility and being able to read the room.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      }
+    ]
+  },
+  {
+    "name": "Lewis Kelly",
+    "short": "Lewis",
+    "age": 28,
+    "hometown": "Dublin, Ireland",
+    "current": "Puerto Rico",
+    "occupation": "Farmer",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDI1/lewis-kelly.jpg",
+    "quote": "I probably won't be the Sole Survivor... but if I do, the game is won.",
+    "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=4462s",
+    "rhap_note": "RHAP Cast Preview Pt. 2",
+    "wiki": "https://survivor.fandom.com/wiki/Lewis_Kelly",
+    "id": "lewis",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Lewis%20Kelly",
+    "twitter": "https://x.com/search?q=Lewis%20Kelly&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Lewis%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "I probably won't be the Sole Survivor... but if I do, the game is won.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My superpower in this game is my Irish charm.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "What are you expecting from this season's twists?",
+        "a": "There's no rules, no concrete things set in stone \u2014 I could make up a million things and nobody's going to know any better.",
+        "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists",
+        "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"
+      }
+    ]
+  },
+  {
+    "name": "Linnea Capobianco",
+    "short": "Linnea",
+    "age": 25,
+    "hometown": "Kearny, NJ",
+    "current": "Jersey City, NJ",
+    "occupation": "Entrepreneur",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDI5/linnea-capobianco.jpg",
+    "quote": "This life... is all I am certain of.",
+    "rhap": "https://www.youtube.com/watch?v=QEIOjo6tSAc&t=5280s",
+    "rhap_note": "RHAP Cast Preview Pt. 2",
+    "wiki": "https://survivor.fandom.com/wiki/Linnea_Capobianco",
+    "id": "linnea",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Linnea%20Capobianco",
+    "twitter": "https://x.com/search?q=Linnea%20Capobianco&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Linnea%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "This life... is all I am certain of.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My biggest superpower is my social game.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      }
+    ]
+  },
+  {
+    "name": "Maggie Nestor",
+    "short": "Maggie",
+    "age": 40,
+    "hometown": "Middleway, WV",
+    "current": "Charlestown, WV",
+    "occupation": "Farmer",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDMy/maggie-nestor.jpg",
+    "quote": "I've loved Survivor since I was 15. I've been watching for 25 years.",
+    "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0",
+    "rhap_note": "RHAP Cast Reveal First Reactions",
+    "wiki": "https://survivor.fandom.com/wiki/Maggie_Nestor",
+    "id": "maggie",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Maggie%20Nestor",
+    "twitter": "https://x.com/search?q=Maggie%20Nestor&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Maggie%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "I've loved Survivor since I was 15. I've been watching for 25 years.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My biggest superpower is probably my social game and social read on people.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      }
+    ]
+  },
+  {
+    "name": "Mike Pinsky",
+    "short": "Mike",
+    "age": 32,
+    "hometown": "New York, NY",
+    "current": "New York, NY",
+    "occupation": "Baseball Executive",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDM2/mike-pinsky.jpg",
+    "quote": "My marriage proposal to my wife Becky incorporated a Probst catchphrase.",
+    "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0",
+    "rhap_note": "RHAP Cast Reveal First Reactions",
+    "wiki": "https://survivor.fandom.com/wiki/Mike_Pinsky",
+    "id": "mike",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Mike%20Pinsky",
+    "twitter": "https://x.com/search?q=Mike%20Pinsky&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Mike%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "My marriage proposal to my wife Becky incorporated a Probst catchphrase.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My superpower is that I have a well-rounded skill set \u2014 social without being just a charisma machine.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "What are you expecting from this season's twists?",
+        "a": "I know that Jeff is going to throw some weird stuff at us. I know it's going to be interesting.",
+        "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists",
+        "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"
+      }
+    ]
+  },
+  {
+    "name": "Ori Jean-Charles",
+    "short": "Ori",
+    "age": 27,
+    "hometown": "Spring Valley, NY",
+    "current": "Spring Valley, NY",
+    "occupation": "Personal Trainer",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDQx/ori-jean-charles.jpg",
+    "quote": "I owe them everything and that's why I am here. To change my family's lives.",
+    "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0",
+    "rhap_note": "RHAP Cast Reveal First Reactions",
+    "wiki": "https://survivor.fandom.com/wiki/Ori_Jean-Charles",
+    "id": "ori",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Ori%20Jean-Charles",
+    "twitter": "https://x.com/search?q=Ori%20Jean-Charles&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Ori%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "I owe them everything and that's why I am here. To change my family's lives.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My biggest superpower is my ability to connect and just make people comfortable.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      }
+    ]
+  },
+  {
+    "name": "Patt Cannaday",
+    "short": "Patt",
+    "age": 33,
+    "hometown": "Tampa, FL",
+    "current": "Washington, D.C.",
+    "occupation": "Federal Prosecutor",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDQ1/patt-cannaday-on-survivor-51.jpg",
+    "quote": "I love challenge and new adventures. This show is the challenge of a lifetime.",
+    "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0",
+    "rhap_note": "RHAP Cast Reveal First Reactions",
+    "wiki": "https://survivor.fandom.com/wiki/Patt_Cannaday",
+    "id": "patt",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Patt%20Cannaday",
+    "twitter": "https://x.com/search?q=Patt%20Cannaday&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Patt%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "I love challenge and new adventures. This show is the challenge of a lifetime.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My biggest superpower... is maybe my ability to stay under the radar.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "What are you expecting from this season's twists?",
+        "a": "Season 50 was amazing, it was so fun to watch, so I want us to match that energy \u2014 I am ready for things to get shook up.",
+        "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists",
+        "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"
+      }
+    ]
+  },
+  {
+    "name": "Rob Antonson",
+    "short": "Rob",
+    "age": 40,
+    "hometown": "Johnston, RI",
+    "current": "Cumberland, RI",
+    "occupation": "Airline Gate Agent",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDQ3/rob-antonson.jpg",
+    "quote": "I want to show my three young kids that you can get out of your comfort zone.",
+    "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0",
+    "rhap_note": "RHAP Cast Reveal First Reactions",
+    "wiki": "https://survivor.fandom.com/wiki/Rob_Antonson",
+    "id": "rob",
+    "instagram": "https://www.instagram.com/explore/search/keyword/?q=Rob%20Antonson",
+    "twitter": "https://x.com/search?q=Rob%20Antonson&src=typed_query&f=user",
+    "tiktok": "https://www.tiktok.com/search/user?q=Rob%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "I want to show my three young kids that you can get out of your comfort zone.",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My superpower is making relationships with everybody... I got the gift of gab.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      },
+      {
+        "q": "What are you expecting from this season's twists?",
+        "a": "This is like a new era now... I'm here for the chaos, baby.",
+        "source": "Reality Blurred \u2014 Survivor 51's Cast Talks Twists",
+        "sourceUrl": "https://www.realityblurred.com/realitytv/2026/08/survivor-51-cast-talks-twists/"
+      }
+    ]
+  },
+  {
+    "name": "Sharonda Cox",
+    "short": "Sharonda",
+    "age": 34,
+    "hometown": "Pompano Beach, FL",
+    "current": "Richmond, KY",
+    "occupation": "OBGYN Resident",
+    "photo": "https://parade.com/.image/ODowMDAwMDAwMDAyMzMwNDQ5/sharonda-cox.jpg",
+    "quote": "Life has trained me for this very moment!",
+    "rhap": "https://www.youtube.com/watch?v=NU-zy7W1cF0",
+    "rhap_note": "RHAP Cast Reveal First Reactions",
+    "wiki": "https://survivor.fandom.com/wiki/Sharonda_Cox",
+    "id": "sharonda",
+    "instagram": "https://www.instagram.com/sharonda_renee_/",
+    "twitter": "https://x.com/SharondaRenee",
+    "tiktok": "https://www.tiktok.com/search/user?q=Sharonda%20survivor51",
+    "qa": [
+      {
+        "q": "What about your life so far makes you feel ready for Survivor?",
+        "a": "Life has trained me for this very moment!",
+        "source": "Parade \u2014 Meet the Survivor 51 Cast",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
+      },
+      {
+        "q": "What's your biggest superpower coming into the game?",
+        "a": "My superpower is that I'm a chameleon. So I can adapt to any environment.",
+        "source": "Parade \u2014 Cast Reveals Their Greatest Strengths",
+        "sourceUrl": "https://parade.com/tv/survivor-51-cast-interviews-greatest-superpowers-strengths"
+      }
+    ]
+  }
+];
 </script>
 <!-- app.js content is injected below at build time -->
 <script>
@@ -617,7 +1354,7 @@ function saveMockSetup(){ lsSet('s51_mock_setup', mockSetup); }
 function renderMockSetup(root){
   root.innerHTML = '';
   const box = el('div',{class:'card-box'});
-  box.appendChild(el('h2',{style:'margin:0 0 4px'}, 'Set Up a Mock Draft'));
+  box.appendChild(el('h2',{style:'margin:0 0 4px'}, '🏖️ Set Up a Mock Draft'));
   box.appendChild(el('p',{style:'margin:0 0 4px;color:var(--sand-dim);font-size:0.88rem'}, 'Solo pass-and-play — great for testing draft strategy before your real live draft. Runs entirely in this browser.'));
 
   const grid = el('div',{class:'setup-grid'});
@@ -634,7 +1371,7 @@ function renderMockSetup(root){
   snakeWrap.appendChild(document.createTextNode('Snake draft order (reverses each round)'));
   box.appendChild(snakeWrap);
 
-  const namesHead = el('label',{class:'field'}, 'Team Names');
+  const namesHead = el('label',{class:'field'}, '🎋 Team Names');
   box.appendChild(namesHead);
   const namesWrap = el('div',{id:'mockNamesWrap'});
   box.appendChild(namesWrap);
@@ -1050,7 +1787,7 @@ function liveLobbyScreen(){
 
   if(host){
     const settingsBox = el('div',{class:'card-box', style:'margin-top:16px'});
-    settingsBox.appendChild(el('h3',{style:'margin:0 0 10px'}, 'Draft Settings'));
+    settingsBox.appendChild(el('h3',{style:'margin:0 0 10px'}, '🥥 Draft Settings'));
     const roundsInput = el('input',{type:'number', min:'1', max:'3', value:String(room.settings.rounds)});
     const timerInput = el('input',{type:'number', min:'0', max:'600', value:String(room.settings.timerSeconds)});
     const snakeInput = el('input',{type:'checkbox'}); snakeInput.checked = room.settings.snake;
@@ -1119,6 +1856,21 @@ function livePick(castawayId, force){
   });
 }
 
+function resetLiveDraft(){
+  if(!confirm('Reset this draft room? All picks will be cleared and the draft returns to the lobby so teams can be re-shuffled or re-picked. Teams and settings stay intact.')) return;
+  roomRef(myRoomCode).transaction(room=>{
+    if(!room) return room;
+    room.status = 'lobby';
+    room.order = null;
+    room.pool = CASTAWAYS.map(c=>c.id);
+    room.picks = [];
+    room.currentPickIndex = 0;
+    room.pickDeadline = null;
+    return room;
+  });
+  toast('Draft reset — back to the lobby');
+}
+
 function liveDraftingScreen(){
   const room = liveRoomState;
   const myTeam = myTeamInRoom(room);
@@ -1143,17 +1895,27 @@ function liveDraftingScreen(){
       banner.appendChild(el('div',{class:'timer-chip', id:'liveTimerChip'}, '--'));
     }
     if(isHostOfRoom(room)){
+      const controls = el('div',{class:'btn-row'});
       const forceBtn = el('button',{class:'btn ghost'}, 'Force Random Pick');
       forceBtn.addEventListener('click', ()=>{
         if(!room.pool.length) return;
         const id = room.pool[Math.floor(Math.random()*room.pool.length)];
         livePick(id, true);
       });
-      banner.appendChild(forceBtn);
+      const resetBtn = el('button',{class:'btn danger'}, '↺ Reset Draft');
+      resetBtn.addEventListener('click', resetLiveDraft);
+      controls.appendChild(forceBtn); controls.appendChild(resetBtn);
+      banner.appendChild(controls);
     }
     main.appendChild(banner);
   } else if(room.status === 'complete'){
-    main.appendChild(el('div',{class:'turn-banner'}, el('div',{}, el('div',{class:'who'}, '🏆 Draft Complete!'), el('div',{class:'sub'}, 'All ' + totalPicks + ' picks are in — good luck out there.'))));
+    const completeBanner = el('div',{class:'turn-banner'}, el('div',{}, el('div',{class:'who'}, '🏆 Draft Complete!'), el('div',{class:'sub'}, 'All ' + totalPicks + ' picks are in — good luck out there.')));
+    if(isHostOfRoom(room)){
+      const resetBtn = el('button',{class:'btn danger'}, '↺ Reset Draft');
+      resetBtn.addEventListener('click', resetLiveDraft);
+      completeBanner.appendChild(el('div',{class:'btn-row'}, resetBtn));
+    }
+    main.appendChild(completeBanner);
   }
 
   const grid = el('div',{class:'grid'});
@@ -1268,8 +2030,18 @@ const DEFAULT_CATEGORIES = [
   { key:'survival', label:'Survival (still in the game)', weight:1 },
 ];
 function newCatKey(label){ return 'c_' + label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,24) + '_' + Math.random().toString(36).slice(2,6); }
+/* Categories persist independently of any one draft, so you can review/tweak
+   them before ever running a draft — new drafts seed their scoring from this. */
+function getCategoriesTemplate(){
+  const saved = lsGet('s51_categories_template', null);
+  if(saved && Array.isArray(saved.categories) && saved.categories.length) return saved.categories.map(c=>({...c}));
+  return DEFAULT_CATEGORIES.map(c=>({...c}));
+}
+function saveCategoriesTemplate(categories){
+  lsSet('s51_categories_template', { categories: categories.map(c=>({...c})) });
+}
 function defaultScoring(){
-  return { categories: DEFAULT_CATEGORIES.map(c=>({...c})), weeks:['1'], entries:{}, steals:{}, eliminated:{}, winnerId:null };
+  return { categories: getCategoriesTemplate(), weeks:['1'], entries:{}, steals:{}, eliminated:{}, winnerId:null };
 }
 function scoringSource(){
   if(myRoomCode && firebaseReady && liveRoomState && liveRoomState.status==='complete'){
@@ -1315,29 +2087,116 @@ function teamWeekPoints(scoring, picks, week){
 function teamSeasonPoints(scoring, picks){
   return (scoring.weeks||[]).reduce((sum,w)=> sum + teamWeekPoints(scoring, picks, w), 0);
 }
+function draftPickLog(source){
+  if(!source) return [];
+  if(source.type==='live'){
+    return [...(liveRoomState.picks||[])].sort((a,b)=>a.pickNo-b.pickNo)
+      .map(p=>({ pickNo:p.pickNo, round:p.round, teamId:p.teamId, castawayId:p.castawayId }));
+  }
+  if(source.type==='mock'){
+    const teamCount = mockState.teams.length || 1;
+    return (mockState.history||[]).map((h,i)=>({ pickNo:i+1, round:Math.floor(i/teamCount)+1, teamId:h.teamId, castawayId:h.castawayId }));
+  }
+  return [];
+}
+
+/* ---------- export helpers ---------- */
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    if(document.querySelector(`script[src="${src}"]`)){ res(); return; }
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = ()=>rej(new Error('Could not load ' + src));
+    document.head.appendChild(s);
+  });
+}
+function downloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = el('a',{href:url, download:filename});
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
+function csvEscape(v){
+  const s = String(v==null ? '' : v);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+}
+function exportDraftCSV(source){
+  const log = draftPickLog(source);
+  if(!log.length){ toast('No draft picks to export yet'); return; }
+  const teamById = Object.fromEntries(source.teams.map(t=>[t.id,t]));
+  const rows = [['Pick #','Round','Team','Drafted By','Castaway','Occupation']];
+  log.forEach(p=>{
+    const t = teamById[p.teamId], c = byId(p.castawayId);
+    rows.push([p.pickNo, p.round, t?t.name:p.teamId, t?(t.ownerName||''):'', c?c.name:p.castawayId, c?c.occupation:'']);
+  });
+  const csv = rows.map(r=>r.map(csvEscape).join(',')).join('\r\n');
+  downloadBlob(new Blob([csv],{type:'text/csv;charset=utf-8;'}), 'survivor51-draft.csv');
+  AudioFX.success();
+  toast('Draft exported as CSV');
+}
+async function exportFullXLSX(source){
+  try{
+    if(!window.XLSX) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    const { teams, scoring } = source;
+    const teamById = Object.fromEntries(teams.map(t=>[t.id,t]));
+    const log = draftPickLog(source);
+
+    const draftRows = log.map(p=>{
+      const t = teamById[p.teamId], c = byId(p.castawayId);
+      return { 'Pick #':p.pickNo, 'Round':p.round, 'Team':t?t.name:p.teamId, 'Drafted By':t?(t.ownerName||''):'', 'Castaway':c?c.name:p.castawayId, 'Occupation':c?c.occupation:'' };
+    });
+
+    const weeklyRows = [];
+    (scoring.weeks||[]).forEach(w=>{
+      teams.forEach(t=>{
+        (t.picks||[]).forEach(cid=>{
+          const c = byId(cid); if(!c) return;
+          const row = { Week:w, Castaway:c.name, Team:t.name };
+          scoring.categories.forEach(cat=>{ row[cat.label] = ((scoring.entries[w]||{})[cid]||{})[cat.key] || 0; });
+          row['Week Total'] = castawayWeekPoints(scoring, cid, w);
+          row['Voted Out'] = (scoring.eliminated && scoring.eliminated[cid]===w) ? 'Yes' : '';
+          weeklyRows.push(row);
+        });
+      });
+    });
+
+    const standingsRows = teams.map(t=>({
+      Team: t.name, Owner: t.ownerName||'', 'Total Points': teamSeasonPoints(scoring,t.picks) + stealBonusSeason(scoring,t.id)
+    })).sort((a,b)=>b['Total Points']-a['Total Points']).map((r,i)=>({ Rank:i+1, ...r }));
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(draftRows.length?draftRows:[{Note:'No picks yet'}]), 'Draft');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(weeklyRows.length?weeklyRows:[{Note:'No weekly scores entered yet'}]), 'Weekly Scores');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(standingsRows.length?standingsRows:[{Note:'No teams yet'}]), 'Standings');
+    XLSX.writeFile(wb, 'survivor51-fantasy-report.xlsx');
+    AudioFX.success();
+    toast('Full report exported');
+  }catch(e){
+    toast('Export failed: ' + e.message);
+  }
+}
 
 let scoringSubTab = 'standings';
 let scoringLeaderView = 'team';
 let scoringSelectedWeek = null;
 
-function scoringNoDraftPrompt(){
-  const box = el('div',{class:'card-box'});
-  box.appendChild(el('h2',{style:'margin:0 0 8px'}, '🏆 Scoring Opens After a Draft'));
-  box.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.9rem'},
-    'Finish a Live Draft (recommended for tracking a real season with your league) or a Mock Draft, and this tab turns into a full scoring hub — the same category-based point system as your Survivor 50 app, fully editable and customizable right here.'));
-  const btns = el('div',{class:'btn-row'});
-  const liveBtn = el('button',{class:'btn primary'}, 'Go to Live Draft');
-  liveBtn.addEventListener('click', ()=> $('nav.tabs button[data-tab=live]').click());
-  const mockBtn = el('button',{class:'btn'}, 'Go to Mock Draft');
-  mockBtn.addEventListener('click', ()=> $('nav.tabs button[data-tab=mock]').click());
-  btns.appendChild(liveBtn); btns.appendChild(mockBtn);
-  box.appendChild(btns);
-  return box;
+function scoringEmptyNotice(msg, showDraftLinks){
+  const wrap = el('div',{});
+  wrap.appendChild(el('div',{class:'notice'}, msg));
+  if(showDraftLinks){
+    const btns = el('div',{class:'btn-row', style:'margin-top:12px'});
+    const liveBtn = el('button',{class:'btn primary'}, 'Go to Live Draft');
+    liveBtn.addEventListener('click', ()=> $('nav.tabs button[data-tab=live]').click());
+    const mockBtn = el('button',{class:'btn'}, 'Go to Mock Draft');
+    mockBtn.addEventListener('click', ()=> $('nav.tabs button[data-tab=mock]').click());
+    btns.appendChild(liveBtn); btns.appendChild(mockBtn);
+    wrap.appendChild(btns);
+  }
+  return wrap;
 }
 
 function scoringSubnav(active){
   const nav = el('div',{class:'subtabs'});
-  const tabs = [['standings','🏅 Standings'],['weekly','📅 Weekly Breakdown'],['enter','✏️ Enter Scores'],['categories','⚙️ Categories'],['champions','👑 Champions']];
+  const tabs = [['standings','🏅 Standings'],['weekly','📅 Weekly Breakdown'],['enter','✏️ Enter Scores'],['categories','⚙️ Categories'],['export','⬇️ Export'],['champions','👑 Champions']];
   tabs.forEach(([id,label])=>{
     const b = el('button',{class: active===id ? 'on' : ''}, label);
     b.addEventListener('click', ()=>{ scoringSubTab = id; renderScoring(); });
@@ -1590,11 +2449,19 @@ function scoringEnter(source){
 }
 
 function scoringCategories(source){
-  const { scoring, isAdmin } = source;
+  const isAdmin = source ? source.isAdmin : true;
+  const scoring = source ? source.scoring : { categories: getCategoriesTemplate() };
+  const persist = (cats)=>{
+    if(source) source.save({ ...source.scoring, categories: cats });
+    saveCategoriesTemplate(cats);
+  };
   const wrap = el('div',{});
   if(!isAdmin){
     wrap.appendChild(el('div',{class:'notice'}, 'Only the commissioner can edit categories.'));
     return wrap;
+  }
+  if(!source){
+    wrap.appendChild(el('div',{class:'notice'}, 'No draft yet — set up your categories and point weights now. Whenever you finish a Live or Mock Draft, scoring starts pre-loaded with exactly what you build here.'));
   }
   wrap.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.85rem;margin:0 0 14px'},
     'Pre-loaded with the same category & point-weight system as your Survivor 50 app. Edit weights, rename, delete, or add your own for this season\'s twists.'));
@@ -1639,19 +2506,64 @@ function scoringCategories(source){
   const btnRow = el('div',{class:'btn-row', style:'margin-top:18px'});
   const saveBtn = el('button',{class:'btn primary'}, '💾 Save Categories');
   saveBtn.addEventListener('click', ()=>{
-    source.save({ ...scoring, categories: scoring.categories });
+    persist(scoring.categories);
     AudioFX.success();
-    toast('Categories saved');
+    toast('Categories saved' + (source ? '' : ' — will apply to your next draft'));
   });
   const resetBtn = el('button',{class:'btn danger'}, 'Reset to Survivor 50 Defaults');
   resetBtn.addEventListener('click', ()=>{
     if(!confirm('Reset all categories to the Survivor 50 defaults? Your custom categories will be removed.')) return;
-    source.save({ ...scoring, categories: DEFAULT_CATEGORIES.map(c=>({...c})) });
+    const defaults = DEFAULT_CATEGORIES.map(c=>({...c}));
+    scoring.categories = defaults;
+    persist(defaults);
     toast('Categories reset');
     setTimeout(renderScoring, 150);
   });
   btnRow.appendChild(saveBtn); btnRow.appendChild(resetBtn);
   wrap.appendChild(btnRow);
+  return wrap;
+}
+
+function scoringExport(source){
+  const wrap = el('div',{});
+  if(!source){
+    wrap.appendChild(scoringEmptyNotice('Export needs a completed draft — finish a Live or Mock Draft first so there are teams and picks to save.', true));
+    return wrap;
+  }
+  const { scoring, isAdmin } = source;
+  wrap.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.85rem;margin:0 0 16px'},
+    'Save your draft board and scores to a file you can open in Excel, Google Sheets, or Numbers.'));
+
+  const box1 = el('div',{class:'card-box', style:'margin-bottom:14px'});
+  box1.appendChild(el('h3',{style:'margin:0 0 6px'}, '⬇️ Full Report (.xlsx)'));
+  box1.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.82rem;margin:0 0 12px'}, 'One workbook, three sheets: Draft board, Weekly Scores, and Standings.'));
+  const xlsxBtn = el('button',{class:'btn primary'}, 'Download Excel (.xlsx)');
+  xlsxBtn.addEventListener('click', ()=> exportFullXLSX(source));
+  box1.appendChild(xlsxBtn);
+  wrap.appendChild(box1);
+
+  const box2 = el('div',{class:'card-box', style:'margin-bottom:14px'});
+  box2.appendChild(el('h3',{style:'margin:0 0 6px'}, '⬇️ Draft Board Only (.csv)'));
+  box2.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.82rem;margin:0 0 12px'}, 'Just the pick order — who drafted whom, in a plain CSV file.'));
+  const csvBtn = el('button',{class:'btn'}, 'Download CSV');
+  csvBtn.addEventListener('click', ()=> exportDraftCSV(source));
+  box2.appendChild(csvBtn);
+  wrap.appendChild(box2);
+
+  if(isAdmin){
+    const box3 = el('div',{class:'card-box'});
+    box3.appendChild(el('h3',{style:'margin:0 0 6px;color:var(--torch)'}, '⚠️ Reset Scoring Data'));
+    box3.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.82rem;margin:0 0 12px'}, 'Clears all entered weeks, points, eliminations, and the declared winner. Teams, picks, and your category weights are kept.'));
+    const resetScoreBtn = el('button',{class:'btn danger'}, 'Reset Scoring Data');
+    resetScoreBtn.addEventListener('click', ()=>{
+      if(!confirm('Reset all scoring data? Weekly points, eliminations, and the declared winner will be cleared. This cannot be undone.')) return;
+      source.save({ categories: scoring.categories, weeks:['1'], entries:{}, steals:{}, eliminated:{}, winnerId:null });
+      toast('Scoring data reset');
+      setTimeout(renderScoring, 150);
+    });
+    box3.appendChild(resetScoreBtn);
+    wrap.appendChild(box3);
+  }
   return wrap;
 }
 
@@ -1728,14 +2640,15 @@ function renderScoring(){
   if(!root) return;
   root.innerHTML='';
   const source = scoringSource();
-  if(!source){ root.appendChild(scoringNoDraftPrompt()); return; }
   root.appendChild(scoringSubnav(scoringSubTab));
+  const needsDraftMsg = 'Scoring, standings, and week-by-week entry unlock once a Live or Mock Draft is complete and teams have their rosters. You can still browse and edit Categories and Export below without a draft.';
   let content;
-  if(scoringSubTab==='standings') content = scoringStandings(source);
-  else if(scoringSubTab==='weekly') content = scoringWeekly(source);
-  else if(scoringSubTab==='enter') content = scoringEnter(source);
+  if(scoringSubTab==='standings') content = source ? scoringStandings(source) : scoringEmptyNotice(needsDraftMsg, true);
+  else if(scoringSubTab==='weekly') content = source ? scoringWeekly(source) : scoringEmptyNotice(needsDraftMsg, true);
+  else if(scoringSubTab==='enter') content = source ? scoringEnter(source) : scoringEmptyNotice(needsDraftMsg, true);
   else if(scoringSubTab==='categories') content = scoringCategories(source);
-  else content = scoringChampions(source);
+  else if(scoringSubTab==='export') content = scoringExport(source);
+  else content = source ? scoringChampions(source) : scoringEmptyNotice(needsDraftMsg, true);
   root.appendChild(content);
 }
 renderScoring();
