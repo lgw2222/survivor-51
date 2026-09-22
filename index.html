@@ -250,6 +250,36 @@ input[type=text]:focus,input[type=number]:focus,select:focus{outline:none;border
 .mini-chip .mini-fallback{width:22px;height:22px;border-radius:50%;background:var(--jungle2);display:flex;align-items:center;justify-content:center;font-size:0.6rem;}
 .empty-slot{color:var(--sand-dim);font-size:0.74rem;font-style:italic;}
 
+/* ===== TV Draft (bigger, mirror-to-a-screen friendly) ===== */
+#panel-tv .grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:18px;}
+#panel-tv .card .info{padding:12px 12px 14px;}
+#panel-tv .card .info .nm{font-size:1.4rem;}
+#panel-tv .card .info .oc{font-size:0.86rem;}
+#panel-tv .btn{font-size:1rem;padding:12px 20px;}
+#panel-tv .turn-banner.tv-banner{padding:22px 26px;}
+#panel-tv .turn-banner.tv-banner .who{font-size:2.4rem;}
+#panel-tv .turn-banner.tv-banner .sub{font-size:1.1rem;}
+#panel-tv .team-card .tname{font-size:1.3rem;}
+#panel-tv .mini-chip{font-size:0.86rem;}
+#panel-tv .mini-chip img,#panel-tv .mini-chip .mini-fallback{width:26px;height:26px;}
+
+.tv-flash{
+  position:fixed;top:16%;left:50%;z-index:300;pointer-events:none;
+  background:linear-gradient(135deg,var(--torch),var(--flame-red));color:#1a0a04;
+  padding:22px 42px;border-radius:20px;text-align:center;
+  box-shadow:0 20px 60px rgba(0,0,0,0.55);
+  opacity:0;animation:tvFlashPop 1.8s ease forwards;
+}
+.tv-flash div:first-child{font-family:'Bebas Neue';font-size:2.4rem;letter-spacing:0.03em;}
+.tv-flash .sub{font-family:'Inter';font-size:1.05rem;font-weight:700;margin-top:4px;}
+@keyframes tvFlashPop{
+  0%{opacity:0;transform:translate(-50%,-8px) scale(0.85);}
+  12%{opacity:1;transform:translate(-50%,0) scale(1.05);}
+  22%{transform:translate(-50%,0) scale(1);}
+  80%{opacity:1;}
+  100%{opacity:0;transform:translate(-50%,-4px) scale(0.97);}
+}
+
 .lobby-code{font-family:'Bebas Neue';font-size:2.6rem;letter-spacing:0.12em;color:var(--torch);}
 .chat-box{display:flex;flex-direction:column;height:260px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:rgba(0,0,0,0.2);}
 .chat-msgs{flex:1;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px;}
@@ -343,6 +373,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
     <nav class="tabs">
       <button data-tab="castaways" class="active">Castaways</button>
       <button data-tab="mock">Mock Draft</button>
+      <button data-tab="tv">📺 TV Draft</button>
       <button data-tab="live">Live Draft</button>
       <button data-tab="scoring">Scoring</button>
       <button data-tab="rankings">Rankings</button>
@@ -374,6 +405,11 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
     <div id="mockRoot"></div>
   </section>
 
+  <!-- TV DRAFT -->
+  <section id="panel-tv" class="panel">
+    <div id="tvRoot"></div>
+  </section>
+
   <!-- LIVE DRAFT -->
   <section id="panel-live" class="panel">
     <div id="liveRoot"></div>
@@ -395,7 +431,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-22 19:57 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-22 22:03 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -3335,6 +3371,208 @@ function renderMock(){
   else { renderMockDrafting(root); }
 }
 renderMock();
+
+/* =========================================================================
+   TV DRAFT (solo host, THE REAL DRAFT — mirror this phone to a TV/screen and
+   tap in every team's pick yourself. No other devices, no internet needed.)
+   ========================================================================= */
+let tvState = lsGet('s51_tv', null);
+let tvSetup = lsGet('s51_tv_setup', { teamCount:6, rounds:1, snake:true, names:[] });
+
+function defaultTvNames(n){
+  const names = [];
+  for(let i=0;i<n;i++) names.push(tvSetup.names[i] || ('Team ' + (i+1)));
+  return names;
+}
+function saveTv(){ lsSet('s51_tv', tvState); }
+function saveTvSetup(){ lsSet('s51_tv_setup', tvSetup); }
+
+function tvFlash(teamName, castawayShort){
+  const f = el('div',{class:'tv-flash'},
+    el('div',{}, '🌺 ' + teamName),
+    el('div',{class:'sub'}, 'drafts ' + castawayShort + '!')
+  );
+  document.body.appendChild(f);
+  setTimeout(()=>f.remove(), 1800);
+}
+
+function renderTvSetup(root){
+  root.innerHTML = '';
+  const box = el('div',{class:'card-box'});
+  box.appendChild(el('h2',{style:'margin:0 0 4px'}, '📺 Set Up Your TV Draft'));
+  box.appendChild(el('p',{style:'margin:0 0 4px;color:var(--sand-dim);font-size:0.88rem'}, 'One phone runs the whole thing — mirror this screen to your TV (AirPlay / Chromecast / an HDMI cable), walk the room, and tap in every team’s pick yourself. This is the real draft — no other devices or internet needed.'));
+
+  const grid = el('div',{class:'setup-grid'});
+  const teamCountInput = el('input',{type:'number', min:'2', max:'12', value:String(tvSetup.teamCount)});
+  const roundsInput = el('input',{type:'number', min:'1', max:String(maxRoundsFor(tvSetup.teamCount)), value:String(tvSetup.rounds)});
+  grid.appendChild(el('div',{}, el('label',{class:'field'},'Number of Teams'), teamCountInput));
+  grid.appendChild(el('div',{}, el('label',{class:'field'},'Rounds (picks per team, up to ' + maxRoundsFor(tvSetup.teamCount) + ' with ' + tvSetup.teamCount + ' teams)'), roundsInput));
+  box.appendChild(grid);
+
+  const snakeWrap = el('label',{class:'checkline', style:'margin:6px 0 16px'});
+  const snakeCheck = el('input',{type:'checkbox'});
+  snakeCheck.checked = tvSetup.snake;
+  snakeWrap.appendChild(snakeCheck);
+  snakeWrap.appendChild(document.createTextNode('Snake draft order (reverses each round)'));
+  box.appendChild(snakeWrap);
+
+  const namesHead = el('label',{class:'field'}, '🎋 Team Names');
+  box.appendChild(namesHead);
+  const namesWrap = el('div',{id:'tvNamesWrap'});
+  box.appendChild(namesWrap);
+
+  function renderNameInputs(){
+    namesWrap.innerHTML = '';
+    const n = Math.max(2, Math.min(12, parseInt(teamCountInput.value)||6));
+    const names = defaultTvNames(n);
+    names.forEach((nm,i)=>{
+      const row = el('div',{class:'team-name-row'});
+      row.appendChild(el('span',{class:'swatch', style:'background:' + TRIBE_COLORS[i%TRIBE_COLORS.length]}));
+      const inp = el('input',{type:'text', value:nm, style:'flex:1'});
+      inp.addEventListener('input', ()=>{ tvSetup.names[i] = inp.value; });
+      row.appendChild(inp);
+      namesWrap.appendChild(row);
+    });
+  }
+  function syncRoundsMax(){
+    const n = Math.max(2, Math.min(12, parseInt(teamCountInput.value)||6));
+    const mx = maxRoundsFor(n);
+    roundsInput.max = String(mx);
+    const cur = parseInt(roundsInput.value)||0;
+    if(cur > mx) roundsInput.value = String(mx);
+  }
+  teamCountInput.addEventListener('input', ()=>{ renderNameInputs(); syncRoundsMax(); });
+  renderNameInputs();
+
+  const startBtn = el('button',{class:'btn primary', style:'margin-top:16px'}, '🔥 Start TV Draft');
+  startBtn.addEventListener('click', ()=>{
+    const n = Math.max(2, Math.min(12, parseInt(teamCountInput.value)||6));
+    const rounds = Math.max(1, Math.min(maxRoundsFor(n), parseInt(roundsInput.value)||1));
+    tvSetup.teamCount = n; tvSetup.rounds = rounds; tvSetup.snake = snakeCheck.checked;
+    saveTvSetup();
+    const names = defaultTvNames(n);
+    const teams = names.map((nm,i)=>({ id:'t'+i, name:nm, color:TRIBE_COLORS[i%TRIBE_COLORS.length], picks:[] }));
+    const order = computeOrder(teams.map(t=>t.id), rounds, tvSetup.snake);
+    tvState = { teams, order, pickIndex:0, pool: CASTAWAYS.map(c=>c.id), status:'drafting', history:[] };
+    saveTv();
+    AudioFX.horn();
+    renderTv();
+  });
+  box.appendChild(startBtn);
+
+  if(lsGet('s51_tv', null)){
+    const resumeBtn = el('button',{class:'btn', style:'margin-top:16px;margin-left:8px'}, 'Resume Saved TV Draft');
+    resumeBtn.addEventListener('click', ()=>{ tvState = lsGet('s51_tv', null); renderTv(); });
+    box.appendChild(resumeBtn);
+  }
+
+  root.appendChild(box);
+}
+
+function renderTvDrafting(root){
+  root.innerHTML = '';
+  const layout = el('div',{class:'draft-layout'});
+  const main = el('div',{});
+
+  const draftedIds = new Set(tvState.teams.flatMap(t=>t.picks));
+  const totalPicks = tvState.order.length;
+
+  if(tvState.status === 'drafting'){
+    const teamId = tvState.order[tvState.pickIndex];
+    const team = tvState.teams.find(t=>t.id===teamId);
+    const banner = el('div',{class:'turn-banner tv-banner'});
+    banner.appendChild(el('div',{},
+      el('div',{class:'who'}, '🔥 ' + team.name + ' is on the clock'),
+      el('div',{class:'sub'}, 'Pick ' + (tvState.pickIndex+1) + ' of ' + totalPicks)
+    ));
+    const controls = el('div',{class:'btn-row'});
+    const undoBtn = el('button',{class:'btn'}, '↶ Undo');
+    undoBtn.disabled = !tvState.history.length;
+    undoBtn.addEventListener('click', tvUndo);
+    const resetBtn = el('button',{class:'btn danger'}, 'Reset');
+    resetBtn.addEventListener('click', tvReset);
+    controls.appendChild(undoBtn); controls.appendChild(resetBtn);
+    banner.appendChild(controls);
+    main.appendChild(banner);
+  } else if(tvState.status === 'complete'){
+    const banner = el('div',{class:'turn-banner tv-banner'});
+    banner.appendChild(el('div',{}, el('div',{class:'who'}, '🏆 Draft Complete!'), el('div',{class:'sub'}, 'All ' + totalPicks + ' picks are in.')));
+    const controls = el('div',{class:'btn-row'});
+    const undoBtn = el('button',{class:'btn'}, '↶ Undo Last Pick');
+    undoBtn.addEventListener('click', tvUndo);
+    const newBtn = el('button',{class:'btn primary'}, 'Start New TV Draft');
+    newBtn.addEventListener('click', ()=>{ tvState=null; lsSet('s51_tv', null); renderTv(); });
+    controls.appendChild(undoBtn); controls.appendChild(newBtn);
+    banner.appendChild(controls);
+    main.appendChild(banner);
+  }
+
+  const grid = el('div',{class:'grid'});
+  CASTAWAYS.forEach(c=>{
+    const drafted = draftedIds.has(c.id);
+    grid.appendChild(castawayCard(c, {
+      drafted: drafted || tvState.status==='complete',
+      onPick: tvState.status==='drafting' ? (cc)=>tvPick(cc.id) : null
+    }));
+  });
+  main.appendChild(grid);
+  layout.appendChild(main);
+
+  const side = el('div',{class:'board-list'});
+  tvState.teams.forEach((t,i)=>{
+    const isCurrent = tvState.status==='drafting' && tvState.order[tvState.pickIndex]===t.id;
+    side.appendChild(teamBoardCard(t, isCurrent));
+  });
+  layout.appendChild(side);
+
+  root.appendChild(layout);
+}
+
+function tvPick(castawayId){
+  if(!tvState || tvState.status !== 'drafting') return;
+  const teamId = tvState.order[tvState.pickIndex];
+  const team = tvState.teams.find(t=>t.id===teamId);
+  const c = byId(castawayId);
+  team.picks.push(castawayId);
+  tvState.pool = tvState.pool.filter(id=>id!==castawayId);
+  tvState.history.push({ teamId, castawayId });
+  tvState.pickIndex++;
+  AudioFX.drum();
+  tvFlash(team.name, c ? c.short : '');
+  setTimeout(()=>AudioFX.success(), 180);
+  if(tvState.pickIndex >= tvState.order.length){
+    tvState.status = 'complete';
+    setTimeout(()=>AudioFX.gong(), 500);
+  } else {
+    setTimeout(()=>AudioFX.horn(), 500);
+  }
+  saveTv();
+  renderTv();
+}
+function tvUndo(){
+  if(!tvState || !tvState.history.length) return;
+  const last = tvState.history.pop();
+  const team = tvState.teams.find(t=>t.id===last.teamId);
+  team.picks.pop();
+  tvState.pool.push(last.castawayId);
+  tvState.pickIndex--;
+  if(tvState.status === 'complete') tvState.status = 'drafting';
+  saveTv();
+  renderTv();
+}
+function tvReset(){
+  if(!confirm('Reset the TV draft? This clears all picks.')) return;
+  tvState = null;
+  lsSet('s51_tv', null);
+  renderTv();
+}
+function renderTv(){
+  const root = $('#tvRoot');
+  if(!root) return;
+  if(!tvState){ renderTvSetup(root); }
+  else { renderTvDrafting(root); }
+}
+renderTv();
 
 /* =========================================================================
    LIVE DRAFT (multiplayer via Firebase Realtime Database)
