@@ -180,6 +180,24 @@ button.pill.yellow.active{background:rgba(232,197,61,0.22);}
 .btn.danger{border-color:#8a2b2b;color:#ff8a7a;}
 .btn:disabled{opacity:0.4;cursor:not-allowed;}
 .btn svg{width:15px;height:15px;}
+.draft-action-row{margin:12px 0 4px;}
+.draft-btn{width:100%;justify-content:center;font-size:1.05rem;padding:13px 16px;font-family:'Bebas Neue';letter-spacing:0.03em;box-shadow:0 0 0 1px rgba(255,145,60,0.25), 0 6px 18px rgba(0,0,0,0.35);}
+
+/* ===== Steals & bonus points (scoring) ===== */
+.steal-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+.steal-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(0,0,0,0.18);border:1px solid var(--line);border-radius:8px;padding:7px 12px;font-size:0.82rem;}
+.steal-team{color:var(--sand);}
+.steal-pts{font-family:'Bebas Neue';color:var(--torch);white-space:nowrap;}
+.steal-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.steal-form select, .steal-form input[type=text]{
+  background:rgba(236,223,192,0.04);border:1px solid var(--line);color:var(--sand);
+  border-radius:8px;padding:8px 10px;font-family:'Inter';font-size:0.82rem;
+}
+.steal-form input[type=text]{flex:1;min-width:160px;}
+.steal-form input[type=number]{
+  background:rgba(236,223,192,0.04);border:1px solid var(--line);color:var(--sand);
+  border-radius:8px;padding:8px 10px;font-family:'Inter';font-size:0.82rem;
+}
 
 /* ===== Draft layout ===== */
 .draft-layout{display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start;}
@@ -2911,8 +2929,7 @@ function castawayCard(c, opts){
   ));
   card.addEventListener('click', ()=>{
     if(opts.drafted) return;
-    if(opts.onPick){ opts.onPick(c); return; }
-    openProfile(c.id);
+    openProfile(c.id, opts.onPick ? { onPick: opts.onPick } : null);
   });
   return card;
 }
@@ -2944,7 +2961,7 @@ const ICONS = {
   wiki: icon('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'),
   qa: icon('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>')
 };
-function openProfile(castawayId){
+function openProfile(castawayId, draftOpts){
   const c = byId(castawayId);
   if(!c) return;
   AudioFX.whoosh();
@@ -2961,6 +2978,17 @@ function openProfile(castawayId){
   body.appendChild(el('h2',{}, c.name));
   body.appendChild(el('div',{class:'modal-meta'}, `Age ${c.age} &middot; ${c.occupation} &middot; From ${c.hometown}${c.current && c.current!==c.hometown ? ' &middot; Now living in '+c.current : ''}`.replace(/&middot;/g,'·')));
   body.appendChild(el('div',{class:'modal-quote'}, '"' + c.quote + '"'));
+
+  if(draftOpts && draftOpts.onPick){
+    const draftRow = el('div',{class:'btn-row draft-action-row'});
+    const draftBtn = el('button',{class:'btn primary draft-btn'}, '🏆 Draft ' + c.short);
+    draftBtn.addEventListener('click', ()=>{
+      closeProfile();
+      draftOpts.onPick(c);
+    });
+    draftRow.appendChild(draftBtn);
+    body.appendChild(draftRow);
+  }
 
   const btns = el('div',{class:'btn-row'});
   const rhap = el('a',{class:'btn primary', href:c.rhap, target:'_blank', rel:'noopener', html: ICONS.play + ' ' + (c.rhap_note || 'RHAP Pregame Interview')});
@@ -4162,7 +4190,66 @@ function scoringEnter(source){
     setTimeout(renderScoring, 150);
   });
   wrap.appendChild(saveBtn);
+  wrap.appendChild(scoringSteals(source, w));
   return wrap;
+}
+function scoringSteals(source, week){
+  const { teams, scoring, isAdmin } = source;
+  const box = el('div',{class:'card-box', style:'margin-top:18px'});
+  box.appendChild(el('h3',{style:'margin:0 0 6px;font-size:1rem'}, '🥷 Steals & Bonus Points — Week ' + week));
+  box.appendChild(el('p',{style:'margin:0 0 12px;font-size:0.78rem;color:var(--sand-dim)'},
+    'Award bonus points for stolen votes, advantage steals, or other one-off plays that fall outside the category scoring above.'));
+
+  const weekSteals = (scoring.steals && scoring.steals[week]) || [];
+  const list = el('div',{class:'steal-list'});
+  if(!weekSteals.length){
+    list.appendChild(el('div',{style:'font-size:0.8rem;color:var(--sand-dim)'}, 'No steals recorded for this week yet.'));
+  }
+  weekSteals.forEach((s, idx)=>{
+    const team = teams.find(t=>t.id===s.teamId);
+    const row = el('div',{class:'steal-row'});
+    row.appendChild(el('div',{class:'steal-team'}, (team?team.name:'Unknown team') + (s.note ? ' — ' + s.note : '')));
+    const right = el('div',{style:'display:flex;align-items:center;gap:10px'});
+    right.appendChild(el('div',{class:'steal-pts'}, (s.pts>=0?'+':'') + s.pts + ' pts'));
+    if(isAdmin){
+      const rm = el('button',{class:'btn danger', style:'padding:4px 10px;font-size:0.7rem'}, 'Remove');
+      rm.addEventListener('click', ()=>{
+        const updatedWeek = weekSteals.filter((_,i)=>i!==idx);
+        const updated = { ...scoring, steals: { ...(scoring.steals||{}), [week]: updatedWeek } };
+        source.save(updated);
+        toast('Steal removed');
+        setTimeout(renderScoring, 150);
+      });
+      right.appendChild(rm);
+    }
+    row.appendChild(right);
+    list.appendChild(row);
+  });
+  box.appendChild(list);
+
+  if(isAdmin && teams.length){
+    const form = el('div',{class:'steal-form'});
+    const teamSel = el('select',{});
+    teams.forEach(t=> teamSel.appendChild(el('option',{value:t.id}, t.name)));
+    const ptsInp = el('input',{type:'number', step:'1', value:'5'});
+    const noteInp = el('input',{type:'text', placeholder:'What happened? (optional)'});
+    const addBtn = el('button',{class:'btn'}, '+ Add Steal');
+    addBtn.addEventListener('click', ()=>{
+      const pts = parseInt(ptsInp.value)||0;
+      if(!pts){ toast('Enter a nonzero point value'); return; }
+      const entry = { teamId: teamSel.value, pts, note: noteInp.value.trim() };
+      const updatedWeek = [...weekSteals, entry];
+      const updated = { ...scoring, steals: { ...(scoring.steals||{}), [week]: updatedWeek } };
+      source.save(updated);
+      AudioFX.success();
+      toast('Steal added');
+      noteInp.value='';
+      setTimeout(renderScoring, 150);
+    });
+    form.appendChild(teamSel); form.appendChild(ptsInp); form.appendChild(noteInp); form.appendChild(addBtn);
+    box.appendChild(form);
+  }
+  return box;
 }
 
 function scoringCategories(source){
