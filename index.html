@@ -395,7 +395,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-22 19:48 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-22 19:57 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -3122,6 +3122,9 @@ function defaultMockNames(n){
   for(let i=0;i<n;i++) names.push(mockSetup.names[i] || ('Team ' + (i+1)));
   return names;
 }
+function maxRoundsFor(teamCount){
+  return Math.max(1, Math.floor(CASTAWAYS.length / Math.max(1, teamCount)));
+}
 function computeOrder(teamIds, rounds, snake){
   const order = [];
   for(let r=0;r<rounds;r++){
@@ -3141,9 +3144,9 @@ function renderMockSetup(root){
 
   const grid = el('div',{class:'setup-grid'});
   const teamCountInput = el('input',{type:'number', min:'2', max:'12', value:String(mockSetup.teamCount)});
-  const roundsInput = el('input',{type:'number', min:'1', max:'3', value:String(mockSetup.rounds)});
+  const roundsInput = el('input',{type:'number', min:'1', max:String(maxRoundsFor(mockSetup.teamCount)), value:String(mockSetup.rounds)});
   grid.appendChild(el('div',{}, el('label',{class:'field'},'Number of Teams'), teamCountInput));
-  grid.appendChild(el('div',{}, el('label',{class:'field'},'Rounds (picks per team)'), roundsInput));
+  grid.appendChild(el('div',{}, el('label',{class:'field'},'Rounds (picks per team, up to ' + maxRoundsFor(mockSetup.teamCount) + ' with ' + mockSetup.teamCount + ' teams)'), roundsInput));
   box.appendChild(grid);
 
   const snakeWrap = el('label',{class:'checkline', style:'margin:6px 0 16px'});
@@ -3171,13 +3174,20 @@ function renderMockSetup(root){
       namesWrap.appendChild(row);
     });
   }
-  teamCountInput.addEventListener('input', renderNameInputs);
+  function syncRoundsMax(){
+    const n = Math.max(2, Math.min(12, parseInt(teamCountInput.value)||6));
+    const mx = maxRoundsFor(n);
+    roundsInput.max = String(mx);
+    const cur = parseInt(roundsInput.value)||0;
+    if(cur > mx) roundsInput.value = String(mx);
+  }
+  teamCountInput.addEventListener('input', ()=>{ renderNameInputs(); syncRoundsMax(); });
   renderNameInputs();
 
   const startBtn = el('button',{class:'btn primary', style:'margin-top:16px'}, '🔥 Start Mock Draft');
   startBtn.addEventListener('click', ()=>{
     const n = Math.max(2, Math.min(12, parseInt(teamCountInput.value)||6));
-    const rounds = Math.max(1, Math.min(3, parseInt(roundsInput.value)||1));
+    const rounds = Math.max(1, Math.min(maxRoundsFor(n), parseInt(roundsInput.value)||1));
     mockSetup.teamCount = n; mockSetup.rounds = rounds; mockSetup.snake = snakeCheck.checked;
     saveMockSetup();
     const names = defaultMockNames(n);
@@ -3379,7 +3389,7 @@ function liveEntryScreen(){
   createBox.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.85rem;margin:0 0 10px'}, 'You\'ll be the host / commissioner.'));
   const yourName = el('input',{type:'text', placeholder:'Your name'});
   const teamCount = el('input',{type:'number', min:'2', max:'16', value:'6'});
-  const rounds = el('input',{type:'number', min:'1', max:'3', value:'1'});
+  const rounds = el('input',{type:'number', min:'1', max:String(maxRoundsFor(6)), value:'1'});
   const timerSec = el('input',{type:'number', min:'0', max:'600', value:'60'});
   const snakeCheck = el('input',{type:'checkbox'}); snakeCheck.checked = true;
   createBox.appendChild(el('div',{class:'setup-grid'},
@@ -3388,6 +3398,12 @@ function liveEntryScreen(){
     el('div',{}, el('label',{class:'field'},'Rounds'), rounds),
     el('div',{}, el('label',{class:'field'},'Pick Timer (seconds, 0 = off)'), timerSec)
   ));
+  teamCount.addEventListener('input', ()=>{
+    const n = Math.max(2, Math.min(16, parseInt(teamCount.value)||6));
+    const mx = maxRoundsFor(n);
+    rounds.max = String(mx);
+    if((parseInt(rounds.value)||0) > mx) rounds.value = String(mx);
+  });
   const snakeWrap = el('label',{class:'checkline', style:'margin:10px 0'});
   snakeWrap.appendChild(snakeCheck); snakeWrap.appendChild(document.createTextNode('Snake draft order'));
   createBox.appendChild(snakeWrap);
@@ -3395,9 +3411,10 @@ function liveEntryScreen(){
   createBtn.addEventListener('click', ()=>{
     const name = yourName.value.trim();
     if(!name){ toast('Enter your name first'); return; }
+    const n = Math.max(2, Math.min(16, parseInt(teamCount.value)||6));
     createRoom(name, {
-      teamCount: Math.max(2, Math.min(16, parseInt(teamCount.value)||6)),
-      rounds: Math.max(1, Math.min(3, parseInt(rounds.value)||1)),
+      teamCount: n,
+      rounds: Math.max(1, Math.min(maxRoundsFor(n), parseInt(rounds.value)||1)),
       timerSeconds: Math.max(0, Math.min(600, parseInt(timerSec.value)||0)),
       snake: snakeCheck.checked
     });
@@ -3570,11 +3587,12 @@ function liveLobbyScreen(){
   if(host){
     const settingsBox = el('div',{class:'card-box', style:'margin-top:16px'});
     settingsBox.appendChild(el('h3',{style:'margin:0 0 10px'}, '🥥 Draft Settings'));
-    const roundsInput = el('input',{type:'number', min:'1', max:'3', value:String(room.settings.rounds)});
+    const roundsMax = maxRoundsFor(room.teams.length);
+    const roundsInput = el('input',{type:'number', min:'1', max:String(roundsMax), value:String(room.settings.rounds)});
     const timerInput = el('input',{type:'number', min:'0', max:'600', value:String(room.settings.timerSeconds)});
     const snakeInput = el('input',{type:'checkbox'}); snakeInput.checked = room.settings.snake;
     settingsBox.appendChild(el('div',{class:'setup-grid'},
-      el('div',{}, el('label',{class:'field'},'Rounds'), roundsInput),
+      el('div',{}, el('label',{class:'field'},'Rounds (up to ' + roundsMax + ' with ' + room.teams.length + ' drafters)'), roundsInput),
       el('div',{}, el('label',{class:'field'},'Pick Timer (sec, 0=off)'), timerInput)
     ));
     const snakeWrap = el('label',{class:'checkline', style:'margin:10px 0'});
@@ -3583,7 +3601,7 @@ function liveLobbyScreen(){
     const saveBtn = el('button',{class:'btn'}, 'Save Settings');
     saveBtn.addEventListener('click', ()=>{
       roomRef(myRoomCode).child('settings').update({
-        rounds: Math.max(1, Math.min(3, parseInt(roundsInput.value)||1)),
+        rounds: Math.max(1, Math.min(roundsMax, parseInt(roundsInput.value)||1)),
         timerSeconds: Math.max(0, Math.min(600, parseInt(timerInput.value)||0)),
         snake: snakeInput.checked
       });
