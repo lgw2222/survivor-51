@@ -250,18 +250,59 @@ input[type=text]:focus,input[type=number]:focus,select:focus{outline:none;border
 .mini-chip .mini-fallback{width:22px;height:22px;border-radius:50%;background:var(--jungle2);display:flex;align-items:center;justify-content:center;font-size:0.6rem;}
 .empty-slot{color:var(--sand-dim);font-size:0.74rem;font-style:italic;}
 
-/* ===== TV Draft (bigger, mirror-to-a-screen friendly) ===== */
-#panel-tv .grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:18px;}
-#panel-tv .card .info{padding:12px 12px 14px;}
-#panel-tv .card .info .nm{font-size:1.4rem;}
-#panel-tv .card .info .oc{font-size:0.86rem;}
-#panel-tv .btn{font-size:1rem;padding:12px 20px;}
-#panel-tv .turn-banner.tv-banner{padding:22px 26px;}
-#panel-tv .turn-banner.tv-banner .who{font-size:2.4rem;}
-#panel-tv .turn-banner.tv-banner .sub{font-size:1.1rem;}
-#panel-tv .team-card .tname{font-size:1.3rem;}
-#panel-tv .mini-chip{font-size:0.86rem;}
-#panel-tv .mini-chip img,#panel-tv .mini-chip .mini-fallback{width:26px;height:26px;}
+/* ===== TV Draft (mirror-to-a-screen friendly, built for holding the phone sideways) ===== */
+.tv-wrap{display:flex;flex-direction:column;gap:12px;}
+
+.tv-team-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;}
+.tv-team-chip{flex:0 0 auto;min-width:112px;max-width:170px;background:rgba(0,0,0,0.22);border:1px solid var(--line);border-radius:10px;padding:7px 10px;}
+.tv-team-chip.current{border-color:var(--torch);box-shadow:0 0 0 1px var(--torch) inset;}
+.tv-team-name{display:flex;align-items:center;gap:6px;font-family:'Bebas Neue';font-size:1rem;letter-spacing:0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tv-team-name .dot{width:8px;height:8px;border-radius:50%;flex:none;}
+.tv-team-picks{display:flex;gap:3px;margin-top:5px;flex-wrap:wrap;}
+.tv-team-picks img,.tv-team-picks .mini-fallback{width:20px;height:20px;border-radius:50%;object-fit:cover;background:var(--jungle2);flex:none;}
+.tv-team-empty{font-size:0.68rem;color:var(--sand-dim);font-style:italic;}
+
+#panel-tv .turn-banner.tv-banner{padding:14px 18px;margin-bottom:0;}
+#panel-tv .turn-banner.tv-banner .who{font-size:1.7rem;}
+#panel-tv .turn-banner.tv-banner .sub{font-size:0.86rem;}
+
+/* Base TV grid: noticeably smaller tiles than the other tabs so more castaways fit at once */
+#panel-tv .tv-grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;}
+#panel-tv .tv-grid .card .info{padding:6px 7px 8px;}
+#panel-tv .tv-grid .card .info .nm{font-size:0.92rem;}
+#panel-tv .tv-grid .card .info .oc{font-size:0.66rem;}
+#panel-tv .tv-grid .card .tribe-badge{font-size:0.56rem;padding:1px 6px;}
+
+/* Phone turned sideways: shrink further to get as many contestants on screen as possible */
+@media (orientation:landscape) and (max-height:520px){
+  /* Collapse the header to one slim row so it doesn't eat the whole sideways screen */
+  header.top .top-inner{padding:6px 12px;gap:8px;}
+  header.top .brand{display:none;}
+  nav.tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-left:0;width:100%;}
+  nav.tabs button{padding:5px 10px;font-size:0.78rem;white-space:nowrap;flex:0 0 auto;}
+  .bamboo-divider{height:4px;}
+  .wrap{padding-left:10px;padding-right:10px;padding-bottom:10px;}
+  #panel-tv{padding-top:4px;}
+  #panel-tv .tv-grid{grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:3px;}
+  #panel-tv .tv-grid .photo-wrap{aspect-ratio:1/1;}
+  #panel-tv .tv-grid .card .info{padding:1px 3px 2px;}
+  #panel-tv .tv-grid .card .info .nm{font-size:0.56rem;line-height:1.1;}
+  #panel-tv .tv-grid .card .info .oc{display:none;}
+  #panel-tv .tv-grid .card .tribe-badge{display:none;}
+  #panel-tv .tv-grid .card.drafted::after{font-size:0.6rem;}
+  #panel-tv .tv-wrap{gap:3px;}
+  #panel-tv .tv-team-strip{gap:4px;padding-bottom:0;}
+  #panel-tv .tv-team-chip{min-width:70px;max-width:100px;padding:2px 6px;}
+  #panel-tv .tv-team-name{font-size:0.64rem;}
+  #panel-tv .tv-team-picks{margin-top:2px;}
+  #panel-tv .tv-team-picks img,#panel-tv .tv-team-picks .mini-fallback{width:12px;height:12px;}
+  #panel-tv .turn-banner.tv-banner{padding:4px 9px;}
+  #panel-tv .turn-banner.tv-banner .who{font-size:0.9rem;}
+  #panel-tv .turn-banner.tv-banner .sub{font-size:0.6rem;}
+  #panel-tv .turn-banner.tv-banner .btn{padding:4px 8px;font-size:0.66rem;}
+  #panel-tv .turn-banner.tv-banner .btn-row{gap:4px;}
+  .bamboo-divider.bottom{margin-top:14px;}
+}
 
 .tv-flash{
   position:fixed;top:16%;left:50%;z-index:300;pointer-events:none;
@@ -431,7 +472,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-22 22:03 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-22 22:19 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -3457,25 +3498,49 @@ function renderTvSetup(root){
     saveTv();
     AudioFX.horn();
     renderTv();
+    window.scrollTo(0,0);
   });
   box.appendChild(startBtn);
 
   if(lsGet('s51_tv', null)){
     const resumeBtn = el('button',{class:'btn', style:'margin-top:16px;margin-left:8px'}, 'Resume Saved TV Draft');
-    resumeBtn.addEventListener('click', ()=>{ tvState = lsGet('s51_tv', null); renderTv(); });
+    resumeBtn.addEventListener('click', ()=>{ tvState = lsGet('s51_tv', null); renderTv(); window.scrollTo(0,0); });
     box.appendChild(resumeBtn);
   }
 
   root.appendChild(box);
 }
 
+function tvTeamChip(team, isCurrent){
+  const chip = el('div',{class:'tv-team-chip' + (isCurrent?' current':'')});
+  chip.appendChild(el('div',{class:'tv-team-name'}, el('span',{class:'dot', style:'background:'+team.color}), team.name));
+  const picksWrap = el('div',{class:'tv-team-picks'});
+  if(!team.picks.length) picksWrap.appendChild(el('div',{class:'tv-team-empty'}, '—'));
+  team.picks.forEach(pid=>{
+    const c = byId(pid);
+    if(!c) return;
+    const img = el('img',{src:c.photo, alt:c.short, title:c.short});
+    img.onerror = function(){ this.replaceWith(el('div',{class:'mini-fallback'}, initials(c.name))); };
+    picksWrap.appendChild(img);
+  });
+  chip.appendChild(picksWrap);
+  return chip;
+}
+
 function renderTvDrafting(root){
   root.innerHTML = '';
-  const layout = el('div',{class:'draft-layout'});
-  const main = el('div',{});
+  const wrap = el('div',{class:'tv-wrap'});
 
   const draftedIds = new Set(tvState.teams.flatMap(t=>t.picks));
   const totalPicks = tvState.order.length;
+
+  // Team strip up top — horizontal & scrollable so it works turned sideways
+  const strip = el('div',{class:'tv-team-strip'});
+  tvState.teams.forEach(t=>{
+    const isCurrent = tvState.status==='drafting' && tvState.order[tvState.pickIndex]===t.id;
+    strip.appendChild(tvTeamChip(t, isCurrent));
+  });
+  wrap.appendChild(strip);
 
   if(tvState.status === 'drafting'){
     const teamId = tvState.order[tvState.pickIndex];
@@ -3493,7 +3558,7 @@ function renderTvDrafting(root){
     resetBtn.addEventListener('click', tvReset);
     controls.appendChild(undoBtn); controls.appendChild(resetBtn);
     banner.appendChild(controls);
-    main.appendChild(banner);
+    wrap.appendChild(banner);
   } else if(tvState.status === 'complete'){
     const banner = el('div',{class:'turn-banner tv-banner'});
     banner.appendChild(el('div',{}, el('div',{class:'who'}, '🏆 Draft Complete!'), el('div',{class:'sub'}, 'All ' + totalPicks + ' picks are in.')));
@@ -3501,13 +3566,13 @@ function renderTvDrafting(root){
     const undoBtn = el('button',{class:'btn'}, '↶ Undo Last Pick');
     undoBtn.addEventListener('click', tvUndo);
     const newBtn = el('button',{class:'btn primary'}, 'Start New TV Draft');
-    newBtn.addEventListener('click', ()=>{ tvState=null; lsSet('s51_tv', null); renderTv(); });
+    newBtn.addEventListener('click', ()=>{ tvState=null; lsSet('s51_tv', null); renderTv(); window.scrollTo(0,0); });
     controls.appendChild(undoBtn); controls.appendChild(newBtn);
     banner.appendChild(controls);
-    main.appendChild(banner);
+    wrap.appendChild(banner);
   }
 
-  const grid = el('div',{class:'grid'});
+  const grid = el('div',{class:'grid tv-grid'});
   CASTAWAYS.forEach(c=>{
     const drafted = draftedIds.has(c.id);
     grid.appendChild(castawayCard(c, {
@@ -3515,17 +3580,9 @@ function renderTvDrafting(root){
       onPick: tvState.status==='drafting' ? (cc)=>tvPick(cc.id) : null
     }));
   });
-  main.appendChild(grid);
-  layout.appendChild(main);
+  wrap.appendChild(grid);
 
-  const side = el('div',{class:'board-list'});
-  tvState.teams.forEach((t,i)=>{
-    const isCurrent = tvState.status==='drafting' && tvState.order[tvState.pickIndex]===t.id;
-    side.appendChild(teamBoardCard(t, isCurrent));
-  });
-  layout.appendChild(side);
-
-  root.appendChild(layout);
+  root.appendChild(wrap);
 }
 
 function tvPick(castawayId){
@@ -3565,6 +3622,7 @@ function tvReset(){
   tvState = null;
   lsSet('s51_tv', null);
   renderTv();
+  window.scrollTo(0,0);
 }
 function renderTv(){
   const root = $('#tvRoot');
