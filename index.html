@@ -479,7 +479,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-22 22:31 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-23 02:32 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -3612,9 +3612,13 @@ function renderTvDrafting(root){
     undoBtn.addEventListener('click', tvUndo);
     const newBtn = el('button',{class:'btn primary'}, 'Start New TV Draft');
     newBtn.addEventListener('click', ()=>{ tvState=null; lsSet('s51_tv', null); renderTv(); window.scrollTo(0,0); });
-    controls.appendChild(undoBtn); controls.appendChild(newBtn); controls.appendChild(fullscreenBtn());
+    const exportBtn = el('button',{class:'btn'}, '⬇️ Export CSV');
+    exportBtn.addEventListener('click', ()=> exportDraftCSV({ type:'tv', teams: tvState.teams }));
+    controls.appendChild(undoBtn); controls.appendChild(newBtn); controls.appendChild(exportBtn); controls.appendChild(fullscreenBtn());
     banner.appendChild(controls);
     wrap.appendChild(banner);
+    wrap.appendChild(el('p',{style:'margin:-2px 2px 0;font-size:0.74rem;color:var(--sand-dim)'},
+      'Want a full workbook with weekly scoring and standings too? Head to the Scoring tab → Export — it now reads from this TV Draft automatically.'));
   }
 
   const grid = el('div',{class:'grid tv-grid'});
@@ -4197,6 +4201,15 @@ function scoringSource(){
       save(newScoring){ roomRef(myRoomCode).child('scoring').set(newScoring); }
     };
   }
+  if(tvState && tvState.status==='complete'){
+    const teams = tvState.teams.map(t=>({ id:t.id, name:t.name, color:t.color, picks:t.picks }));
+    return {
+      type:'tv', teams,
+      isAdmin:true,
+      scoring: lsGet('s51_tv_scoring', null) || defaultScoring(),
+      save(newScoring){ lsSet('s51_tv_scoring', newScoring); }
+    };
+  }
   if(mockState && mockState.status==='complete'){
     const teams = mockState.teams.map(t=>({ id:t.id, name:t.name, color:t.color, picks:t.picks }));
     return {
@@ -4233,6 +4246,10 @@ function draftPickLog(source){
   if(source.type==='live'){
     return [...(liveRoomState.picks||[])].sort((a,b)=>a.pickNo-b.pickNo)
       .map(p=>({ pickNo:p.pickNo, round:p.round, teamId:p.teamId, castawayId:p.castawayId }));
+  }
+  if(source.type==='tv'){
+    const teamCount = tvState.teams.length || 1;
+    return (tvState.history||[]).map((h,i)=>({ pickNo:i+1, round:Math.floor(i/teamCount)+1, teamId:h.teamId, castawayId:h.castawayId }));
   }
   if(source.type==='mock'){
     const teamCount = mockState.teams.length || 1;
@@ -4327,9 +4344,11 @@ function scoringEmptyNotice(msg, showDraftLinks){
     const btns = el('div',{class:'btn-row', style:'margin-top:12px'});
     const liveBtn = el('button',{class:'btn primary'}, 'Go to Live Draft');
     liveBtn.addEventListener('click', ()=> $('nav.tabs button[data-tab=live]').click());
+    const tvBtn = el('button',{class:'btn'}, 'Go to TV Draft');
+    tvBtn.addEventListener('click', ()=> $('nav.tabs button[data-tab=tv]').click());
     const mockBtn = el('button',{class:'btn'}, 'Go to Mock Draft');
     mockBtn.addEventListener('click', ()=> $('nav.tabs button[data-tab=mock]').click());
-    btns.appendChild(liveBtn); btns.appendChild(mockBtn);
+    btns.appendChild(liveBtn); btns.appendChild(tvBtn); btns.appendChild(mockBtn);
     wrap.appendChild(btns);
   }
   return wrap;
