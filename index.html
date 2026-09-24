@@ -400,6 +400,38 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 .week-scorecard .wsname{font-weight:600;font-size:0.88rem;}
 .week-scorecard .wspts{font-family:'Bebas Neue';font-size:1.3rem;color:var(--torch);}
 
+/* Team Pages */
+.team-page-switcher{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+.team-page-chip{
+  font-family:'Bebas Neue';font-size:1rem;letter-spacing:0.03em;
+  background:rgba(236,223,192,0.04);border:1px solid var(--tc,var(--line));color:var(--tc,var(--sand-dim));
+  padding:8px 16px;border-radius:999px;cursor:pointer;transition:transform .12s, box-shadow .12s;
+}
+.team-page-chip:hover{transform:translateY(-1px);}
+.team-page-chip.on{background:var(--tc,var(--torch));border-color:transparent;color:#0a1712;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,0.35);}
+.team-page-banner{
+  position:relative;overflow:hidden;
+  border:2px solid var(--line);border-radius:var(--radius);
+  padding:26px 24px 22px;margin-bottom:8px;
+  background:linear-gradient(160deg, var(--jungle), var(--night2));
+  box-shadow:var(--shadow);
+}
+.team-page-banner::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:6px;
+  background:repeating-linear-gradient(90deg, var(--bamboo) 0 14px, var(--bamboo-dark) 14px 17px);
+  opacity:0.6;
+}
+.team-page-kicker{font-size:0.72rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--sand-dim);margin-bottom:4px;}
+.team-page-name{font-family:'Bebas Neue';font-size:2.6rem;letter-spacing:0.03em;line-height:1.05;text-shadow:0 4px 18px rgba(0,0,0,0.4);}
+.team-page-owner{font-size:0.88rem;color:var(--sand-dim);margin-top:4px;}
+.team-page-stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;}
+.team-page-stat{background:rgba(0,0,0,0.25);border:1px solid var(--line);border-radius:10px;padding:10px 18px;min-width:100px;text-align:center;}
+.team-page-stat-val{font-family:'Bebas Neue';font-size:1.9rem;line-height:1;}
+.team-page-stat-lbl{font-size:0.68rem;color:var(--sand-dim);text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;}
+.team-page-week{display:flex;justify-content:space-between;align-items:center;}
+.team-page-week-row{display:flex;justify-content:space-between;gap:10px;font-size:0.85rem;margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);}
+.team-page-week-row:first-of-type{border-top:none;padding-top:0;}
+
 ::-webkit-scrollbar{width:10px;height:10px;}
 ::-webkit-scrollbar-thumb{background:var(--jungle2);border-radius:6px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -479,7 +511,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-23 02:32 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-24 18:01 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -3079,6 +3111,7 @@ function castawayCard(c, opts){
     el('div',{class:'nm'}, c.short),
     el('div',{class:'oc'}, c.occupation)
   ));
+  if(opts.sub) card.appendChild(el('div',{class:'oc', style:'color:#ff8a7a;font-weight:700;margin-top:2px'}, opts.sub));
   card.addEventListener('click', ()=>{
     if(opts.drafted) return;
     openProfile(c.id, opts.onPick ? { onPick: opts.onPick } : null);
@@ -4336,6 +4369,7 @@ async function exportFullXLSX(source){
 let scoringSubTab = 'standings';
 let scoringLeaderView = 'team';
 let scoringSelectedWeek = null;
+let scoringSelectedTeam = null;
 
 function scoringEmptyNotice(msg, showDraftLinks){
   const wrap = el('div',{});
@@ -4356,7 +4390,7 @@ function scoringEmptyNotice(msg, showDraftLinks){
 
 function scoringSubnav(active){
   const nav = el('div',{class:'subtabs'});
-  const tabs = [['standings','🏅 Standings'],['weekly','📅 Weekly Breakdown'],['enter','✏️ Enter Scores'],['categories','⚙️ Categories'],['export','⬇️ Export'],['champions','👑 Champions']];
+  const tabs = [['standings','🏅 Standings'],['teams','🏝️ Team Pages'],['weekly','📅 Weekly Breakdown'],['enter','✏️ Enter Scores'],['categories','⚙️ Categories'],['export','⬇️ Export'],['champions','👑 Champions']];
   tabs.forEach(([id,label])=>{
     const b = el('button',{class: active===id ? 'on' : ''}, label);
     b.addEventListener('click', ()=>{ scoringSubTab = id; renderScoring(); });
@@ -4453,6 +4487,86 @@ function scoringStandings(source){
       wrap.appendChild(row);
     });
   }
+  return wrap;
+}
+
+function scoringTeamPages(source){
+  const { teams, scoring } = source;
+  const wrap = el('div',{});
+  if(!teams.length){ wrap.appendChild(el('div',{class:'notice'}, 'No teams yet.')); return wrap; }
+  if(!scoringSelectedTeam || !teams.some(t=>t.id===scoringSelectedTeam)) scoringSelectedTeam = teams[0].id;
+
+  const switcher = el('div',{class:'team-page-switcher'});
+  teams.forEach(t=>{
+    const b = el('button',{class:'team-page-chip' + (t.id===scoringSelectedTeam?' on':''), style:'--tc:'+t.color}, t.name);
+    b.addEventListener('click', ()=>{ scoringSelectedTeam = t.id; renderScoring(); });
+    switcher.appendChild(b);
+  });
+  wrap.appendChild(switcher);
+
+  const team = teams.find(t=>t.id===scoringSelectedTeam);
+  const total = teamSeasonPoints(scoring, team.picks) + stealBonusSeason(scoring, team.id);
+  const stillIn = team.picks.filter(cid => !(scoring.eliminated && scoring.eliminated[cid])).length;
+
+  const banner = el('div',{class:'team-page-banner', style:'border-color:'+team.color});
+  banner.appendChild(el('div',{class:'team-page-kicker'}, '🔥 Survivor 51 Fantasy Tribe'));
+  banner.appendChild(el('div',{class:'team-page-name', style:'color:'+team.color}, team.name));
+  if(team.ownerName) banner.appendChild(el('div',{class:'team-page-owner'}, '👤 Drafted by ' + team.ownerName));
+  const stats = el('div',{class:'team-page-stats'});
+  [['Total Points', total, team.color], ['Castaways', team.picks.length, team.color], ['Still In', stillIn, team.color]].forEach(([label,val,color])=>{
+    stats.appendChild(el('div',{class:'team-page-stat'},
+      el('div',{class:'team-page-stat-val', style:'color:'+color}, String(val)),
+      el('div',{class:'team-page-stat-lbl'}, label)
+    ));
+  });
+  banner.appendChild(stats);
+  wrap.appendChild(banner);
+
+  wrap.appendChild(el('h3',{style:'margin:22px 0 10px'}, '🏆 Roster'));
+  const roster = team.picks.map(cid=>byId(cid)).filter(Boolean)
+    .sort((a,b)=>castawaySeasonPoints(scoring,b.id)-castawaySeasonPoints(scoring,a.id));
+  if(!roster.length){
+    wrap.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.85rem'}, 'No castaways on this roster.'));
+  } else {
+    const grid = el('div',{class:'grid team-page-roster'});
+    roster.forEach(c=>{
+      const pts = castawaySeasonPoints(scoring, c.id);
+      const out = scoring.eliminated && scoring.eliminated[c.id];
+      grid.appendChild(castawayCard(c, { badge: pts + ' pts', sub: out ? ('OUT — Week ' + out) : null }));
+    });
+    wrap.appendChild(grid);
+  }
+
+  wrap.appendChild(el('h3',{style:'margin:22px 0 10px'}, '🥷 Steals & Bonus Plays'));
+  const weeks = scoring.weeks || [];
+  const stealTotal = stealBonusSeason(scoring, team.id);
+  wrap.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.85rem;margin:-4px 0 12px'},
+    stealTotal ? ('+' + stealTotal + ' bonus points from steals this season.') : 'No steal or bonus points recorded yet this season.'));
+  if(!weeks.length){
+    wrap.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.85rem'}, 'No weeks scored yet — add one in Enter Scores.'));
+  } else {
+    weeks.forEach(w=>{
+      const weekSteals = ((scoring.steals||{})[w]||[]).filter(s=>s.teamId===team.id);
+      const wkTotal = stealBonusForWeek(scoring, team.id, w);
+      const box = el('div',{class:'card-box', style:'margin-bottom:10px;padding:12px 16px'});
+      const head = el('div',{class:'team-page-week'});
+      head.appendChild(el('div',{style:'font-family:\'Bebas Neue\';font-size:1.05rem;color:var(--sand)'}, 'Week ' + w));
+      head.appendChild(el('div',{style:'font-family:\'Bebas Neue\';color:var(--torch)'}, (wkTotal>=0?'+':'') + wkTotal + ' pts'));
+      box.appendChild(head);
+      if(!weekSteals.length){
+        box.appendChild(el('div',{style:'font-size:0.78rem;color:var(--sand-dim);margin-top:6px'}, 'No steals this week.'));
+      } else {
+        weekSteals.forEach(s=>{
+          box.appendChild(el('div',{class:'team-page-week-row'},
+            el('div',{}, s.note || 'Steal'),
+            el('div',{style:'color:var(--torch);font-family:\'Bebas Neue\';white-space:nowrap'}, (s.pts>=0?'+':'') + s.pts)
+          ));
+        });
+      }
+      wrap.appendChild(box);
+    });
+  }
+
   return wrap;
 }
 
@@ -4863,6 +4977,7 @@ function renderScoring(){
   const needsDraftMsg = 'Scoring, standings, and week-by-week entry unlock once a Live or Mock Draft is complete and teams have their rosters. You can still browse and edit Categories and Export below without a draft.';
   let content;
   if(scoringSubTab==='standings') content = source ? scoringStandings(source) : scoringEmptyNotice(needsDraftMsg, true);
+  else if(scoringSubTab==='teams') content = source ? scoringTeamPages(source) : scoringEmptyNotice(needsDraftMsg, true);
   else if(scoringSubTab==='weekly') content = source ? scoringWeekly(source) : scoringEmptyNotice(needsDraftMsg, true);
   else if(scoringSubTab==='enter') content = source ? scoringEnter(source) : scoringEmptyNotice(needsDraftMsg, true);
   else if(scoringSubTab==='categories') content = scoringCategories(source);
