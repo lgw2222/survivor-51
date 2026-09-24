@@ -100,6 +100,8 @@ nav.tabs button.active{background:linear-gradient(135deg,var(--torch),var(--flam
 .panel{display:none;padding-top:22px;}
 .panel.active{display:block;animation:fadein .25s ease;}
 @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.draft-mode{display:none;padding-top:16px;}
+.draft-mode.active{display:block;animation:fadein .25s ease;}
 
 .section-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:14px;flex-wrap:wrap;}
 .section-head h2{margin:0;font-size:1.9rem;color:var(--sand);}
@@ -431,6 +433,19 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 .team-page-week{display:flex;justify-content:space-between;align-items:center;}
 .team-page-week-row{display:flex;justify-content:space-between;gap:10px;font-size:0.85rem;margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);}
 .team-page-week-row:first-of-type{border-top:none;padding-top:0;}
+.roster-edit-btn{
+  position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;
+  background:rgba(10,23,18,0.8);border:1px solid var(--line);color:var(--sand);
+  cursor:pointer;font-size:0.9rem;z-index:2;display:flex;align-items:center;justify-content:center;
+  transition:border-color .15s, color .15s, transform .15s;
+}
+.roster-edit-btn:hover{border-color:var(--torch);color:var(--torch);transform:scale(1.08);}
+
+/* score entry search */
+.score-search{max-width:360px;margin:14px 0 12px;}
+.score-search input{width:100%;}
+.score-table tbody tr.row-match{background:rgba(255,122,51,0.12);}
+.score-table tbody tr.row-hidden{display:none;}
 
 ::-webkit-scrollbar{width:10px;height:10px;}
 ::-webkit-scrollbar-thumb{background:var(--jungle2);border-radius:6px;}
@@ -452,9 +467,8 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
     </div>
     <nav class="tabs">
       <button data-tab="castaways" class="active">Castaways</button>
-      <button data-tab="mock">Mock Draft</button>
-      <button data-tab="tv">📺 TV Draft</button>
-      <button data-tab="live">Live Draft</button>
+      <button data-tab="draft">🎯 Draft</button>
+      <button data-tab="teams">🏝️ Teams</button>
       <button data-tab="scoring">Scoring</button>
       <button data-tab="rankings">Rankings</button>
     </nav>
@@ -480,19 +494,26 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
     <div class="grid" id="castawayGrid"></div>
   </section>
 
-  <!-- MOCK DRAFT -->
-  <section id="panel-mock" class="panel">
-    <div id="mockRoot"></div>
+  <!-- DRAFT (Mock / TV / Live, combined) -->
+  <section id="panel-draft" class="panel">
+    <div class="subtabs" id="draftSubnav"></div>
+
+    <div id="panel-mock" class="draft-mode">
+      <div id="mockRoot"></div>
+    </div>
+
+    <div id="panel-tv" class="draft-mode">
+      <div id="tvRoot"></div>
+    </div>
+
+    <div id="panel-live" class="draft-mode">
+      <div id="liveRoot"></div>
+    </div>
   </section>
 
-  <!-- TV DRAFT -->
-  <section id="panel-tv" class="panel">
-    <div id="tvRoot"></div>
-  </section>
-
-  <!-- LIVE DRAFT -->
-  <section id="panel-live" class="panel">
-    <div id="liveRoot"></div>
+  <!-- TEAM PAGES -->
+  <section id="panel-teams" class="panel">
+    <div id="teamsRoot"></div>
   </section>
 
   <!-- SCORING -->
@@ -511,7 +532,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-24 18:01 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-24 18:19 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -3252,8 +3273,39 @@ $all('nav.tabs button').forEach(btn=>{
     $('#panel-' + btn.dataset.tab).classList.add('active');
     if(btn.dataset.tab === 'scoring' && typeof renderScoring === 'function') renderScoring();
     if(btn.dataset.tab === 'rankings' && typeof renderRankings === 'function') renderRankings();
+    if(btn.dataset.tab === 'teams' && typeof renderTeamsTab === 'function') renderTeamsTab();
   });
 });
+
+/* =========================================================================
+   DRAFT TAB — Mock / TV / Live combined under one nav entry, switched via
+   an internal subnav so all three draft modes are one click away.
+   ========================================================================= */
+let draftSubTab = lsGet('s51_draft_subtab', 'mock');
+function renderDraftSubnav(){
+  const nav = $('#draftSubnav');
+  if(!nav) return;
+  nav.innerHTML = '';
+  const tabs = [['mock','🧪 Mock Draft'],['tv','📺 TV Draft'],['live','🌐 Live Draft']];
+  tabs.forEach(([id,label])=>{
+    const b = el('button',{class: draftSubTab===id ? 'on' : ''}, label);
+    b.addEventListener('click', ()=> setDraftSubTab(id));
+    nav.appendChild(b);
+  });
+}
+function setDraftSubTab(id){
+  draftSubTab = id;
+  lsSet('s51_draft_subtab', id);
+  renderDraftSubnav();
+  $all('.draft-mode').forEach(p=> p.classList.toggle('active', p.id === 'panel-' + id));
+}
+function goToDraftMode(id){
+  const draftBtn = $('nav.tabs button[data-tab=draft]');
+  if(draftBtn) draftBtn.click();
+  setDraftSubTab(id);
+}
+renderDraftSubnav();
+setDraftSubTab(draftSubTab);
 
 renderCastawayGrid();
 
@@ -3903,6 +3955,7 @@ function listenRoom(code){
     liveRoomState = room;
     renderLive();
     if(document.getElementById('panel-scoring') && document.getElementById('panel-scoring').classList.contains('active') && typeof renderScoring === 'function') renderScoring();
+    if(document.getElementById('panel-teams') && document.getElementById('panel-teams').classList.contains('active') && typeof renderTeamsTab === 'function') renderTeamsTab();
   });
 }
 
@@ -4377,11 +4430,11 @@ function scoringEmptyNotice(msg, showDraftLinks){
   if(showDraftLinks){
     const btns = el('div',{class:'btn-row', style:'margin-top:12px'});
     const liveBtn = el('button',{class:'btn primary'}, 'Go to Live Draft');
-    liveBtn.addEventListener('click', ()=> $('nav.tabs button[data-tab=live]').click());
+    liveBtn.addEventListener('click', ()=> goToDraftMode('live'));
     const tvBtn = el('button',{class:'btn'}, 'Go to TV Draft');
-    tvBtn.addEventListener('click', ()=> $('nav.tabs button[data-tab=tv]').click());
+    tvBtn.addEventListener('click', ()=> goToDraftMode('tv'));
     const mockBtn = el('button',{class:'btn'}, 'Go to Mock Draft');
-    mockBtn.addEventListener('click', ()=> $('nav.tabs button[data-tab=mock]').click());
+    mockBtn.addEventListener('click', ()=> goToDraftMode('mock'));
     btns.appendChild(liveBtn); btns.appendChild(tvBtn); btns.appendChild(mockBtn);
     wrap.appendChild(btns);
   }
@@ -4390,7 +4443,7 @@ function scoringEmptyNotice(msg, showDraftLinks){
 
 function scoringSubnav(active){
   const nav = el('div',{class:'subtabs'});
-  const tabs = [['standings','🏅 Standings'],['teams','🏝️ Team Pages'],['weekly','📅 Weekly Breakdown'],['enter','✏️ Enter Scores'],['categories','⚙️ Categories'],['export','⬇️ Export'],['champions','👑 Champions']];
+  const tabs = [['standings','🏅 Standings'],['weekly','📅 Weekly Breakdown'],['enter','✏️ Enter Scores'],['categories','⚙️ Categories'],['export','⬇️ Export'],['champions','👑 Champions']];
   tabs.forEach(([id,label])=>{
     const b = el('button',{class: active===id ? 'on' : ''}, label);
     b.addEventListener('click', ()=>{ scoringSubTab = id; renderScoring(); });
@@ -4499,7 +4552,7 @@ function scoringTeamPages(source){
   const switcher = el('div',{class:'team-page-switcher'});
   teams.forEach(t=>{
     const b = el('button',{class:'team-page-chip' + (t.id===scoringSelectedTeam?' on':''), style:'--tc:'+t.color}, t.name);
-    b.addEventListener('click', ()=>{ scoringSelectedTeam = t.id; renderScoring(); });
+    b.addEventListener('click', ()=>{ scoringSelectedTeam = t.id; renderTeamsTab(); });
     switcher.appendChild(b);
   });
   wrap.appendChild(switcher);
@@ -4522,18 +4575,15 @@ function scoringTeamPages(source){
   banner.appendChild(stats);
   wrap.appendChild(banner);
 
-  wrap.appendChild(el('h3',{style:'margin:22px 0 10px'}, '🏆 Roster'));
+  wrap.appendChild(el('h3',{style:'margin:22px 0 4px'}, '🏆 Roster'));
+  if(source.isAdmin) wrap.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.78rem;margin:0 0 10px'}, 'Tap a card for their profile, or the ✏️ to score their week right here.'));
   const roster = team.picks.map(cid=>byId(cid)).filter(Boolean)
     .sort((a,b)=>castawaySeasonPoints(scoring,b.id)-castawaySeasonPoints(scoring,a.id));
   if(!roster.length){
     wrap.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.85rem'}, 'No castaways on this roster.'));
   } else {
     const grid = el('div',{class:'grid team-page-roster'});
-    roster.forEach(c=>{
-      const pts = castawaySeasonPoints(scoring, c.id);
-      const out = scoring.eliminated && scoring.eliminated[c.id];
-      grid.appendChild(castawayCard(c, { badge: pts + ' pts', sub: out ? ('OUT — Week ' + out) : null }));
-    });
+    roster.forEach(c=> grid.appendChild(teamRosterCard(c, source, team)));
     wrap.appendChild(grid);
   }
 
@@ -4568,6 +4618,133 @@ function scoringTeamPages(source){
   }
 
   return wrap;
+}
+
+function renderTeamsTab(){
+  const root = $('#teamsRoot');
+  if(!root) return;
+  root.innerHTML = '';
+  const source = scoringSource();
+  if(!source){
+    root.appendChild(scoringEmptyNotice(
+      'Team pages unlock once a Draft (Live, TV, or Mock) is complete and teams have their rosters.', true));
+    return;
+  }
+  root.appendChild(scoringTeamPages(source));
+}
+renderTeamsTab();
+
+function teamRosterCard(c, source, team){
+  const { scoring, isAdmin } = source;
+  const pts = castawaySeasonPoints(scoring, c.id);
+  const out = scoring.eliminated && scoring.eliminated[c.id];
+  const card = el('div',{class:'card'});
+  card.appendChild(photoBlock(c));
+  card.appendChild(el('div',{class:'badge'}, pts + ' pts'));
+  card.appendChild(el('div',{class:'tribe-badge ' + (c.tribe || 'tbd')}, tribeLabel(c.tribe)));
+  card.appendChild(el('div',{class:'info'},
+    el('div',{class:'nm'}, c.short),
+    el('div',{class:'oc'}, c.occupation)
+  ));
+  if(out) card.appendChild(el('div',{class:'oc', style:'color:#ff8a7a;font-weight:700;margin-top:2px'}, 'OUT — Week ' + out));
+  card.addEventListener('click', ()=> openProfile(c.id));
+  if(isAdmin){
+    const editBtn = el('button',{class:'roster-edit-btn', title:'Score ' + c.short + '\'s week here'}, '✏️');
+    editBtn.addEventListener('click', (e)=>{ e.stopPropagation(); openScoreEditor(c.id, source, team); });
+    card.appendChild(editBtn);
+  }
+  return card;
+}
+
+/* Quick, focused score editor for one castaway — opened from a Team Page
+   roster card so you don't have to hunt through the full scoring table. */
+function openScoreEditor(castawayId, source, team){
+  const c = byId(castawayId);
+  if(!c || !source) return;
+  const { scoring, isAdmin } = source;
+  if(!isAdmin){ toast('Only the commissioner can enter scores.'); return; }
+  AudioFX.whoosh();
+  const modal = $('#profileModal');
+  modal.innerHTML = '';
+
+  const head = el('div',{class:'modal-head'});
+  head.appendChild(photoBlock(c));
+  const closeBtn = el('button',{class:'modal-close', html:ICONS.close});
+  closeBtn.addEventListener('click', closeProfile);
+  head.appendChild(closeBtn);
+  modal.appendChild(head);
+
+  const body = el('div',{class:'modal-body'});
+  body.appendChild(el('h2',{}, c.name));
+  body.appendChild(el('div',{class:'modal-meta'}, (team ? team.name + ' · ' : '') + c.occupation));
+
+  const weeks = scoring.weeks || [];
+  if(!weeks.length){
+    body.appendChild(el('div',{class:'notice', style:'margin-top:12px'},
+      'Add a week first (Scoring → Enter Scores → + Add Week), then come back here to score ' + c.short + '.'));
+    modal.appendChild(body);
+    $('#profileOverlay').classList.add('open');
+    return;
+  }
+
+  let editWeek = (scoringSelectedWeek && weeks.includes(scoringSelectedWeek)) ? scoringSelectedWeek : weeks[weeks.length-1];
+
+  const weekPicker = el('div',{class:'week-picker', style:'margin:14px 0 4px'});
+  const fieldsWrap = el('div',{style:'display:grid;gap:8px;margin-top:8px'});
+
+  function renderWeekPicker(){
+    weekPicker.innerHTML = '';
+    weeks.forEach(w=>{
+      const b = el('button',{class: editWeek===w ? 'on' : ''}, 'Week ' + w);
+      b.addEventListener('click', ()=>{ editWeek = w; renderWeekPicker(); renderFields(); });
+      weekPicker.appendChild(b);
+    });
+  }
+  function renderFields(){
+    fieldsWrap.innerHTML = '';
+    const existing = ((scoring.entries[editWeek]||{})[castawayId]) || {};
+    scoring.categories.forEach(cat=>{
+      const row = el('div',{style:'display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(0,0,0,0.18);border:1px solid var(--line);border-radius:10px;padding:9px 14px'});
+      row.appendChild(el('div',{style:'font-size:0.88rem'}, cat.label + '  ', el('span',{style:'color:var(--sand-dim);font-size:0.7rem'}, '(×' + cat.weight + ')')));
+      const inp = el('input',{type:'number', min:'0', step:'1', value:String(existing[cat.key]||0), style:'width:64px;text-align:center'});
+      inp.dataset.cat = cat.key;
+      row.appendChild(inp);
+      fieldsWrap.appendChild(row);
+    });
+    const outRow = el('div',{class:'checkline', style:'margin-top:6px'});
+    const outChk = el('input',{type:'checkbox', id:'scoreEditorOut'});
+    outChk.checked = !!(scoring.eliminated && scoring.eliminated[castawayId] === editWeek);
+    outRow.appendChild(outChk);
+    outRow.appendChild(el('label',{for:'scoreEditorOut'}, 'Voted out / eliminated this week'));
+    fieldsWrap.appendChild(outRow);
+  }
+  renderWeekPicker();
+  renderFields();
+  body.appendChild(weekPicker);
+  body.appendChild(fieldsWrap);
+
+  const saveBtn = el('button',{class:'btn primary', style:'margin-top:16px;width:100%;justify-content:center'}, '💾 Save Score');
+  saveBtn.addEventListener('click', ()=>{
+    const catValues = {};
+    $all('input[type=number]', fieldsWrap).forEach(inp=>{ catValues[inp.dataset.cat] = Math.max(0, parseInt(inp.value)||0); });
+    const outChecked = $('#scoreEditorOut').checked;
+    const entries = { ...(scoring.entries[editWeek]||{}) };
+    entries[castawayId] = catValues;
+    const eliminated = { ...(scoring.eliminated||{}) };
+    if(outChecked) eliminated[castawayId] = editWeek;
+    else if(eliminated[castawayId]===editWeek) delete eliminated[castawayId];
+    const updated = { ...scoring, entries: { ...scoring.entries, [editWeek]: entries }, eliminated };
+    source.save(updated);
+    AudioFX.success();
+    toast(c.short + '’s Week ' + editWeek + ' score saved');
+    closeProfile();
+    setTimeout(renderScoring, 150);
+    setTimeout(renderTeamsTab, 150);
+  });
+  body.appendChild(saveBtn);
+
+  modal.appendChild(body);
+  $('#profileOverlay').classList.add('open');
 }
 
 function scoringWeekly(source){
@@ -4654,6 +4831,11 @@ function scoringEnter(source){
   if(!scoringSelectedWeek){ wrap.appendChild(el('p',{style:'color:var(--sand-dim)'}, 'Add a week above to start entering scores.')); return wrap; }
   const w = scoringSelectedWeek;
 
+  const searchWrap = el('div',{class:'score-search'});
+  const searchInp = el('input',{type:'text', placeholder:'🔍 Type a name to find their row...'});
+  searchWrap.appendChild(searchInp);
+  wrap.appendChild(searchWrap);
+
   const table = el('table',{class:'score-table'});
   const thead = el('thead',{});
   const headRow = el('tr',{});
@@ -4669,6 +4851,7 @@ function scoringEnter(source){
     const c = byId(cid);
     if(!c) return;
     const row = el('tr',{});
+    row.dataset.name = (c.name + ' ' + c.short + ' ' + team.name).toLowerCase();
     const nameCell = el('td',{});
     const nameWrap = el('div',{class:'snm-cell'});
     const img = el('img',{src:c.photo, alt:c.short});
@@ -4696,6 +4879,15 @@ function scoringEnter(source){
   });
   table.appendChild(tbody);
   wrap.appendChild(table);
+
+  searchInp.addEventListener('input', ()=>{
+    const q = searchInp.value.trim().toLowerCase();
+    $all('tr', tbody).forEach(row=>{
+      const isMatch = !q || (row.dataset.name||'').includes(q);
+      row.classList.toggle('row-hidden', !isMatch);
+      row.classList.toggle('row-match', !!q && isMatch);
+    });
+  });
 
   const saveBtn = el('button',{class:'btn primary', style:'margin-top:16px'}, '💾 Save Week ' + w);
   saveBtn.addEventListener('click', ()=>{
@@ -4977,7 +5169,6 @@ function renderScoring(){
   const needsDraftMsg = 'Scoring, standings, and week-by-week entry unlock once a Live or Mock Draft is complete and teams have their rosters. You can still browse and edit Categories and Export below without a draft.';
   let content;
   if(scoringSubTab==='standings') content = source ? scoringStandings(source) : scoringEmptyNotice(needsDraftMsg, true);
-  else if(scoringSubTab==='teams') content = source ? scoringTeamPages(source) : scoringEmptyNotice(needsDraftMsg, true);
   else if(scoringSubTab==='weekly') content = source ? scoringWeekly(source) : scoringEmptyNotice(needsDraftMsg, true);
   else if(scoringSubTab==='enter') content = source ? scoringEnter(source) : scoringEmptyNotice(needsDraftMsg, true);
   else if(scoringSubTab==='categories') content = scoringCategories(source);
