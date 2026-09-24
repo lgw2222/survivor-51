@@ -447,6 +447,12 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 .score-table tbody tr.row-match{background:rgba(255,122,51,0.12);}
 .score-table tbody tr.row-hidden{display:none;}
 
+/* steal picker grid (inside the profile modal) */
+.steal-pick-grid{grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;margin-top:4px;max-height:44vh;overflow-y:auto;padding-right:2px;}
+.steal-pick-grid .card .info{padding:5px 6px 7px;}
+.steal-pick-grid .card .info .nm{font-size:0.78rem;}
+.steal-pick-grid .photo-wrap .fallback{font-size:1.5rem;}
+
 ::-webkit-scrollbar{width:10px;height:10px;}
 ::-webkit-scrollbar-thumb{background:var(--jungle2);border-radius:6px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -532,7 +538,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-24 18:19 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-24 19:30 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -4271,8 +4277,23 @@ function getCategoriesTemplate(){
 function saveCategoriesTemplate(categories){
   lsSet('s51_categories_template', { categories: categories.map(c=>({...c})) });
 }
+const DEFAULT_SEASON_WEEKS = Array.from({length:13}, (_,i)=>String(i+1));
 function defaultScoring(){
-  return { categories: getCategoriesTemplate(), weeks:['1'], entries:{}, steals:{}, eliminated:{}, winnerId:null };
+  // Pre-loaded with all 13 New-Era-length episode weeks so Standings, Team
+  // Pages, and Enter Scores all have somewhere to score into right away —
+  // use "+ Add Week" (works the same everywhere) if your season runs longer.
+  return { categories: getCategoriesTemplate(), weeks:[...DEFAULT_SEASON_WEEKS], entries:{}, steals:{}, eliminated:{}, winnerId:null };
+}
+function addScoringWeek(source, scoring){
+  const weeks = scoring.weeks || [];
+  const next = weeks.length ? String(weeks.length+1) : '1';
+  const label = prompt('Week label (e.g. 8, 12A, 13B):', next);
+  if(!label) return null;
+  if(weeks.includes(label)){ toast('That week already exists'); return null; }
+  const updated = { ...scoring, weeks:[...weeks, label], entries:{...scoring.entries} };
+  source.save(updated);
+  toast('Week ' + label + ' added');
+  return label;
 }
 function scoringSource(){
   if(myRoomCode && firebaseReady && liveRoomState && liveRoomState.status==='complete'){
@@ -4587,13 +4608,24 @@ function scoringTeamPages(source){
     wrap.appendChild(grid);
   }
 
-  wrap.appendChild(el('h3',{style:'margin:22px 0 10px'}, '🥷 Steals & Bonus Plays'));
+  const stealsHeadRow = el('div',{style:'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin:22px 0 4px'});
+  stealsHeadRow.appendChild(el('h3',{style:'margin:0'}, '🥷 Steals & Bonus Plays'));
+  if(source.isAdmin){
+    const addWeekBtn = el('button',{class:'btn', style:'padding:6px 14px;font-size:0.76rem'}, '+ Add Week');
+    addWeekBtn.addEventListener('click', ()=>{
+      const label = addScoringWeek(source, scoring);
+      if(label) renderTeamsTab();
+    });
+    stealsHeadRow.appendChild(addWeekBtn);
+  }
+  wrap.appendChild(stealsHeadRow);
+
   const weeks = scoring.weeks || [];
   const stealTotal = stealBonusSeason(scoring, team.id);
-  wrap.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.85rem;margin:-4px 0 12px'},
+  wrap.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.85rem;margin:0 0 12px'},
     stealTotal ? ('+' + stealTotal + ' bonus points from steals this season.') : 'No steal or bonus points recorded yet this season.'));
   if(!weeks.length){
-    wrap.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.85rem'}, 'No weeks scored yet — add one in Enter Scores.'));
+    wrap.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.85rem'}, 'No weeks yet — add one above.'));
   } else {
     weeks.forEach(w=>{
       const weekSteals = ((scoring.steals||{})[w]||[]).filter(s=>s.teamId===team.id);
@@ -4607,11 +4639,46 @@ function scoringTeamPages(source){
         box.appendChild(el('div',{style:'font-size:0.78rem;color:var(--sand-dim);margin-top:6px'}, 'No steals this week.'));
       } else {
         weekSteals.forEach(s=>{
-          box.appendChild(el('div',{class:'team-page-week-row'},
-            el('div',{}, s.note || 'Steal'),
-            el('div',{style:'color:var(--torch);font-family:\'Bebas Neue\';white-space:nowrap'}, (s.pts>=0?'+':'') + s.pts)
-          ));
+          const castaway = s.castawayId ? byId(s.castawayId) : null;
+          const row = el('div',{class:'team-page-week-row', style:'align-items:center'});
+          const left = el('div',{style:'display:flex;align-items:center;gap:8px;min-width:0'});
+          if(castaway){
+            const thumb = el('div',{style:'width:26px;height:26px;border-radius:50%;overflow:hidden;flex:none;background:var(--jungle2)'});
+            const img = el('img',{src:castaway.photo});
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+            img.onerror = function(){ this.remove(); };
+            thumb.appendChild(img);
+            left.appendChild(thumb);
+            left.appendChild(el('div',{},
+              el('div',{style:'font-size:0.85rem;font-weight:600'}, castaway.short),
+              s.note ? el('div',{style:'font-size:0.72rem;color:var(--sand-dim)'}, s.note) : null
+            ));
+          } else {
+            left.appendChild(el('div',{style:'font-size:0.85rem'}, s.note || 'Steal'));
+          }
+          row.appendChild(left);
+          const right = el('div',{style:'display:flex;align-items:center;gap:8px;flex:none'});
+          right.appendChild(el('div',{style:'color:var(--torch);font-family:\'Bebas Neue\';white-space:nowrap'}, (s.pts>=0?'+':'') + s.pts));
+          if(source.isAdmin){
+            const rm = el('button',{class:'btn danger', style:'padding:2px 9px;font-size:0.66rem'}, '✕');
+            rm.addEventListener('click', ()=>{
+              const fullWeekList = (scoring.steals && scoring.steals[w]) || [];
+              const updatedWeekList = fullWeekList.filter(x=>x!==s);
+              const updated = { ...scoring, steals: { ...(scoring.steals||{}), [w]: updatedWeekList } };
+              source.save(updated);
+              toast('Steal removed');
+              setTimeout(renderTeamsTab, 150);
+            });
+            right.appendChild(rm);
+          }
+          row.appendChild(right);
+          box.appendChild(row);
         });
+      }
+      if(source.isAdmin){
+        const pickBtn = el('button',{class:'btn', style:'margin-top:10px;padding:6px 14px;font-size:0.78rem'}, '🥷 + Pick Steal');
+        pickBtn.addEventListener('click', ()=> openStealPicker(source, team, w));
+        box.appendChild(pickBtn);
       }
       wrap.appendChild(box);
     });
@@ -4680,8 +4747,15 @@ function openScoreEditor(castawayId, source, team){
 
   const weeks = scoring.weeks || [];
   if(!weeks.length){
-    body.appendChild(el('div',{class:'notice', style:'margin-top:12px'},
-      'Add a week first (Scoring → Enter Scores → + Add Week), then come back here to score ' + c.short + '.'));
+    body.appendChild(el('div',{class:'notice', style:'margin-top:12px'}, 'No weeks yet — add one to start scoring ' + c.short + '.'));
+    const addWeekBtn = el('button',{class:'btn primary', style:'margin-top:12px'}, '+ Add Week');
+    addWeekBtn.addEventListener('click', ()=>{
+      const label = addScoringWeek(source, scoring);
+      if(!label) return;
+      scoringSelectedWeek = label;
+      openScoreEditor(castawayId, source, team);
+    });
+    body.appendChild(addWeekBtn);
     modal.appendChild(body);
     $('#profileOverlay').classList.add('open');
     return;
@@ -4745,6 +4819,96 @@ function openScoreEditor(castawayId, source, team){
 
   modal.appendChild(body);
   $('#profileOverlay').classList.add('open');
+}
+
+/* Two-step "pick a castaway, then lock in the bonus" flow for steals,
+   launched from a Team Page's Week box. Reuses the profile modal shell. */
+function openStealPicker(source, team, week){
+  const { scoring, isAdmin } = source;
+  if(!isAdmin){ toast('Only the commissioner can add steals.'); return; }
+  AudioFX.whoosh();
+  const modal = $('#profileModal');
+
+  function renderPickStep(){
+    modal.innerHTML = '';
+    const head = el('div',{class:'modal-head', style:'min-height:0'});
+    const closeBtn = el('button',{class:'modal-close', html:ICONS.close});
+    closeBtn.addEventListener('click', closeProfile);
+    head.appendChild(closeBtn);
+    modal.appendChild(head);
+
+    const body = el('div',{class:'modal-body', style:'padding-top:16px'});
+    body.appendChild(el('h2',{style:'font-size:1.6rem'}, '🥷 Pick a Steal — Week ' + week));
+    body.appendChild(el('div',{class:'modal-meta'}, 'For ' + team.name + '. Choose who the bonus play is about, then lock in the points.'));
+
+    const searchWrap = el('div',{class:'score-search'});
+    const searchInp = el('input',{type:'text', placeholder:'🔍 Search all castaways...'});
+    searchWrap.appendChild(searchInp);
+    body.appendChild(searchWrap);
+
+    const grid = el('div',{class:'grid steal-pick-grid'});
+    CASTAWAYS.forEach(c=>{
+      const card = el('div',{class:'card'});
+      card.dataset.name = (c.name + ' ' + c.short).toLowerCase();
+      card.appendChild(photoBlock(c));
+      card.appendChild(el('div',{class:'info'}, el('div',{class:'nm'}, c.short)));
+      card.addEventListener('click', ()=> renderConfirmStep(c));
+      grid.appendChild(card);
+    });
+    body.appendChild(grid);
+    searchInp.addEventListener('input', ()=>{
+      const q = searchInp.value.trim().toLowerCase();
+      $all('.card', grid).forEach(card=>{ card.style.display = (!q || (card.dataset.name||'').includes(q)) ? '' : 'none'; });
+    });
+
+    modal.appendChild(body);
+    $('#profileOverlay').classList.add('open');
+  }
+
+  function renderConfirmStep(c){
+    modal.innerHTML = '';
+    const head = el('div',{class:'modal-head'});
+    head.appendChild(photoBlock(c));
+    const closeBtn = el('button',{class:'modal-close', html:ICONS.close});
+    closeBtn.addEventListener('click', closeProfile);
+    head.appendChild(closeBtn);
+    modal.appendChild(head);
+
+    const body = el('div',{class:'modal-body'});
+    body.appendChild(el('h2',{}, c.name));
+    body.appendChild(el('div',{class:'modal-meta'}, 'Steal for ' + team.name + ' — Week ' + week));
+
+    const ptsInp = el('input',{type:'number', step:'1', value:'5'});
+    const noteInp = el('input',{type:'text', placeholder:'e.g. Stole a vote at tribal (optional)'});
+    body.appendChild(el('div',{style:'margin-top:14px'}, el('label',{class:'field'}, 'Points'), ptsInp));
+    body.appendChild(el('div',{style:'margin-top:12px'}, el('label',{class:'field'}, 'What happened?'), noteInp));
+
+    const btnRow = el('div',{class:'btn-row', style:'margin-top:18px'});
+    const backBtn = el('button',{class:'btn'}, '‹ Back');
+    backBtn.addEventListener('click', renderPickStep);
+    const lockBtn = el('button',{class:'btn primary'}, '🔒 Lock In Steal');
+    lockBtn.addEventListener('click', ()=>{
+      const pts = parseInt(ptsInp.value)||0;
+      if(!pts){ toast('Enter a nonzero point value'); return; }
+      const weekSteals = (scoring.steals && scoring.steals[week]) || [];
+      const entry = { teamId: team.id, pts, note: noteInp.value.trim(), castawayId: c.id };
+      const updated = { ...scoring, steals: { ...(scoring.steals||{}), [week]: [...weekSteals, entry] } };
+      source.save(updated);
+      AudioFX.success();
+      toast('Steal locked in for ' + team.name);
+      closeProfile();
+      setTimeout(renderTeamsTab, 150);
+      setTimeout(renderScoring, 150);
+    });
+    btnRow.appendChild(backBtn);
+    btnRow.appendChild(lockBtn);
+    body.appendChild(btnRow);
+
+    modal.appendChild(body);
+    $('#profileOverlay').classList.add('open');
+  }
+
+  renderPickStep();
 }
 
 function scoringWeekly(source){
@@ -4815,14 +4979,9 @@ function scoringEnter(source){
   });
   const addBtn = el('button',{class:'add'}, '+ Add Week');
   addBtn.addEventListener('click', ()=>{
-    const next = weeks.length ? String(weeks.length+1) : '1';
-    const label = prompt('Week label (e.g. 8, 12A, 13B):', next);
+    const label = addScoringWeek(source, scoring);
     if(!label) return;
-    if(weeks.includes(label)){ toast('That week already exists'); return; }
-    const updated = { ...scoring, weeks:[...weeks, label], entries:{...scoring.entries} };
-    source.save(updated);
     scoringSelectedWeek = label;
-    toast('Week ' + label + ' added');
     setTimeout(renderScoring, 150);
   });
   picker.appendChild(addBtn);
@@ -4928,8 +5087,10 @@ function scoringSteals(source, week){
   }
   weekSteals.forEach((s, idx)=>{
     const team = teams.find(t=>t.id===s.teamId);
+    const castaway = s.castawayId ? byId(s.castawayId) : null;
     const row = el('div',{class:'steal-row'});
-    row.appendChild(el('div',{class:'steal-team'}, (team?team.name:'Unknown team') + (s.note ? ' — ' + s.note : '')));
+    row.appendChild(el('div',{class:'steal-team'},
+      (team?team.name:'Unknown team') + (castaway ? ' — ' + castaway.short : '') + (s.note ? ' — ' + s.note : '')));
     const right = el('div',{style:'display:flex;align-items:center;gap:10px'});
     right.appendChild(el('div',{class:'steal-pts'}, (s.pts>=0?'+':'') + s.pts + ' pts'));
     if(isAdmin){
