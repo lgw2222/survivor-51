@@ -434,7 +434,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 .team-page-week-row{display:flex;justify-content:space-between;gap:10px;font-size:0.85rem;margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);}
 .team-page-week-row:first-of-type{border-top:none;padding-top:0;}
 .roster-edit-btn{
-  position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;
+  position:absolute;top:40px;left:8px;width:30px;height:30px;border-radius:50%;
   background:rgba(10,23,18,0.8);border:1px solid var(--line);color:var(--sand);
   cursor:pointer;font-size:0.9rem;z-index:2;display:flex;align-items:center;justify-content:center;
   transition:border-color .15s, color .15s, transform .15s;
@@ -492,9 +492,9 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
         <p>21 new castaways &middot; The Open Era &middot; Click anyone for their full profile</p>
       </div>
       <div class="pill-row" id="tribeFilterRow">
-        <button type="button" class="pill purple" data-tribe="purple">🟣 Purple Tribe</button>
-        <button type="button" class="pill yellow" data-tribe="yellow">🟡 Yellow Tribe</button>
-        <span class="pill tbd-note">Tribes reveal at the Sept 23 premiere — click a color to filter once assigned</span>
+        <button type="button" class="pill purple" data-tribe="purple">🟣 Savu (Purple)</button>
+        <button type="button" class="pill yellow" data-tribe="yellow">🟡 Toka (Yellow)</button>
+        <span class="pill tbd-note">Lewis started on Exile Island, then joined Toka after Episode 1 — click a tribe to filter</span>
       </div>
     </div>
     <div class="grid" id="castawayGrid"></div>
@@ -538,7 +538,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-24 19:30 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-25 02:45 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -609,7 +609,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://www.truedorktimes.com/survivor/cast/aaliyah_puglia.htm"
       }
     ],
-    "tribe": null,
+    "tribe": "yellow",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -720,7 +720,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://www.truedorktimes.com/survivor/cast/alexis_levine.htm"
       }
     ],
-    "tribe": null,
+    "tribe": "purple",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -831,7 +831,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
     ],
-    "tribe": null,
+    "tribe": "yellow",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -948,7 +948,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://www.truedorktimes.com/survivor/cast/ana_sani.htm"
       }
     ],
-    "tribe": null,
+    "tribe": "purple",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -1065,7 +1065,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
     ],
-    "tribe": null,
+    "tribe": "yellow",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -1178,7 +1178,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://www.truedorktimes.com/survivor/cast/brady_booker.htm"
       }
     ],
-    "tribe": null,
+    "tribe": "yellow",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -1295,7 +1295,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
     ],
-    "tribe": null,
+    "tribe": "purple",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -1400,7 +1400,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://www.truedorktimes.com/survivor/cast/cristian_chavez.htm"
       }
     ],
-    "tribe": null,
+    "tribe": "purple",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -1517,7 +1517,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://www.truedorktimes.com/survivor/cast/dan_kilby.htm"
       }
     ],
-    "tribe": null,
+    "tribe": "yellow",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -1636,7 +1636,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
     ],
-    "tribe": null,
+    "tribe": "yellow",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -1755,7 +1755,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
     ],
-    "tribe": null,
+    "tribe": "purple",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -1872,7 +1872,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
     ],
-    "tribe": null,
+    "tribe": "yellow",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -1983,7 +1983,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
     ],
-    "tribe": null,
+    "tribe": "purple",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -2094,7 +2094,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
     ],
-    "tribe": null,
+    "tribe": "yellow",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -2205,7 +2205,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
     ],
-    "tribe": null,
+    "tribe": "purple",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -2310,7 +2310,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
     ],
-    "tribe": null,
+    "tribe": "yellow",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -2427,7 +2427,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://www.truedorktimes.com/survivor/cast/mike_pinsky.htm"
       }
     ],
-    "tribe": null,
+    "tribe": "yellow",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -2538,7 +2538,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
     ],
-    "tribe": null,
+    "tribe": "purple",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -2643,7 +2643,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://www.truedorktimes.com/survivor/cast/patt_cannaday.htm"
       }
     ],
-    "tribe": null,
+    "tribe": "yellow",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -2754,7 +2754,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://www.truedorktimes.com/survivor/cast/rob_antonson.htm"
       }
     ],
-    "tribe": null,
+    "tribe": "purple",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -2865,7 +2865,7 @@ const CASTAWAYS = [
         "sourceUrl": "https://parade.com/tv/survivor-51-cast-2026"
       }
     ],
-    "tribe": null,
+    "tribe": "purple",
     "analystTakes": [
       {
         "channel": "RHAP (Rob Has a Podcast) — Survivor 51 Cast Preview",
@@ -2886,8 +2886,7 @@ const CASTAWAYS = [
     },
     "otherDrafts": []
   }
-]
-;
+];
 </script>
 <!-- app.js content is injected below at build time -->
 <script>
@@ -3123,7 +3122,7 @@ function photoBlock(c, extraClass){
   return wrap;
 }
 function tribeLabel(t){
-  return t==='purple' ? '🟣 Purple' : t==='yellow' ? '🟡 Yellow' : 'Tribe TBD';
+  return t==='purple' ? '🟣 Savu' : t==='yellow' ? '🟡 Toka' : 'Tribe TBD';
 }
 function castawayCard(c, opts){
   opts = opts || {};
@@ -4878,7 +4877,7 @@ function openStealPicker(source, team, week){
     body.appendChild(el('h2',{}, c.name));
     body.appendChild(el('div',{class:'modal-meta'}, 'Steal for ' + team.name + ' — Week ' + week));
 
-    const ptsInp = el('input',{type:'number', step:'1', value:'5'});
+    const ptsInp = el('input',{type:'number', step:'1', placeholder:'e.g. 5'});
     const noteInp = el('input',{type:'text', placeholder:'e.g. Stole a vote at tribal (optional)'});
     body.appendChild(el('div',{style:'margin-top:14px'}, el('label',{class:'field'}, 'Points'), ptsInp));
     body.appendChild(el('div',{style:'margin-top:12px'}, el('label',{class:'field'}, 'What happened?'), noteInp));
@@ -5039,6 +5038,40 @@ function scoringEnter(source){
   table.appendChild(tbody);
   wrap.appendChild(table);
 
+  // Bulk-apply a category to a whole tribe at once (Team Reward / Team
+  // Immunity wins hit every castaway on the winning tribe the same way).
+  const bulkBox = el('div',{class:'card-box', style:'margin:14px 0'});
+  bulkBox.appendChild(el('h3',{style:'margin:0 0 4px;font-size:0.95rem'}, '⚡ Bulk Apply — Whole Tribe'));
+  bulkBox.appendChild(el('p',{style:'margin:0 0 10px;font-size:0.76rem;color:var(--sand-dim)'},
+    'Set one category to the same value for every drafted castaway on a tribe — handy for tribe-wide wins like Team Reward or Team Immunity. Still hit Save Week ' + w + ' after.'));
+  const bulkRow = el('div',{style:'display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end'});
+  const bulkCatSel = el('select',{});
+  scoring.categories.forEach(cat=> bulkCatSel.appendChild(el('option',{value:cat.key}, cat.label)));
+  bulkRow.appendChild(el('div',{}, el('label',{class:'field'}, 'Category'), bulkCatSel));
+  const bulkTribeSel = el('select',{});
+  bulkTribeSel.appendChild(el('option',{value:'yellow'}, '🟡 Toka (Yellow)'));
+  bulkTribeSel.appendChild(el('option',{value:'purple'}, '🟣 Savu (Purple)'));
+  bulkRow.appendChild(el('div',{}, el('label',{class:'field'}, 'Tribe'), bulkTribeSel));
+  const bulkValInp = el('input',{type:'number', step:'1', placeholder:'e.g. 1', style:'width:90px'});
+  bulkRow.appendChild(el('div',{}, el('label',{class:'field'}, 'Value'), bulkValInp));
+  const bulkApplyBtn = el('button',{class:'btn primary'}, '⚡ Apply to Tribe');
+  bulkApplyBtn.addEventListener('click', ()=>{
+    const val = parseInt(bulkValInp.value);
+    if(isNaN(val)){ toast('Enter a value to apply'); return; }
+    const cat = bulkCatSel.value, tribe = bulkTribeSel.value;
+    let count = 0;
+    $all('input[type=number]', table).forEach(inp=>{
+      if(inp.dataset.cat !== cat) return;
+      const c = byId(inp.dataset.castaway);
+      if(c && c.tribe === tribe){ inp.value = String(Math.max(0, val)); count++; }
+    });
+    if(!count){ toast('No drafted castaways on that tribe this week'); return; }
+    toast('Applied to ' + count + ' castaway' + (count===1?'':'s') + ' — click Save Week ' + w + ' to lock it in');
+  });
+  bulkRow.appendChild(bulkApplyBtn);
+  bulkBox.appendChild(bulkRow);
+  wrap.insertBefore(bulkBox, table);
+
   searchInp.addEventListener('input', ()=>{
     const q = searchInp.value.trim().toLowerCase();
     $all('tr', tbody).forEach(row=>{
@@ -5113,7 +5146,7 @@ function scoringSteals(source, week){
     const form = el('div',{class:'steal-form'});
     const teamSel = el('select',{});
     teams.forEach(t=> teamSel.appendChild(el('option',{value:t.id}, t.name)));
-    const ptsInp = el('input',{type:'number', step:'1', value:'5'});
+    const ptsInp = el('input',{type:'number', step:'1', placeholder:'e.g. 5'});
     const noteInp = el('input',{type:'text', placeholder:'What happened? (optional)'});
     const addBtn = el('button',{class:'btn'}, '+ Add Steal');
     addBtn.addEventListener('click', ()=>{
