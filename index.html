@@ -538,7 +538,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-25 02:45 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-26 04:39 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -5243,10 +5243,58 @@ function scoringCategories(source){
   return wrap;
 }
 
+const BACKUP_KEYS = ['s51_tv','s51_tv_setup','s51_tv_scoring','s51_mock','s51_mock_setup','s51_mock_scoring','s51_live_room','s51_categories_template'];
+function buildBackupPayload(){
+  const payload = { _app:'survivor51-draft-backup', _version:1, _exportedAt:new Date().toISOString() };
+  BACKUP_KEYS.forEach(k=> payload[k] = lsGet(k, null));
+  return payload;
+}
+function scoringBackupBox(){
+  const box = el('div',{class:'card-box', style:'margin-bottom:14px'});
+  box.appendChild(el('h3',{style:'margin:0 0 6px'}, '💾 Backup & Restore'));
+  box.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.82rem;margin:0 0 12px'},
+    'TV Draft and Mock Draft results live only in THIS browser — clearing your cache or "site data" wipes them for good, with no way to get them back. Download a backup right after your draft (and again anytime you enter scores), and keep the file somewhere safe. Live Draft rooms are backed up automatically on the server, but this also saves your room connection.'));
+  const dlBtn = el('button',{class:'btn primary'}, '⬇️ Download Backup');
+  dlBtn.addEventListener('click', ()=>{
+    const payload = buildBackupPayload();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+    downloadBlob(blob, 'survivor51-backup-' + new Date().toISOString().slice(0,10) + '.json');
+    toast('Backup downloaded');
+  });
+  box.appendChild(dlBtn);
+
+  const restoreRow = el('div',{style:'margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)'});
+  restoreRow.appendChild(el('label',{class:'field'}, 'Restore from a backup file'));
+  const fileInp = el('input',{type:'file', accept:'application/json'});
+  fileInp.addEventListener('change', ()=>{
+    const file = fileInp.files[0];
+    if(!file) return;
+    if(!confirm('Restore from this backup? This overwrites your current TV Draft, Mock Draft, Live Draft connection, and category settings in this browser.')){ fileInp.value=''; return; }
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const payload = JSON.parse(reader.result);
+        if(payload._app !== 'survivor51-draft-backup') throw new Error('not a backup file');
+        BACKUP_KEYS.forEach(k=>{ if(k in payload && payload[k]!=null) lsSet(k, payload[k]); });
+        toast('Backup restored — reloading…');
+        setTimeout(()=> location.reload(), 700);
+      }catch(e){
+        toast('That file doesn’t look like a valid backup.');
+        fileInp.value = '';
+      }
+    };
+    reader.readAsText(file);
+  });
+  restoreRow.appendChild(fileInp);
+  box.appendChild(restoreRow);
+  return box;
+}
+
 function scoringExport(source){
   const wrap = el('div',{});
+  wrap.appendChild(scoringBackupBox());
   if(!source){
-    wrap.appendChild(scoringEmptyNotice('Export needs a completed draft — finish a Live or Mock Draft first so there are teams and picks to save.', true));
+    wrap.appendChild(scoringEmptyNotice('Export to a spreadsheet needs a completed draft — finish a Live, TV, or Mock Draft first. (Backup & Restore above works anytime.)', true));
     return wrap;
   }
   const { scoring, isAdmin } = source;
@@ -5276,7 +5324,7 @@ function scoringExport(source){
     const resetScoreBtn = el('button',{class:'btn danger'}, 'Reset Scoring Data');
     resetScoreBtn.addEventListener('click', ()=>{
       if(!confirm('Reset all scoring data? Weekly points, eliminations, and the declared winner will be cleared. This cannot be undone.')) return;
-      source.save({ categories: scoring.categories, weeks:['1'], entries:{}, steals:{}, eliminated:{}, winnerId:null });
+      source.save({ categories: scoring.categories, weeks:[...DEFAULT_SEASON_WEEKS], entries:{}, steals:{}, eliminated:{}, winnerId:null });
       toast('Scoring data reset');
       setTimeout(renderScoring, 150);
     });
