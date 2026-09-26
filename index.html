@@ -547,7 +547,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-26 14:51 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-26 15:26 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -3554,8 +3554,36 @@ renderMock();
    TV DRAFT (solo host, THE REAL DRAFT — mirror this phone to a TV/screen and
    tap in every team's pick yourself. No other devices, no internet needed.)
    ========================================================================= */
+/* One-time seed: bake Garrott's real completed TV Draft in as the built-in
+   default so a brand-new browser/device shows the same rosters immediately
+   with no manual restore step. Runs once per browser (guarded by
+   s51_tv_seeded) so it never fights a deliberate "New Draft" reset later. */
+const REAL_TV_DRAFT_TEAMS = [
+  { id:'t0', name:'Bula',   color:'var(--torch)',        picks:['carter','patt','cristian','jenna','lewis'] },
+  { id:'t1', name:'Sainoi', color:'var(--tribe-purple)', picks:['brady','eric','alexis','linnea','sharonda'] },
+  { id:'t2', name:'Wai',    color:'var(--tribe-yellow)', picks:['maggie','ori','jelly','aaliyah','ana'] },
+  { id:'t3', name:'Goji',   color:'#4dd0a5',             picks:['rob','devin','kilby','mike','thien-an'] }
+];
+const REAL_TV_DRAFT_HISTORY = [
+  {teamId:'t0',castawayId:'carter'},{teamId:'t1',castawayId:'brady'},{teamId:'t2',castawayId:'maggie'},{teamId:'t3',castawayId:'rob'},
+  {teamId:'t3',castawayId:'devin'},{teamId:'t2',castawayId:'ori'},{teamId:'t1',castawayId:'eric'},{teamId:'t0',castawayId:'patt'},
+  {teamId:'t0',castawayId:'cristian'},{teamId:'t1',castawayId:'alexis'},{teamId:'t2',castawayId:'jelly'},{teamId:'t3',castawayId:'kilby'},
+  {teamId:'t3',castawayId:'mike'},{teamId:'t2',castawayId:'aaliyah'},{teamId:'t1',castawayId:'linnea'},{teamId:'t0',castawayId:'jenna'},
+  {teamId:'t0',castawayId:'lewis'},{teamId:'t1',castawayId:'sharonda'},{teamId:'t2',castawayId:'ana'},{teamId:'t3',castawayId:'thien-an'}
+];
+function defaultRealTvState(){
+  return { teams: JSON.parse(JSON.stringify(REAL_TV_DRAFT_TEAMS)), order:[], pickIndex:20, pool:[], status:'complete', history: JSON.parse(JSON.stringify(REAL_TV_DRAFT_HISTORY)) };
+}
+
 let tvState = lsGet('s51_tv', null);
 let tvSetup = lsGet('s51_tv_setup', { teamCount:6, rounds:1, snake:true, names:[] });
+if(tvState===null && !lsGet('s51_tv_seeded', false)){
+  tvState = defaultRealTvState();
+  tvSetup = { teamCount:4, rounds:5, snake:true, names:['Bula','Sainoi','Wai','Goji'] };
+  lsSet('s51_tv', tvState);
+  lsSet('s51_tv_setup', tvSetup);
+  lsSet('s51_tv_seeded', true);
+}
 
 function defaultTvNames(n){
   const names = [];
@@ -4290,8 +4318,28 @@ function defaultScoring(){
   // Pre-loaded with all 13 New-Era-length episode weeks so Standings, Team
   // Pages, and Enter Scores all have somewhere to score into right away —
   // use "+ Add Week" (works the same everywhere) if your season runs longer.
-  return { categories: getCategoriesTemplate(), weeks:[...DEFAULT_SEASON_WEEKS], entries:{}, steals:{}, eliminated:{}, winnerId:null };
+  return { categories: getCategoriesTemplate(), weeks:[...DEFAULT_SEASON_WEEKS], entries:{}, steals:{}, eliminated:{}, winnerId:null, honorary:{} };
 }
+
+/* One-time patch (runs idempotently on every load, old and new browsers
+   alike): Kristin Flickinger — the one castaway nobody drafted — gets added
+   to Team Wai as an honorary member, since Aaliyah (also on Wai) was voted
+   out Episode 1. Safe to run repeatedly: it checks first and does nothing
+   once applied, and it never touches anyone actually drafted. */
+(function seedHonoraryKristinOnWai(){
+  if(!(tvState && tvState.status==='complete' && Array.isArray(tvState.teams))) return;
+  const wai = tvState.teams.find(t=>t.name==='Wai');
+  if(!wai) return;
+  const draftedIds = tvState.teams.flatMap(t=>t.picks||[]);
+  if(draftedIds.includes('kristin')) return;
+  const scoring = lsGet('s51_tv_scoring', null) || defaultScoring();
+  const honorary = { ...(scoring.honorary||{}) };
+  const waiHonorary = honorary[wai.id] || [];
+  if(waiHonorary.includes('kristin')) return;
+  if(Object.values(honorary).flat().includes('kristin')) return;
+  honorary[wai.id] = [...waiHonorary, 'kristin'];
+  lsSet('s51_tv_scoring', { ...scoring, honorary });
+})();
 function addScoringWeek(source, scoring){
   const weeks = scoring.weeks || [];
   const next = weeks.length ? String(weeks.length+1) : '1';
@@ -4616,6 +4664,8 @@ function scoringTeamPages(source){
     wrap.appendChild(grid);
   }
 
+  wrap.appendChild(honoraryMemberBox(source, team));
+
   const stealsHeadRow = el('div',{style:'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin:22px 0 4px'});
   stealsHeadRow.appendChild(el('h3',{style:'margin:0'}, '🥷 Steals & Bonus Plays'));
   if(source.isAdmin){
@@ -4708,6 +4758,117 @@ function renderTeamsTab(){
   root.appendChild(scoringTeamPages(source));
 }
 renderTeamsTab();
+
+/* Honorary team members — non-drafted castaways attached to a team for fun
+   (e.g. an undrafted castaway "adopted" by a team after another one's boot).
+   They never enter scoring/standings math — this is display-only, stored on
+   the scoring object (scoring.honorary[teamId] = [castawayId, ...]) so it's
+   backed up the same way steals and entries are. */
+function honoraryMemberBox(source, team){
+  const { scoring, isAdmin } = source;
+  const wrap = el('div',{style:'margin:18px 0 4px'});
+  const headRow = el('div',{style:'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px'});
+  headRow.appendChild(el('h3',{style:'margin:0;font-size:0.95rem'}, '🎖️ Honorary Team Member' + (((scoring.honorary||{})[team.id]||[]).length===1?'':'s')));
+  if(isAdmin){
+    const addBtn = el('button',{class:'btn', style:'padding:6px 14px;font-size:0.76rem'}, '+ Add Honorary Member');
+    addBtn.addEventListener('click', ()=> openHonoraryPicker(source, team));
+    headRow.appendChild(addBtn);
+  }
+  wrap.appendChild(headRow);
+
+  const ids = (scoring.honorary||{})[team.id] || [];
+  if(!ids.length){
+    wrap.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.78rem;margin:6px 0 0'}, 'No honorary members — a fun way to attach an undrafted castaway to a team without them counting toward scoring.'));
+    return wrap;
+  }
+  const grid = el('div',{class:'grid team-page-roster', style:'margin-top:10px'});
+  ids.map(byId).filter(Boolean).forEach(c=>{
+    const card = el('div',{class:'card', style:'opacity:0.92;border-style:dashed'});
+    card.appendChild(photoBlock(c));
+    card.appendChild(el('div',{class:'badge', style:'background:rgba(155,107,255,0.85)'}, 'HONORARY'));
+    card.appendChild(el('div',{class:'tribe-badge ' + (c.tribe || 'tbd')}, tribeLabel(c.tribe)));
+    card.appendChild(el('div',{class:'info'},
+      el('div',{class:'nm'}, c.short),
+      el('div',{class:'oc'}, c.occupation)
+    ));
+    card.addEventListener('click', ()=> openProfile(c.id));
+    if(isAdmin){
+      const rmBtn = el('button',{class:'roster-edit-btn', title:'Remove honorary member'}, '✕');
+      rmBtn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const updatedIds = ids.filter(x=>x!==c.id);
+        const updated = { ...scoring, honorary: { ...(scoring.honorary||{}), [team.id]: updatedIds } };
+        source.save(updated);
+        toast(c.short + ' removed as an honorary member');
+        setTimeout(renderTeamsTab, 150);
+      });
+      card.appendChild(rmBtn);
+    }
+    grid.appendChild(card);
+  });
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+function openHonoraryPicker(source, team){
+  const { scoring, isAdmin, teams } = source;
+  if(!isAdmin){ toast('Only the commissioner can add honorary members.'); return; }
+  AudioFX.whoosh();
+  const modal = $('#profileModal');
+  modal.innerHTML = '';
+
+  const head = el('div',{class:'modal-head', style:'min-height:0'});
+  const closeBtn = el('button',{class:'modal-close', html:ICONS.close});
+  closeBtn.addEventListener('click', closeProfile);
+  head.appendChild(closeBtn);
+  modal.appendChild(head);
+
+  const body = el('div',{class:'modal-body', style:'padding-top:16px'});
+  body.appendChild(el('h2',{style:'font-size:1.6rem'}, '🎖️ Add an Honorary Member'));
+  body.appendChild(el('div',{class:'modal-meta'}, 'For ' + team.name + '. Pick any castaway not already drafted — they\'ll show on the roster but won\'t count toward scoring.'));
+
+  const draftedIds = new Set(teams.flatMap(t=>t.picks||[]));
+  const honoraryIds = new Set(Object.values(scoring.honorary||{}).flat());
+  const available = CASTAWAYS.filter(c=>!draftedIds.has(c.id) && !honoraryIds.has(c.id));
+
+  if(!available.length){
+    body.appendChild(el('div',{class:'notice'}, 'Every castaway is already drafted or already an honorary member somewhere.'));
+    modal.appendChild(body);
+    $('#profileOverlay').classList.add('open');
+    return;
+  }
+
+  const searchWrap = el('div',{class:'score-search'});
+  const searchInp = el('input',{type:'text', placeholder:'🔍 Search undrafted castaways...'});
+  searchWrap.appendChild(searchInp);
+  body.appendChild(searchWrap);
+
+  const grid = el('div',{class:'grid steal-pick-grid'});
+  available.forEach(c=>{
+    const card = el('div',{class:'card'});
+    card.dataset.name = (c.name + ' ' + c.short).toLowerCase();
+    card.appendChild(photoBlock(c));
+    card.appendChild(el('div',{class:'info'}, el('div',{class:'nm'}, c.short)));
+    card.addEventListener('click', ()=>{
+      const ids = (scoring.honorary||{})[team.id] || [];
+      const updated = { ...scoring, honorary: { ...(scoring.honorary||{}), [team.id]: [...ids, c.id] } };
+      source.save(updated);
+      AudioFX.success();
+      toast(c.short + ' added as an honorary member of ' + team.name);
+      closeProfile();
+      setTimeout(renderTeamsTab, 150);
+    });
+    grid.appendChild(card);
+  });
+  body.appendChild(grid);
+  searchInp.addEventListener('input', ()=>{
+    const q = searchInp.value.trim().toLowerCase();
+    $all('.card', grid).forEach(card=>{ card.style.display = (!q || (card.dataset.name||'').includes(q)) ? '' : 'none'; });
+  });
+
+  modal.appendChild(body);
+  $('#profileOverlay').classList.add('open');
+}
 
 function teamRosterCard(c, source, team){
   const { scoring, isAdmin } = source;
