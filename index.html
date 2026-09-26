@@ -139,6 +139,8 @@ button.pill.yellow.active{background:rgba(232,197,61,0.22);}
 .card .tribe-badge.yellow{background:rgba(232,197,61,0.9);color:#1a1400;}
 .card .tribe-badge.tbd{background:rgba(10,23,18,0.7);border:1px dashed var(--line);color:var(--sand-dim);}
 .card.tribe-dimmed{opacity:0.3;}
+.card.honorary-card{border-style:dashed;opacity:0.94;}
+.card .irrelevant-tag{position:absolute;top:40px;right:8px;background:rgba(155,107,255,0.85);color:#fff;border-radius:999px;padding:2px 9px;font-size:0.58rem;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;}
 
 /* ===== Rankings page ===== */
 .rank-table{display:flex;flex-direction:column;gap:8px;}
@@ -547,7 +549,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-26 15:26 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-26 19:37 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -4404,6 +4406,12 @@ function teamWeekPoints(scoring, picks, week){
 function teamSeasonPoints(scoring, picks){
   return (scoring.weeks||[]).reduce((sum,w)=> sum + teamWeekPoints(scoring, picks, w), 0);
 }
+/* A team's full point-earning roster: drafted picks plus any Mr./Mrs.
+   Irrelevant (honorary) members — their scores count toward the team the
+   same as a drafted castaway's, they're just shown in their own section. */
+function teamScoringRoster(scoring, team){
+  return [...(team.picks||[]), ...(((scoring.honorary||{})[team.id])||[])];
+}
 function draftPickLog(source){
   if(!source) return [];
   if(source.type==='live'){
@@ -4469,7 +4477,7 @@ async function exportFullXLSX(source){
     const weeklyRows = [];
     (scoring.weeks||[]).forEach(w=>{
       teams.forEach(t=>{
-        (t.picks||[]).forEach(cid=>{
+        teamScoringRoster(scoring,t).forEach(cid=>{
           const c = byId(cid); if(!c) return;
           const row = { Week:w, Castaway:c.name, Team:t.name };
           scoring.categories.forEach(cat=>{ row[cat.label] = ((scoring.entries[w]||{})[cid]||{})[cat.key] || 0; });
@@ -4481,7 +4489,7 @@ async function exportFullXLSX(source){
     });
 
     const standingsRows = teams.map(t=>({
-      Team: t.name, Owner: t.ownerName||'', 'Total Points': teamSeasonPoints(scoring,t.picks) + stealBonusSeason(scoring,t.id)
+      Team: t.name, Owner: t.ownerName||'', 'Total Points': teamSeasonPoints(scoring,teamScoringRoster(scoring,t)) + stealBonusSeason(scoring,t.id)
     })).sort((a,b)=>b['Total Points']-a['Total Points']).map((r,i)=>({ Rank:i+1, ...r }));
 
     const wb = XLSX.utils.book_new();
@@ -4533,7 +4541,7 @@ function pointsByWeekChart(source){
   const { teams, scoring } = source;
   const weeks = scoring.weeks || [];
   if(!weeks.length) return el('p',{style:'color:var(--sand-dim);font-size:0.85rem'}, 'No weeks scored yet.');
-  const weekTotals = weeks.map(w => teams.map(t => teamWeekPoints(scoring, t.picks, w) + stealBonusForWeek(scoring, t.id, w)));
+  const weekTotals = weeks.map(w => teams.map(t => teamWeekPoints(scoring, teamScoringRoster(scoring,t), w) + stealBonusForWeek(scoring, t.id, w)));
   const maxVal = Math.max(1, ...weekTotals.flat());
   const wrap = el('div',{class:'chart-wrap'});
   weeks.forEach((w,i)=>{
@@ -4571,7 +4579,7 @@ function scoringStandings(source){
   wrap.appendChild(toggle);
 
   if(scoringLeaderView==='team'){
-    const ranked = teams.map(t=>({ ...t, total: teamSeasonPoints(scoring,t.picks) + stealBonusSeason(scoring,t.id) }))
+    const ranked = teams.map(t=>({ ...t, total: teamSeasonPoints(scoring,teamScoringRoster(scoring,t)) + stealBonusSeason(scoring,t.id) }))
       .sort((a,b)=>b.total-a.total);
     ranked.forEach((t,i)=>{
       const card = el('div',{class:'team-standing-card'});
@@ -4582,7 +4590,7 @@ function scoringStandings(source){
       ));
       head.appendChild(el('div',{class:'team-standing-pts', style:'color:'+t.color}, String(t.total)));
       card.appendChild(head);
-      const roster = t.picks.map(cid=>byId(cid)).filter(Boolean).sort((a,b)=>castawaySeasonPoints(scoring,b.id)-castawaySeasonPoints(scoring,a.id));
+      const roster = teamScoringRoster(scoring,t).map(cid=>byId(cid)).filter(Boolean).sort((a,b)=>castawaySeasonPoints(scoring,b.id)-castawaySeasonPoints(scoring,a.id));
       roster.forEach(c=>{
         const row = el('div',{class:'lb-row', style:'margin-bottom:5px;padding:6px 10px'});
         const thumb = el('div',{class:'lb-thumb', style:'width:28px;height:28px'});
@@ -4600,7 +4608,7 @@ function scoringStandings(source){
       wrap.appendChild(card);
     });
   } else {
-    const allPicks = teams.flatMap(t=>t.picks.map(cid=>({cid, team:t})));
+    const allPicks = teams.flatMap(t=>teamScoringRoster(scoring,t).map(cid=>({cid, team:t})));
     const ranked = allPicks.map(({cid,team})=>({ c: byId(cid), team, total: castawaySeasonPoints(scoring, cid) }))
       .filter(x=>x.c).sort((a,b)=>b.total-a.total);
     ranked.forEach((r,i)=>{
@@ -4635,7 +4643,7 @@ function scoringTeamPages(source){
   wrap.appendChild(switcher);
 
   const team = teams.find(t=>t.id===scoringSelectedTeam);
-  const total = teamSeasonPoints(scoring, team.picks) + stealBonusSeason(scoring, team.id);
+  const total = teamSeasonPoints(scoring, teamScoringRoster(scoring, team)) + stealBonusSeason(scoring, team.id);
   const stillIn = team.picks.filter(cid => !(scoring.eliminated && scoring.eliminated[cid])).length;
 
   const banner = el('div',{class:'team-page-banner', style:'border-color:'+team.color});
@@ -4759,18 +4767,22 @@ function renderTeamsTab(){
 }
 renderTeamsTab();
 
-/* Honorary team members — non-drafted castaways attached to a team for fun
-   (e.g. an undrafted castaway "adopted" by a team after another one's boot).
-   They never enter scoring/standings math — this is display-only, stored on
-   the scoring object (scoring.honorary[teamId] = [castawayId, ...]) so it's
-   backed up the same way steals and entries are. */
+/* "Mr./Mrs. Irrelevant" — a nod to the NFL Draft's tradition of naming the
+   very last pick — used here for a non-drafted castaway attached to a team
+   for fun (e.g. the one undrafted castaway "adopted" by a team after
+   another one's boot). Their points DO count toward the team's total,
+   standings, and every other team-total calc (see teamScoringRoster) — they
+   just render in this separate section rather than the main Roster grid.
+   Stored on the scoring object (scoring.honorary[teamId] = [castawayId,
+   ...], internal key name unchanged) so it's backed up the same way steals
+   and entries are. */
 function honoraryMemberBox(source, team){
   const { scoring, isAdmin } = source;
   const wrap = el('div',{style:'margin:18px 0 4px'});
   const headRow = el('div',{style:'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px'});
-  headRow.appendChild(el('h3',{style:'margin:0;font-size:0.95rem'}, '🎖️ Honorary Team Member' + (((scoring.honorary||{})[team.id]||[]).length===1?'':'s')));
+  headRow.appendChild(el('h3',{style:'margin:0;font-size:0.95rem'}, '🏈 Mr./Mrs. Irrelevant'));
   if(isAdmin){
-    const addBtn = el('button',{class:'btn', style:'padding:6px 14px;font-size:0.76rem'}, '+ Add Honorary Member');
+    const addBtn = el('button',{class:'btn', style:'padding:6px 14px;font-size:0.76rem'}, '+ Add Mr./Mrs. Irrelevant');
     addBtn.addEventListener('click', ()=> openHonoraryPicker(source, team));
     headRow.appendChild(addBtn);
   }
@@ -4778,28 +4790,20 @@ function honoraryMemberBox(source, team){
 
   const ids = (scoring.honorary||{})[team.id] || [];
   if(!ids.length){
-    wrap.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.78rem;margin:6px 0 0'}, 'No honorary members — a fun way to attach an undrafted castaway to a team without them counting toward scoring.'));
+    wrap.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.78rem;margin:6px 0 0'}, 'No Mr./Mrs. Irrelevant yet — a fun nod to the NFL Draft\'s last pick: attach an undrafted castaway to a team. Their points count toward the team\'s total just like a drafted pick.'));
     return wrap;
   }
   const grid = el('div',{class:'grid team-page-roster', style:'margin-top:10px'});
   ids.map(byId).filter(Boolean).forEach(c=>{
-    const card = el('div',{class:'card', style:'opacity:0.92;border-style:dashed'});
-    card.appendChild(photoBlock(c));
-    card.appendChild(el('div',{class:'badge', style:'background:rgba(155,107,255,0.85)'}, 'HONORARY'));
-    card.appendChild(el('div',{class:'tribe-badge ' + (c.tribe || 'tbd')}, tribeLabel(c.tribe)));
-    card.appendChild(el('div',{class:'info'},
-      el('div',{class:'nm'}, c.short),
-      el('div',{class:'oc'}, c.occupation)
-    ));
-    card.addEventListener('click', ()=> openProfile(c.id));
+    const card = teamRosterCard(c, source, team, { honorary:true });
     if(isAdmin){
-      const rmBtn = el('button',{class:'roster-edit-btn', title:'Remove honorary member'}, '✕');
+      const rmBtn = el('button',{class:'btn danger', style:'width:100%;border-radius:0;padding:6px 0;font-size:0.68rem'}, '✕ Remove');
       rmBtn.addEventListener('click', (e)=>{
         e.stopPropagation();
         const updatedIds = ids.filter(x=>x!==c.id);
         const updated = { ...scoring, honorary: { ...(scoring.honorary||{}), [team.id]: updatedIds } };
         source.save(updated);
-        toast(c.short + ' removed as an honorary member');
+        toast(c.short + ' removed as ' + team.name + '\'s Mr./Mrs. Irrelevant');
         setTimeout(renderTeamsTab, 150);
       });
       card.appendChild(rmBtn);
@@ -4812,7 +4816,7 @@ function honoraryMemberBox(source, team){
 
 function openHonoraryPicker(source, team){
   const { scoring, isAdmin, teams } = source;
-  if(!isAdmin){ toast('Only the commissioner can add honorary members.'); return; }
+  if(!isAdmin){ toast('Only the commissioner can add a Mr./Mrs. Irrelevant.'); return; }
   AudioFX.whoosh();
   const modal = $('#profileModal');
   modal.innerHTML = '';
@@ -4824,15 +4828,15 @@ function openHonoraryPicker(source, team){
   modal.appendChild(head);
 
   const body = el('div',{class:'modal-body', style:'padding-top:16px'});
-  body.appendChild(el('h2',{style:'font-size:1.6rem'}, '🎖️ Add an Honorary Member'));
-  body.appendChild(el('div',{class:'modal-meta'}, 'For ' + team.name + '. Pick any castaway not already drafted — they\'ll show on the roster but won\'t count toward scoring.'));
+  body.appendChild(el('h2',{style:'font-size:1.6rem'}, '🏈 Add a Mr./Mrs. Irrelevant'));
+  body.appendChild(el('div',{class:'modal-meta'}, 'For ' + team.name + '. Pick any castaway not already drafted — they\'ll show in their own section and their points count toward ' + team.name + '\'s total.'));
 
   const draftedIds = new Set(teams.flatMap(t=>t.picks||[]));
   const honoraryIds = new Set(Object.values(scoring.honorary||{}).flat());
   const available = CASTAWAYS.filter(c=>!draftedIds.has(c.id) && !honoraryIds.has(c.id));
 
   if(!available.length){
-    body.appendChild(el('div',{class:'notice'}, 'Every castaway is already drafted or already an honorary member somewhere.'));
+    body.appendChild(el('div',{class:'notice'}, 'Every castaway is already drafted or already someone\'s Mr./Mrs. Irrelevant.'));
     modal.appendChild(body);
     $('#profileOverlay').classList.add('open');
     return;
@@ -4854,7 +4858,7 @@ function openHonoraryPicker(source, team){
       const updated = { ...scoring, honorary: { ...(scoring.honorary||{}), [team.id]: [...ids, c.id] } };
       source.save(updated);
       AudioFX.success();
-      toast(c.short + ' added as an honorary member of ' + team.name);
+      toast(c.short + ' is now ' + team.name + '\'s Mr./Mrs. Irrelevant');
       closeProfile();
       setTimeout(renderTeamsTab, 150);
     });
@@ -4870,13 +4874,15 @@ function openHonoraryPicker(source, team){
   $('#profileOverlay').classList.add('open');
 }
 
-function teamRosterCard(c, source, team){
+function teamRosterCard(c, source, team, opts){
+  opts = opts || {};
   const { scoring, isAdmin } = source;
   const pts = castawaySeasonPoints(scoring, c.id);
   const out = scoring.eliminated && scoring.eliminated[c.id];
-  const card = el('div',{class:'card'});
+  const card = el('div',{class:'card' + (opts.honorary ? ' honorary-card' : '')});
   card.appendChild(photoBlock(c));
   card.appendChild(el('div',{class:'badge'}, pts + ' pts'));
+  if(opts.honorary) card.appendChild(el('div',{class:'irrelevant-tag'}, 'IRRELEVANT'));
   card.appendChild(el('div',{class:'tribe-badge ' + (c.tribe || 'tbd')}, tribeLabel(c.tribe)));
   card.appendChild(el('div',{class:'info'},
     el('div',{class:'nm'}, c.short),
@@ -5047,9 +5053,18 @@ function openStealPicker(source, team, week){
     body.appendChild(el('h2',{}, c.name));
     body.appendChild(el('div',{class:'modal-meta'}, 'Steal for ' + team.name + ' — Week ' + week));
 
-    const ptsInp = el('input',{type:'number', step:'1', placeholder:'e.g. 5'});
+    // Auto-fill from whatever this castaway already earned that week in the
+    // scoring spreadsheet (Enter Scores), since a "steal" takes their
+    // already-assigned points rather than making up a new number. Still
+    // editable, in case the commissioner wants to adjust it.
+    const autoPts = castawayWeekPoints(scoring, c.id, week);
+    const ptsInp = el('input',{type:'number', step:'1', value:String(autoPts)});
     const noteInp = el('input',{type:'text', placeholder:'e.g. Stole a vote at tribal (optional)'});
-    body.appendChild(el('div',{style:'margin-top:14px'}, el('label',{class:'field'}, 'Points'), ptsInp));
+    body.appendChild(el('div',{style:'margin-top:14px'},
+      el('label',{class:'field'}, 'Points'), ptsInp,
+      el('div',{style:'margin-top:4px;font-size:0.72rem;color:var(--sand-dim)'},
+        'Auto-filled from ' + c.short + '’s Week ' + week + ' score (' + autoPts + ' pts) — edit if you want a different amount.')
+    ));
     body.appendChild(el('div',{style:'margin-top:12px'}, el('label',{class:'field'}, 'What happened?'), noteInp));
 
     const btnRow = el('div',{class:'btn-row', style:'margin-top:18px'});
@@ -5057,8 +5072,8 @@ function openStealPicker(source, team, week){
     backBtn.addEventListener('click', renderPickStep);
     const lockBtn = el('button',{class:'btn primary'}, '🔒 Lock In Steal');
     lockBtn.addEventListener('click', ()=>{
-      const pts = parseInt(ptsInp.value)||0;
-      if(!pts){ toast('Enter a nonzero point value'); return; }
+      const pts = parseInt(ptsInp.value);
+      if(isNaN(pts)){ toast('Enter a point value'); return; }
       const weekSteals = (scoring.steals && scoring.steals[week]) || [];
       const entry = { teamId: team.id, pts, note: noteInp.value.trim(), castawayId: c.id };
       const updated = { ...scoring, steals: { ...(scoring.steals||{}), [week]: [...weekSteals, entry] } };
@@ -5098,7 +5113,7 @@ function scoringWeekly(source){
 
   const teamRow = el('div',{style:'display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px'});
   teams.forEach(t=>{
-    const pts = teamWeekPoints(scoring, t.picks, w) + stealBonusForWeek(scoring, t.id, w);
+    const pts = teamWeekPoints(scoring, teamScoringRoster(scoring, t), w) + stealBonusForWeek(scoring, t.id, w);
     teamRow.appendChild(el('div',{class:'card-box', style:'padding:12px 14px'},
       el('div',{style:'font-family:\'Bebas Neue\';font-size:1.1rem;color:'+t.color}, t.name),
       el('div',{style:'font-family:\'Bebas Neue\';font-size:1.8rem;color:'+t.color}, String(pts))
@@ -5106,7 +5121,7 @@ function scoringWeekly(source){
   });
   wrap.appendChild(teamRow);
 
-  const allPicks = teams.flatMap(t=>t.picks.map(cid=>({cid,team:t})));
+  const allPicks = teams.flatMap(t=>teamScoringRoster(scoring,t).map(cid=>({cid,team:t})));
   const ranked = allPicks.map(({cid,team})=>({c:byId(cid), team, pts:castawayWeekPoints(scoring,cid,w)}))
     .filter(x=>x.c).sort((a,b)=>b.pts-a.pts);
   ranked.forEach(r=>{
@@ -5174,8 +5189,11 @@ function scoringEnter(source){
   thead.appendChild(headRow);
   table.appendChild(thead);
   const tbody = el('tbody',{});
-  const allPicks = teams.flatMap(t=>t.picks.map(cid=>({cid,team:t})));
-  allPicks.forEach(({cid,team})=>{
+  const allPicks = teams.flatMap(t=>[
+    ...t.picks.map(cid=>({cid,team:t,honorary:false})),
+    ...(((scoring.honorary||{})[t.id])||[]).map(cid=>({cid,team:t,honorary:true}))
+  ]);
+  allPicks.forEach(({cid,team,honorary})=>{
     const c = byId(cid);
     if(!c) return;
     const row = el('tr',{});
@@ -5185,7 +5203,7 @@ function scoringEnter(source){
     const img = el('img',{src:c.photo, alt:c.short});
     img.onerror=function(){this.style.display='none';};
     nameWrap.appendChild(img);
-    nameWrap.appendChild(el('span',{}, c.short + ' (' + team.name + ')'));
+    nameWrap.appendChild(el('span',{}, c.short + ' (' + team.name + (honorary ? ' — Irrelevant' : '') + ')'));
     nameCell.appendChild(nameWrap);
     row.appendChild(nameCell);
     const existing = ((scoring.entries[w]||{})[cid])||{};
@@ -5494,7 +5512,7 @@ function scoringExport(source){
     const resetScoreBtn = el('button',{class:'btn danger'}, 'Reset Scoring Data');
     resetScoreBtn.addEventListener('click', ()=>{
       if(!confirm('Reset all scoring data? Weekly points, eliminations, and the declared winner will be cleared. This cannot be undone.')) return;
-      source.save({ categories: scoring.categories, weeks:[...DEFAULT_SEASON_WEEKS], entries:{}, steals:{}, eliminated:{}, winnerId:null });
+      source.save({ categories: scoring.categories, weeks:[...DEFAULT_SEASON_WEEKS], entries:{}, steals:{}, eliminated:{}, winnerId:null, honorary: scoring.honorary||{} });
       toast('Scoring data reset');
       setTimeout(renderScoring, 150);
     });
@@ -5507,7 +5525,7 @@ function scoringExport(source){
 function scoringChampions(source){
   const { teams, scoring, isAdmin } = source;
   const wrap = el('div',{});
-  const ranked = teams.map(t=>({ ...t, total: teamSeasonPoints(scoring,t.picks) + stealBonusSeason(scoring,t.id) })).sort((a,b)=>b.total-a.total);
+  const ranked = teams.map(t=>({ ...t, total: teamSeasonPoints(scoring,teamScoringRoster(scoring,t)) + stealBonusSeason(scoring,t.id) })).sort((a,b)=>b.total-a.total);
   const fantasyChamp = ranked[0];
   const winner = scoring.winnerId ? byId(scoring.winnerId) : null;
 
