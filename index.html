@@ -385,6 +385,15 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 .week-picker button{font-family:'Bebas Neue';font-size:0.9rem;background:rgba(236,223,192,0.04);border:1px solid var(--line);color:var(--sand-dim);padding:6px 13px;border-radius:8px;cursor:pointer;}
 .week-picker button.on{background:var(--torch);border-color:transparent;color:#1a0a04;}
 .week-picker button.add{border-style:dashed;}
+.conf-row{position:relative;overflow:hidden;}
+.conf-bar-track{position:absolute;left:0;bottom:0;height:3px;width:100%;background:rgba(236,223,192,0.08);}
+.conf-bar-fill{position:absolute;left:0;bottom:0;height:3px;background:linear-gradient(90deg,var(--torch),var(--flame-red));}
+.conf-tier{display:inline-block;font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;padding:1px 7px;border-radius:999px;margin-left:6px;vertical-align:middle;}
+.conf-tier.hot{background:rgba(255,122,51,0.22);color:var(--torch);}
+.conf-tier.warm{background:rgba(232,197,61,0.18);color:#e8c53d;}
+.conf-tier.cool{background:rgba(155,107,255,0.16);color:#b79bff;}
+.conf-elim-tag{font-size:0.62rem;color:var(--sand-dim);text-transform:uppercase;letter-spacing:0.03em;}
+.conf-ep-cell{font-size:0.72rem;color:var(--sand-dim);text-align:center;min-width:44px;}
 .score-table{width:100%;border-collapse:collapse;font-size:0.82rem;}
 .score-table th{text-align:left;padding:6px 8px;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--sand-dim);border-bottom:1px solid var(--line);white-space:nowrap;}
 .score-table td{padding:5px 8px;border-bottom:1px solid rgba(236,223,192,0.06);vertical-align:middle;}
@@ -538,7 +547,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-26 04:39 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-26 14:51 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -5243,7 +5252,7 @@ function scoringCategories(source){
   return wrap;
 }
 
-const BACKUP_KEYS = ['s51_tv','s51_tv_setup','s51_tv_scoring','s51_mock','s51_mock_setup','s51_mock_scoring','s51_live_room','s51_categories_template'];
+const BACKUP_KEYS = ['s51_tv','s51_tv_setup','s51_tv_scoring','s51_mock','s51_mock_setup','s51_mock_scoring','s51_live_room','s51_categories_template','s51_confessional'];
 function buildBackupPayload(){
   const payload = { _app:'survivor51-draft-backup', _version:1, _exportedAt:new Date().toISOString() };
   BACKUP_KEYS.forEach(k=> payload[k] = lsGet(k, null));
@@ -5433,19 +5442,37 @@ renderScoring();
 })();
 
 /* =========================================================================
-   RANKINGS — consensus power rankings + where other podcasts drafted them
+   RANKINGS — consensus power rankings + confessional-time power tracker
    ========================================================================= */
+let rankingsSubTab = 'analyst';
+function rankingsSubnav(active){
+  const nav = el('div',{class:'subtabs'});
+  const tabs = [['analyst','📊 Analyst Rankings'],['confessional','🎥 Confessional Time']];
+  tabs.forEach(([id,label])=>{
+    const b = el('button',{class: active===id ? 'on' : ''}, label);
+    b.addEventListener('click', ()=>{ rankingsSubTab = id; renderRankings(); });
+    nav.appendChild(b);
+  });
+  return nav;
+}
+
 function renderRankings(){
   const root = $('#rankingsRoot');
   root.innerHTML = '';
+  root.appendChild(rankingsSubnav(rankingsSubTab));
+  if(rankingsSubTab === 'confessional') root.appendChild(renderConfessionalTracker());
+  else root.appendChild(renderAnalystRankings());
+}
 
+function renderAnalystRankings(){
+  const wrap = el('div',{});
   const head = el('div',{class:'section-head'},
     el('div',{},
       el('h2',{}, '📊 Analyst Power Rankings'),
       el('p',{}, 'How the biggest Survivor podcasts/YouTube channels see this cast pre-premiere — plus where a couple of them landed in other outlets’ own fantasy drafts.')
     )
   );
-  root.appendChild(head);
+  wrap.appendChild(head);
 
   const ranked = CASTAWAYS.filter(c=>c.powerRank).slice().sort((a,b)=>a.powerRank.rank - b.powerRank.rank);
   const table = el('div',{class:'rank-table'});
@@ -5463,7 +5490,7 @@ function renderRankings(){
     row.addEventListener('click', ()=>openProfile(c.id));
     table.appendChild(row);
   });
-  root.appendChild(table);
+  wrap.appendChild(table);
 
   const otherDrafted = CASTAWAYS.filter(c=>c.otherDrafts && c.otherDrafts.length);
   if(otherDrafted.length){
@@ -5473,7 +5500,7 @@ function renderRankings(){
         el('p',{}, 'A few confirmed picks from other podcasts’ own preseason fantasy drafts, for comparison against the power rankings above.')
       )
     );
-    root.appendChild(otherHead);
+    wrap.appendChild(otherHead);
     const grid = el('div',{class:'grid'});
     otherDrafted.forEach(c=>{
       const od = c.otherDrafts[0];
@@ -5484,11 +5511,271 @@ function renderRankings(){
       card.appendChild(el('a',{class:'qa-source', href:od.sourceUrl, target:'_blank', rel:'noopener'}, '— view source'));
       grid.appendChild(card);
     });
-    root.appendChild(grid);
+    wrap.appendChild(grid);
   }
 
-  root.appendChild(el('p',{style:'margin-top:22px;font-size:0.74rem;color:var(--sand-dim)'},
-    'Rankings and takes are pulled from public preseason commentary (podcasts/YouTube channels), not from anything that has aired — treat them as pundit opinion, not spoilers.'));
+  wrap.appendChild(el('p',{style:'margin-top:22px;font-size:0.74rem;color:var(--sand-dim)'},
+    'Rankings and takes are pulled from public preseason commentary (podcasts/YouTube channels), not from anything that has aired — treat them as pundit opinion, not spoilers. Once episodes start airing, check the 🎥 Confessional Time tab above for a power ranking built from actual screen-time data, updated weekly.'));
+  return wrap;
+}
+
+/* ---------- Confessional Time Tracker ----------
+   Tracks per-episode confessional screen time per castaway, framed as a
+   "power ranking" — more camera time is a well-known (if imperfect) signal
+   for who's getting the bigger story/deeper run. Seeded once with real
+   Episode 1 numbers transcribed from the r/survivor community tracker
+   (weekly post by u/nintendolost); update it each week as new posts land. */
+const CONFESSIONAL_SEED_TIMES = { '1': {
+  devin:168, lewis:135, jenna:131, jelly:89, kilby:71, brady:64, rob:64, kristin:59, eric:56, ana:52,
+  patt:45, mike:36, sharonda:36, 'thien-an':34, carter:31, linnea:29, maggie:25, alexis:22, cristian:13, ori:13, aaliyah:38
+}};
+const CONFESSIONAL_SEED_ELIM = { aaliyah:'1' };
+const CONFESSIONAL_SEED_LINKS = { '1': 'https://www.reddit.com/r/survivor/s/CaQmZvCmli' };
+function defaultConfessional(){
+  return { episodes:['1'], times: JSON.parse(JSON.stringify(CONFESSIONAL_SEED_TIMES)), eliminated: { ...CONFESSIONAL_SEED_ELIM }, links: { ...CONFESSIONAL_SEED_LINKS } };
+}
+function getConfessional(){ return lsGet('s51_confessional', null) || defaultConfessional(); }
+function saveConfessional(data){ lsSet('s51_confessional', data); }
+function fmtMMSS(totalSeconds){
+  const s = Math.max(0, Math.round(totalSeconds||0));
+  return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+}
+function parseMMSS(str){
+  if(str==null) return null;
+  str = String(str).trim();
+  if(!str) return null;
+  const m = str.match(/^(\d+):([0-5]?\d)$/);
+  if(m) return parseInt(m[1],10)*60 + parseInt(m[2],10);
+  if(/^\d+$/.test(str)) return parseInt(str,10);
+  return null;
+}
+function confessionalTotals(data){
+  const totals = {};
+  CASTAWAYS.forEach(c=>{ totals[c.id] = 0; });
+  (data.episodes||[]).forEach(ep=>{
+    const epTimes = data.times[ep] || {};
+    Object.keys(epTimes).forEach(cid=>{ if(totals[cid]!=null) totals[cid] += (epTimes[cid]||0); });
+  });
+  return totals;
+}
+
+function confessionalSourceLinksBox(data, episodes){
+  const box = el('div',{class:'card-box', style:'margin-bottom:16px'});
+  box.appendChild(el('h3',{style:'margin:0 0 8px;font-size:0.9rem'}, '📎 Source Posts'));
+  const links = data.links || {};
+  if(!episodes.length || !Object.keys(links).length){
+    box.appendChild(el('p',{style:'margin:0;font-size:0.78rem;color:var(--sand-dim)'},
+      'No source links saved yet — you\'ll be prompted for one each time you add an episode, or add one below.'));
+  } else {
+    const list = el('div',{style:'display:flex;flex-direction:column;gap:6px'});
+    episodes.forEach(ep=>{
+      if(!links[ep]) return;
+      const row = el('div',{style:'display:flex;align-items:center;gap:8px;flex-wrap:wrap'});
+      row.appendChild(el('a',{href:links[ep], target:'_blank', rel:'noopener', class:'qa-source'}, 'Episode ' + ep + ' — view tracker post ↗'));
+      list.appendChild(row);
+    });
+    box.appendChild(list);
+  }
+  const editRow = el('div',{class:'btn-row', style:'margin-top:10px'});
+  const editBtn = el('button',{class:'btn ghost', style:'padding:6px 12px;font-size:0.76rem'}, '🔗 Add / Edit a Link');
+  editBtn.addEventListener('click', ()=>{
+    if(!episodes.length){ toast('Add an episode first'); return; }
+    const target = prompt('Which episode is this link for? (' + episodes.join(', ') + ')', episodes[episodes.length-1]);
+    if(!target || !episodes.includes(target)){ if(target) toast('That episode isn\'t tracked yet'); return; }
+    const url = prompt('Paste the tracker post link for Episode ' + target + ':', (data.links||{})[target] || '');
+    if(url==null) return;
+    const updatedLinks = { ...(data.links||{}) };
+    if(url.trim()) updatedLinks[target] = url.trim();
+    else delete updatedLinks[target];
+    saveConfessional({ ...data, links: updatedLinks });
+    toast('Link updated for Episode ' + target);
+    renderRankings();
+  });
+  editRow.appendChild(editBtn);
+  box.appendChild(editRow);
+  return box;
+}
+
+function renderConfessionalTracker(){
+  const wrap = el('div',{});
+  const data = getConfessional();
+  const episodes = (data.episodes||[]).slice().sort((a,b)=>parseInt(a)-parseInt(b));
+
+  wrap.appendChild(el('div',{class:'section-head'},
+    el('div',{},
+      el('h2',{}, '🎥 Confessional Time Tracker'),
+      el('p',{}, 'Community-tracked confessional screen time, episode by episode — more time in front of the camera usually (not always) means a bigger edit and a better shot at going deep. Source: the r/survivor weekly tracker by u/nintendolost.')
+    )
+  ));
+
+  wrap.appendChild(confessionalSourceLinksBox(data, episodes));
+
+  const controls = el('div',{class:'btn-row', style:'margin-bottom:14px'});
+  const addEpBtn = el('button',{class:'btn'}, '+ Add Episode');
+  addEpBtn.addEventListener('click', ()=>{
+    const lastNum = episodes.length ? (parseInt(episodes[episodes.length-1])||episodes.length) : 0;
+    const suggested = String(lastNum + 1);
+    const label = prompt('Episode number (e.g. ' + suggested + '):', suggested);
+    if(!label) return;
+    if(episodes.includes(label)){ toast('Episode ' + label + ' already added'); return; }
+    const url = prompt('Optional: paste the link to this week\'s tracker post (leave blank to skip):', '');
+    const links = { ...(data.links||{}) };
+    if(url && url.trim()) links[label] = url.trim();
+    const updated = { ...data, episodes:[...data.episodes, label], times: { ...data.times, [label]: {} }, links };
+    saveConfessional(updated);
+    toast('Episode ' + label + ' added — enter times below');
+    renderRankings();
+  });
+  controls.appendChild(addEpBtn);
+  wrap.appendChild(controls);
+
+  if(!episodes.length){
+    wrap.appendChild(el('div',{class:'notice'}, 'No episodes tracked yet. Click "+ Add Episode" and copy the numbers over from this week\'s r/survivor confessional tracker post — they\'ll roll straight into the power ranking below.'));
+    return wrap;
+  }
+
+  wrap.appendChild(confessionalEntryBox(data, episodes[episodes.length-1], episodes));
+  wrap.appendChild(confessionalLeaderboard(data, episodes));
+
+  wrap.appendChild(el('p',{style:'margin-top:18px;font-size:0.74rem;color:var(--sand-dim)'},
+    'Update this each week once the new episode\'s numbers are posted (usually Saturday mornings Eastern). Confessional time is a fun predictive signal, not a guarantee — big pre-merge boots and "goat" edits can rack up time too.'));
+
+  return wrap;
+}
+
+function confessionalEntryBox(data, defaultEp, episodes){
+  const box = el('div',{class:'card-box', style:'margin-bottom:22px'});
+  box.appendChild(el('h3',{style:'margin:0 0 4px;font-size:0.95rem'}, '✏️ Enter / Edit Confessional Times'));
+  box.appendChild(el('p',{style:'margin:0 0 12px;font-size:0.76rem;color:var(--sand-dim)'},
+    'Times in minutes:seconds, straight off the tracker post (e.g. 2:48). Leave blank for anyone not shown that episode.'));
+
+  const picker = el('div',{class:'week-picker'});
+  const buttons = [];
+  episodes.forEach(ep=>{
+    const b = el('button',{class: ep===defaultEp ? 'on' : ''}, 'Episode ' + ep);
+    b.addEventListener('click', ()=>{
+      buttons.forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
+      renderTableForEp(ep);
+    });
+    buttons.push(b);
+    picker.appendChild(b);
+  });
+  box.appendChild(picker);
+
+  const tableWrap = el('div',{style:'overflow-x:auto'});
+  box.appendChild(tableWrap);
+
+  let currentEp = defaultEp;
+  function renderTableForEp(ep){
+    currentEp = ep;
+    tableWrap.innerHTML = '';
+    const table = el('table',{class:'score-table'});
+    table.appendChild(el('thead',{}, el('tr',{},
+      el('th',{}, 'Castaway'), el('th',{}, 'Confessional Time'), el('th',{}, 'Voted out this ep?')
+    )));
+    const tbody = el('tbody',{});
+    CASTAWAYS.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(c=>{
+      const existing = (data.times[ep]||{})[c.id];
+      const timeInp = el('input',{type:'text', placeholder:'e.g. 1:04', value: existing!=null ? fmtMMSS(existing) : ''});
+      timeInp.dataset.castaway = c.id;
+      const elimChk = el('input',{type:'checkbox'});
+      elimChk.dataset.castawayElim = c.id;
+      elimChk.checked = !!(data.eliminated && data.eliminated[c.id] === ep);
+      const nameWrap = el('div',{class:'snm-cell'});
+      const img = el('img',{src:c.photo, alt:c.short});
+      img.onerror=function(){this.style.display='none';};
+      nameWrap.appendChild(img);
+      nameWrap.appendChild(el('span',{}, c.short + ' ' + tribeLabel(c.tribe)));
+      tbody.appendChild(el('tr',{},
+        el('td',{}, nameWrap),
+        el('td',{}, timeInp),
+        el('td',{style:'text-align:center'}, elimChk)
+      ));
+    });
+    table.appendChild(tbody);
+    tableWrap.appendChild(table);
+  }
+  renderTableForEp(defaultEp);
+
+  const saveBtn = el('button',{class:'btn primary', style:'margin-top:12px'}, '💾 Save Times');
+  saveBtn.addEventListener('click', ()=>{
+    const ep = currentEp;
+    const times = { ...(data.times[ep]||{}) };
+    const eliminated = { ...(data.eliminated||{}) };
+    let count = 0;
+    $all('input[type=text]', tableWrap).forEach(inp=>{
+      const cid = inp.dataset.castaway;
+      const val = parseMMSS(inp.value);
+      if(val != null){ times[cid] = val; count++; }
+      else delete times[cid];
+    });
+    $all('input[type=checkbox]', tableWrap).forEach(chk=>{
+      const cid = chk.dataset.castawayElim;
+      if(chk.checked) eliminated[cid] = ep;
+      else if(eliminated[cid] === ep) delete eliminated[cid];
+    });
+    const updated = { ...data, times: { ...data.times, [ep]: times }, eliminated };
+    saveConfessional(updated);
+    AudioFX.success();
+    toast('Saved Episode ' + ep + ' times for ' + count + ' castaway' + (count===1?'':'s'));
+    renderRankings();
+  });
+  box.appendChild(saveBtn);
+  return box;
+}
+
+function confessionalLeaderboard(data, episodes){
+  const wrap = el('div',{});
+  wrap.appendChild(el('h3',{style:'margin:22px 0 10px;font-size:1rem'}, '🏆 Confessional Power Ranking — Total Time'));
+
+  const totals = confessionalTotals(data);
+  const stillIn = CASTAWAYS.filter(c=>!(data.eliminated && data.eliminated[c.id]));
+  const votedOut = CASTAWAYS.filter(c=>data.eliminated && data.eliminated[c.id]);
+  const maxTotal = Math.max(1, ...CASTAWAYS.map(c=>totals[c.id]||0));
+
+  function tierFor(total){
+    if(total >= maxTotal*0.66) return ['hot','🔥 High edit'];
+    if(total >= maxTotal*0.33) return ['warm','📈 Mid edit'];
+    return ['cool','📉 Low edit'];
+  }
+
+  function buildRow(c, rank){
+    const total = totals[c.id]||0;
+    const row = el('div',{class:'lb-row conf-row'});
+    row.appendChild(el('div',{class:'lb-rank'}, String(rank)));
+    const img = el('img',{class:'lb-thumb', src:c.photo, alt:c.short});
+    img.onerror=function(){this.style.display='none';};
+    row.appendChild(img);
+    const [tierClass, tierText] = tierFor(total);
+    const nameLine = el('div',{class:'lb-name'}, c.short + ' ' + tribeLabel(c.tribe));
+    nameLine.appendChild(el('span',{class:'conf-tier ' + tierClass}, tierText));
+    if(data.eliminated && data.eliminated[c.id]) nameLine.appendChild(el('span',{class:'conf-elim-tag', style:'margin-left:8px'}, 'VOTED OUT EP ' + data.eliminated[c.id]));
+    const perEp = episodes.map(ep=>{
+      const t = (data.times[ep]||{})[c.id];
+      return 'E' + ep + ' ' + (t!=null ? fmtMMSS(t) : '—');
+    }).join(' · ');
+    const info = el('div',{class:'lb-info'}, nameLine, el('div',{class:'lb-sub'}, perEp));
+    row.appendChild(info);
+    row.appendChild(el('div',{class:'lb-pts'}, el('b',{}, fmtMMSS(total)), el('span',{}, 'total')));
+    const track = el('div',{class:'conf-bar-track'});
+    const fillPct = maxTotal ? Math.round((total/maxTotal)*100) : 0;
+    track.appendChild(el('div',{class:'conf-bar-fill', style:'width:' + fillPct + '%'}));
+    row.appendChild(track);
+    row.addEventListener('click', ()=>openProfile(c.id));
+    return row;
+  }
+
+  const rankedStillIn = stillIn.slice().sort((a,b)=>(totals[b.id]||0)-(totals[a.id]||0));
+  rankedStillIn.forEach((c,i)=> wrap.appendChild(buildRow(c, i+1)));
+
+  if(votedOut.length){
+    wrap.appendChild(el('h3',{style:'margin:22px 0 10px;font-size:0.9rem;color:var(--sand-dim)'}, '👋 Voted Out'));
+    const rankedOut = votedOut.slice().sort((a,b)=>(parseInt(data.eliminated[a.id])-parseInt(data.eliminated[b.id])) || ((totals[b.id]||0)-(totals[a.id]||0)));
+    rankedOut.forEach((c,i)=> wrap.appendChild(buildRow(c, rankedStillIn.length+i+1)));
+  }
+
+  return wrap;
 }
 
 </script>
