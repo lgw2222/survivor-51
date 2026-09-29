@@ -141,6 +141,17 @@ button.pill.yellow.active{background:rgba(232,197,61,0.22);}
 .card.tribe-dimmed{opacity:0.3;}
 .card.honorary-card{border-style:dashed;opacity:0.94;}
 .card .irrelevant-tag{position:absolute;top:40px;right:8px;background:rgba(155,107,255,0.85);color:#fff;border-radius:999px;padding:2px 9px;font-size:0.58rem;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;}
+.card.steal-taken{opacity:0.35;filter:grayscale(0.5);cursor:default;}
+.card.steal-taken:hover{transform:none;box-shadow:none;border-color:var(--line);}
+.card.steal-taken::after{content:'STOLEN';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue';font-size:0.95rem;letter-spacing:0.08em;background:rgba(0,0,0,0.5);color:var(--ember);text-align:center;padding:0 6px;}
+
+/* Inline tribe chip — same purple/yellow tribe colors as .tribe-badge/.pill,
+   but for use inline next to a name in a table row or list, rather than
+   absolute-positioned on a card corner. */
+.tribe-chip{display:inline-flex;align-items:center;font-size:0.6rem;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;padding:1px 7px;border-radius:999px;margin-left:6px;white-space:nowrap;vertical-align:middle;}
+.tribe-chip.purple{background:rgba(155,107,255,0.22);color:var(--tribe-purple);border:1px solid rgba(155,107,255,0.5);}
+.tribe-chip.yellow{background:rgba(232,197,61,0.22);color:var(--tribe-yellow);border:1px solid rgba(232,197,61,0.5);}
+.tribe-chip.tbd{background:rgba(255,255,255,0.05);color:var(--sand-dim);border:1px dashed var(--line);}
 
 /* ===== Rankings page ===== */
 .rank-table{display:flex;flex-direction:column;gap:8px;}
@@ -463,6 +474,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 .steal-pick-grid .card .info{padding:5px 6px 7px;}
 .steal-pick-grid .card .info .nm{font-size:0.78rem;}
 .steal-pick-grid .photo-wrap .fallback{font-size:1.5rem;}
+.steal-pick-grid .card .tribe-badge{font-size:0.54rem;padding:1px 6px;top:5px;right:5px;}
 
 ::-webkit-scrollbar{width:10px;height:10px;}
 ::-webkit-scrollbar-thumb{background:var(--jungle2);border-radius:6px;}
@@ -549,7 +561,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-26 19:37 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-29 15:28 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -3135,6 +3147,13 @@ function photoBlock(c, extraClass){
 function tribeLabel(t){
   return t==='purple' ? '🟣 Savu' : t==='yellow' ? '🟡 Toka' : 'Tribe TBD';
 }
+/* Small inline, tribe-colored chip for a castaway's name in any list or
+   table row (as opposed to the absolute-positioned .tribe-badge used on
+   card corners) — used so a castaway's tribe is visible wherever they show
+   up across the app, not just on their card. */
+function tribeChip(c){
+  return el('span',{class:'tribe-chip ' + (c.tribe || 'tbd')}, tribeLabel(c.tribe));
+}
 function castawayCard(c, opts){
   opts = opts || {};
   const card = el('div',{class:'card' + (opts.drafted?' drafted':'')});
@@ -3197,7 +3216,9 @@ function openProfile(castawayId, draftOpts){
   modal.appendChild(head);
 
   const body = el('div',{class:'modal-body'});
-  body.appendChild(el('h2',{}, c.name));
+  const nameHead = el('h2',{}, c.name);
+  nameHead.appendChild(tribeChip(c));
+  body.appendChild(nameHead);
   body.appendChild(el('div',{class:'modal-meta'}, `Age ${c.age} &middot; ${c.occupation} &middot; From ${c.hometown}${c.current && c.current!==c.hometown ? ' &middot; Now living in '+c.current : ''}`.replace(/&middot;/g,'·')));
   body.appendChild(el('div',{class:'modal-quote'}, '"' + c.quote + '"'));
 
@@ -4599,6 +4620,7 @@ function scoringStandings(source){
         thumb.appendChild(imgEl);
         row.appendChild(thumb);
         const nameLine = el('div',{class:'lb-name'}, c.short);
+        nameLine.appendChild(tribeChip(c));
         if(scoring.eliminated && scoring.eliminated[c.id]) nameLine.appendChild(el('span',{class:'elim-tag'}, 'OUT wk ' + scoring.eliminated[c.id]));
         row.appendChild(el('div',{class:'lb-info'}, nameLine));
         row.appendChild(el('div',{class:'lb-pts'}, el('b',{style:'font-size:1rem'}, String(castawaySeasonPoints(scoring,c.id)))));
@@ -4618,6 +4640,7 @@ function scoringStandings(source){
       img.onerror = function(){ this.style.display='none'; };
       row.appendChild(img);
       const nameLine = el('div',{class:'lb-name'}, r.c.short);
+      nameLine.appendChild(tribeChip(r.c));
       if(scoring.eliminated && scoring.eliminated[r.c.id]) nameLine.appendChild(el('span',{class:'elim-tag'}, 'OUT wk ' + scoring.eliminated[r.c.id]));
       row.appendChild(el('div',{class:'lb-info'}, nameLine, el('div',{class:'lb-sub'}, r.team.name)));
       row.appendChild(el('div',{class:'lb-pts'}, el('b',{}, String(r.total)), el('span',{}, 'pts')));
@@ -4715,8 +4738,10 @@ function scoringTeamPages(source){
             img.onerror = function(){ this.remove(); };
             thumb.appendChild(img);
             left.appendChild(thumb);
+            const nmLine = el('div',{style:'font-size:0.85rem;font-weight:600'}, castaway.short);
+            nmLine.appendChild(tribeChip(castaway));
             left.appendChild(el('div',{},
-              el('div',{style:'font-size:0.85rem;font-weight:600'}, castaway.short),
+              nmLine,
               s.note ? el('div',{style:'font-size:0.72rem;color:var(--sand-dim)'}, s.note) : null
             ));
           } else {
@@ -4852,6 +4877,7 @@ function openHonoraryPicker(source, team){
     const card = el('div',{class:'card'});
     card.dataset.name = (c.name + ' ' + c.short).toLowerCase();
     card.appendChild(photoBlock(c));
+    card.appendChild(el('div',{class:'tribe-badge ' + (c.tribe || 'tbd')}, tribeLabel(c.tribe)));
     card.appendChild(el('div',{class:'info'}, el('div',{class:'nm'}, c.short)));
     card.addEventListener('click', ()=>{
       const ids = (scoring.honorary||{})[team.id] || [];
@@ -4917,7 +4943,9 @@ function openScoreEditor(castawayId, source, team){
   modal.appendChild(head);
 
   const body = el('div',{class:'modal-body'});
-  body.appendChild(el('h2',{}, c.name));
+  const scNameHead = el('h2',{}, c.name);
+  scNameHead.appendChild(tribeChip(c));
+  body.appendChild(scNameHead);
   body.appendChild(el('div',{class:'modal-meta'}, (team ? team.name + ' · ' : '') + c.occupation));
 
   const weeks = scoring.weeks || [];
@@ -5021,13 +5049,28 @@ function openStealPicker(source, team, week){
     searchWrap.appendChild(searchInp);
     body.appendChild(searchWrap);
 
+    // A castaway can only be stolen by ONE team per week — once locked in,
+    // they're off the board for everyone else (including the same team
+    // picking them twice) for that week. Different weeks are unaffected.
+    const weekSteals = (scoring.steals && scoring.steals[week]) || [];
+    const stolenBy = {};
+    weekSteals.forEach(s => { stolenBy[s.castawayId] = s.teamId; });
+
     const grid = el('div',{class:'grid steal-pick-grid'});
     CASTAWAYS.forEach(c=>{
-      const card = el('div',{class:'card'});
+      const takenTeamId = stolenBy[c.id];
+      const takenTeam = takenTeamId ? (source.teams||[]).find(t=>t.id===takenTeamId) : null;
+      const card = el('div',{class:'card' + (takenTeam ? ' steal-taken' : '')});
       card.dataset.name = (c.name + ' ' + c.short).toLowerCase();
       card.appendChild(photoBlock(c));
+      card.appendChild(el('div',{class:'tribe-badge ' + (c.tribe || 'tbd')}, tribeLabel(c.tribe)));
       card.appendChild(el('div',{class:'info'}, el('div',{class:'nm'}, c.short)));
-      card.addEventListener('click', ()=> renderConfirmStep(c));
+      if(takenTeam){
+        card.title = 'Already stolen this week by ' + takenTeam.name;
+        card.addEventListener('click', ()=> toast(c.short + ' was already stolen by ' + takenTeam.name + ' this week'));
+      } else {
+        card.addEventListener('click', ()=> renderConfirmStep(c));
+      }
       grid.appendChild(card);
     });
     body.appendChild(grid);
@@ -5050,7 +5093,9 @@ function openStealPicker(source, team, week){
     modal.appendChild(head);
 
     const body = el('div',{class:'modal-body'});
-    body.appendChild(el('h2',{}, c.name));
+    const stealNameHead = el('h2',{}, c.name);
+    stealNameHead.appendChild(tribeChip(c));
+    body.appendChild(stealNameHead);
     body.appendChild(el('div',{class:'modal-meta'}, 'Steal for ' + team.name + ' — Week ' + week));
 
     // Auto-fill from whatever this castaway already earned that week in the
@@ -5133,6 +5178,7 @@ function scoringWeekly(source){
     const chips = scoring.categories.filter(cat=>Number(cats[cat.key])>0)
       .map(cat=>el('span',{class:'chip'}, cat.label + ' ×' + cats[cat.key]));
     const nameLine = el('div',{class:'wsname'}, r.c.short + ' · ' + r.team.name);
+    nameLine.appendChild(tribeChip(r.c));
     if(scoring.eliminated && scoring.eliminated[r.c.id]===w) nameLine.appendChild(el('span',{class:'elim-tag'}, 'VOTED OUT'));
     row.appendChild(el('div',{class:'wsinfo'},
       nameLine,
@@ -5204,6 +5250,7 @@ function scoringEnter(source){
     img.onerror=function(){this.style.display='none';};
     nameWrap.appendChild(img);
     nameWrap.appendChild(el('span',{}, c.short + ' (' + team.name + (honorary ? ' — Irrelevant' : '') + ')'));
+    nameWrap.appendChild(tribeChip(c));
     nameCell.appendChild(nameWrap);
     row.appendChild(nameCell);
     const existing = ((scoring.entries[w]||{})[cid])||{};
@@ -5660,8 +5707,10 @@ function renderAnalystRankings(){
     row.appendChild(el('div',{class:'rank-num-big'}, '#' + c.powerRank.rank));
     const photo = photoBlock(c, 'rank-photo');
     row.appendChild(photo);
+    const nmLine = el('div',{class:'rank-name'}, c.name + ' — ' + c.occupation);
+    nmLine.appendChild(tribeChip(c));
     const info = el('div',{class:'rank-info'},
-      el('div',{class:'rank-name'}, c.name + ' — ' + c.occupation),
+      nmLine,
       el('div',{class:'rank-reason'}, c.powerRank.reasoning),
       el('a',{class:'qa-source', href:c.powerRank.sourceUrl, target:'_blank', rel:'noopener'}, '— ' + c.powerRank.source + ' Power Rankings')
     );
@@ -5865,7 +5914,8 @@ function confessionalEntryBox(data, defaultEp, episodes){
       const img = el('img',{src:c.photo, alt:c.short});
       img.onerror=function(){this.style.display='none';};
       nameWrap.appendChild(img);
-      nameWrap.appendChild(el('span',{}, c.short + ' ' + tribeLabel(c.tribe)));
+      nameWrap.appendChild(el('span',{}, c.short));
+      nameWrap.appendChild(tribeChip(c));
       tbody.appendChild(el('tr',{},
         el('td',{}, nameWrap),
         el('td',{}, timeInp),
@@ -5927,7 +5977,8 @@ function confessionalLeaderboard(data, episodes){
     img.onerror=function(){this.style.display='none';};
     row.appendChild(img);
     const [tierClass, tierText] = tierFor(total);
-    const nameLine = el('div',{class:'lb-name'}, c.short + ' ' + tribeLabel(c.tribe));
+    const nameLine = el('div',{class:'lb-name'}, c.short);
+    nameLine.appendChild(tribeChip(c));
     nameLine.appendChild(el('span',{class:'conf-tier ' + tierClass}, tierText));
     if(data.eliminated && data.eliminated[c.id]) nameLine.appendChild(el('span',{class:'conf-elim-tag', style:'margin-left:8px'}, 'VOTED OUT EP ' + data.eliminated[c.id]));
     const perEp = episodes.map(ep=>{
