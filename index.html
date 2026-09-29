@@ -246,6 +246,8 @@ input[type=text],input[type=number],select{
   padding:9px 11px;border-radius:8px;font-family:'Inter';font-size:0.92rem;
 }
 input[type=text]:focus,input[type=number]:focus,select:focus{outline:none;border-color:var(--torch);}
+textarea{width:100%;background:rgba(0,0,0,0.25);border:1px solid var(--line);color:var(--sand);padding:9px 11px;border-radius:8px;font-family:'Inter';font-size:0.92rem;resize:vertical;}
+textarea:focus{outline:none;border-color:var(--torch);}
 .team-name-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 .team-name-row .swatch{width:10px;height:10px;border-radius:50%;flex:none;}
 .checkline{display:flex;align-items:center;gap:8px;font-size:0.88rem;color:var(--sand-dim);}
@@ -561,7 +563,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-29 17:58 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-29 19:12 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -2988,6 +2990,28 @@ function toast(msg){
   stack.appendChild(t);
   setTimeout(()=>{ t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); }, 3200);
 }
+/* Copies text to the clipboard — used for "share this as a text message"
+   buttons (e.g. steal alerts) aimed at league-mates who don't have the app
+   open. navigator.clipboard needs a secure context, which a plain
+   file:// page or an http (non-https) GitHub Pages mirror may not have, so
+   this falls back to the old select-and-execCommand trick, which still
+   works from a user gesture even without clipboard permissions. */
+function copyToClipboard(text){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>toast('Copied to clipboard')).catch(()=>copyToClipboardFallback(text));
+  } else {
+    copyToClipboardFallback(text);
+  }
+}
+function copyToClipboardFallback(text){
+  const ta = el('textarea',{style:'position:fixed;top:-9999px;left:-9999px'});
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  try{ document.execCommand('copy'); toast('Copied to clipboard'); }
+  catch(e){ toast('Couldn\'t copy — select and copy the text manually'); }
+  ta.remove();
+}
 
 /* client identity, persisted per-browser */
 let CLIENT_ID = lsGet('s51_client_id', null);
@@ -4451,7 +4475,8 @@ function normalizeScoring(s){
     steals: s.steals || {},
     eliminated: s.eliminated || {},
     winnerId: s.winnerId != null ? s.winnerId : null,
-    honorary: s.honorary || {}
+    honorary: s.honorary || {},
+    stealOrder: s.stealOrder || {}
   };
 }
 /* Same idea for the TV Draft's roster/state record — order and pool are
@@ -4779,11 +4804,137 @@ function scoringStandings(source){
   return wrap;
 }
 
+/* Fantasy-waiver-style steal order: the team in LAST place going into a week
+   gets first pick of who to steal, so the standings don't just snowball.
+   Stored per week on scoring.stealOrder[week] = [teamId, ...] (worst-first)
+   so it's a real record — not recomputed on the fly — and stays put even
+   as picks lock in and totals shift mid-round. Synced via Firebase like
+   everything else, so it survives a refresh or a different device. */
+function computeStealOrder(source){
+  const { teams, scoring } = source;
+  return teams.map(t=>({
+    id: t.id, name: t.name,
+    total: teamSeasonPoints(scoring,teamScoringRoster(scoring,t)) + stealBonusSeason(scoring,t.id)
+  })).sort((a,b)=> a.total-b.total || a.name.localeCompare(b.name)).map(t=>t.id);
+}
+const ORDER_EMOJI = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
+function stealOrderBox(source){
+  const { teams, scoring, isAdmin } = source;
+  const weeks = scoring.weeks || [];
+  if(!weeks.length || teams.length < 2) return null;
+  if(scoringSelectedWeek===null || !weeks.includes(scoringSelectedWeek)) scoringSelectedWeek = weeks[weeks.length-1] || null;
+  const w = scoringSelectedWeek;
+  if(!w) return null;
+
+  const box = el('div',{class:'card-box', style:'margin-bottom:18px'});
+  const headRow = el('div',{style:'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px'});
+  headRow.appendChild(el('h3',{style:'margin:0;font-size:1rem'}, '🥷 Steal Order — Week ' + w));
+  const weekSel = el('select',{style:'width:auto;padding:5px 8px;font-size:0.78rem'});
+  weeks.forEach(wk=>{
+    const opt = el('option',{value:wk}, 'Week ' + wk);
+    if(wk===w) opt.selected = true;
+    weekSel.appendChild(opt);
+  });
+  weekSel.addEventListener('change', ()=>{ scoringSelectedWeek = weekSel.value; renderTeamsTab(); });
+  headRow.appendChild(weekSel);
+  box.appendChild(headRow);
+  box.appendChild(el('p',{style:'margin:6px 0 12px;font-size:0.78rem;color:var(--sand-dim)'},
+    'Last place goes first — order is set once per week from that week\'s starting standings, so it doesn\'t shift as picks come in.'));
+
+  const order = (scoring.stealOrder||{})[w];
+  if(!order || !order.length){
+    box.appendChild(el('p',{style:'font-size:0.85rem;color:var(--sand-dim);margin:0 0 10px'}, 'No order set yet for Week ' + w + '.'));
+  } else {
+    const weekSteals = (scoring.steals||{})[w] || [];
+    const list = el('div',{style:'display:flex;flex-direction:column;gap:6px;margin-bottom:12px'});
+    order.forEach((teamId,i)=>{
+      const t = teams.find(x=>x.id===teamId);
+      if(!t) return;
+      const picked = weekSteals.some(s=>s.teamId===teamId);
+      const row = el('div',{style:'display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:8px;background:var(--jungle2);opacity:'+(picked?'0.55':'1')});
+      row.appendChild(el('div',{style:'font-family:\'Bebas Neue\';font-size:1rem;flex:none'}, ORDER_EMOJI[i] || (String(i+1)+'.')));
+      row.appendChild(el('div',{style:'flex:1;font-weight:600;color:'+t.color}, t.name));
+      row.appendChild(el('div',{style:'font-size:0.72rem;color:var(--sand-dim)'}, picked ? '✅ Picked' : 'Waiting'));
+      list.appendChild(row);
+    });
+    box.appendChild(list);
+  }
+
+  if(isAdmin){
+    const btnRow = el('div',{style:'display:flex;gap:8px;flex-wrap:wrap'});
+    const setBtn = el('button',{class:'btn primary'}, (order && order.length) ? '🔀 Re-set Order From Current Standings' : '🔀 Set Order From Current Standings');
+    setBtn.addEventListener('click', ()=>{
+      const newOrder = computeStealOrder(source);
+      const updated = { ...scoring, stealOrder: { ...(scoring.stealOrder||{}), [w]: newOrder } };
+      source.save(updated);
+      toast('Steal order set for Week ' + w);
+      setTimeout(renderTeamsTab, 150);
+    });
+    btnRow.appendChild(setBtn);
+
+    if(order && order.length){
+      const msgBtn = el('button',{class:'btn'}, '💬 Get Message');
+      msgBtn.addEventListener('click', ()=> openStealOrderMessage(source, w, order));
+      btnRow.appendChild(msgBtn);
+    }
+    box.appendChild(btnRow);
+  }
+
+  return box;
+}
+/* Same "share as a text" pattern as the post-steal alert — most league-mates
+   don't have the app open, so the order has to travel as an actual message
+   Garrott can copy or hand to his phone's Messages app. */
+function openStealOrderMessage(source, week, order){
+  const { teams } = source;
+  AudioFX.whoosh();
+  const modal = $('#profileModal');
+  modal.innerHTML = '';
+  const head = el('div',{class:'modal-head', style:'min-height:0'});
+  const closeBtn = el('button',{class:'modal-close', html:ICONS.close});
+  closeBtn.addEventListener('click', closeProfile);
+  head.appendChild(closeBtn);
+  modal.appendChild(head);
+
+  const body = el('div',{class:'modal-body', style:'padding-top:16px'});
+  body.appendChild(el('h2',{style:'font-size:1.5rem'}, '🥷 Steal Order — Week ' + week));
+
+  const lines = order.map((teamId,i)=>{
+    const t = teams.find(x=>x.id===teamId);
+    return (ORDER_EMOJI[i] || (String(i+1)+'.')) + ' ' + (t ? t.name : 'Unknown');
+  });
+  const message = '🥷 Time to pick your Week ' + week + ' steals! Order (last place goes first):\n' +
+    lines.join('\n') + '\nReply with who you want to steal and I\'ll lock it in!';
+
+  body.appendChild(el('div',{style:'margin-top:4px'}, el('label',{class:'field'}, 'Message to send')));
+  const msgArea = el('textarea',{rows:'6'});
+  msgArea.value = message;
+  body.appendChild(msgArea);
+
+  const btnRow = el('div',{class:'btn-row', style:'margin-top:14px;flex-wrap:wrap'});
+  const copyBtn = el('button',{class:'btn primary'}, '📋 Copy Message');
+  copyBtn.addEventListener('click', ()=> copyToClipboard(msgArea.value));
+  btnRow.appendChild(copyBtn);
+  const textBtn = el('a',{class:'btn', href:'sms:?body=' + encodeURIComponent(message)}, '📱 Text It');
+  btnRow.appendChild(textBtn);
+  const doneBtn = el('button',{class:'btn'}, 'Done');
+  doneBtn.addEventListener('click', closeProfile);
+  btnRow.appendChild(doneBtn);
+  body.appendChild(btnRow);
+  body.appendChild(el('div',{style:'margin-top:10px;font-size:0.72rem;color:var(--sand-dim)'},
+    '"Text It" opens your phone\'s Messages app with this pre-filled (works best on phones). Otherwise, copy it and paste it into your group chat.'));
+
+  modal.appendChild(body);
+  $('#profileOverlay').classList.add('open');
+}
 function scoringTeamPages(source){
   const { teams, scoring } = source;
   const wrap = el('div',{});
   if(!teams.length){ wrap.appendChild(el('div',{class:'notice'}, 'No teams yet.')); return wrap; }
   if(!scoringSelectedTeam || !teams.some(t=>t.id===scoringSelectedTeam)) scoringSelectedTeam = teams[0].id;
+
+  const stealOrder = stealOrderBox(source);
+  if(stealOrder) wrap.appendChild(stealOrder);
 
   const switcher = el('div',{class:'team-page-switcher'});
   teams.forEach(t=>{
@@ -5252,14 +5403,55 @@ function openStealPicker(source, team, week){
       const updated = { ...scoring, steals: { ...(scoring.steals||{}), [week]: [...weekSteals, entry] } };
       source.save(updated);
       AudioFX.success();
-      toast('Steal locked in for ' + team.name);
-      closeProfile();
       setTimeout(renderTeamsTab, 150);
       setTimeout(renderScoring, 150);
+      renderMessageStep(c);
     });
     btnRow.appendChild(backBtn);
     btnRow.appendChild(lockBtn);
     body.appendChild(btnRow);
+
+    modal.appendChild(body);
+    $('#profileOverlay').classList.add('open');
+  }
+
+  /* Most league-mates don't have the app open, so a steal isn't seen by
+     anyone unless it's actively shared — this gives a ready-made message
+     to copy or hand straight to the phone's Messages app, instead of
+     Garrott having to type it out himself every time. */
+  function renderMessageStep(c){
+    modal.innerHTML = '';
+    const head = el('div',{class:'modal-head', style:'min-height:0'});
+    const closeBtn = el('button',{class:'modal-close', html:ICONS.close});
+    closeBtn.addEventListener('click', closeProfile);
+    head.appendChild(closeBtn);
+    modal.appendChild(head);
+
+    const body = el('div',{class:'modal-body', style:'padding-top:16px'});
+    body.appendChild(el('h2',{style:'font-size:1.5rem'}, '🥷 Steal Locked In!'));
+    body.appendChild(el('div',{class:'modal-meta'}, team.name + ' stole ' + c.short + ' — Week ' + week));
+
+    const livePts = castawayWeekPoints(scoring, c.id, week);
+    const message = '🥷 STEAL ALERT! ' + team.name + ' just stole ' + c.short + ' for Week ' + week +
+      '! Whatever ' + c.short + ' scores this week (currently +' + livePts + ' pts), ' + team.name + ' gets those points too.';
+
+    body.appendChild(el('div',{style:'margin-top:14px'}, el('label',{class:'field'}, 'Message to send')));
+    const msgArea = el('textarea',{rows:'4'});
+    msgArea.value = message;
+    body.appendChild(msgArea);
+
+    const btnRow = el('div',{class:'btn-row', style:'margin-top:14px;flex-wrap:wrap'});
+    const copyBtn = el('button',{class:'btn primary'}, '📋 Copy Message');
+    copyBtn.addEventListener('click', ()=> copyToClipboard(msgArea.value));
+    btnRow.appendChild(copyBtn);
+    const textBtn = el('a',{class:'btn', href:'sms:?body=' + encodeURIComponent(message)}, '📱 Text It');
+    btnRow.appendChild(textBtn);
+    const doneBtn = el('button',{class:'btn'}, 'Done');
+    doneBtn.addEventListener('click', closeProfile);
+    btnRow.appendChild(doneBtn);
+    body.appendChild(btnRow);
+    body.appendChild(el('div',{style:'margin-top:10px;font-size:0.72rem;color:var(--sand-dim)'},
+      '"Text It" opens your phone\'s Messages app with this pre-filled (works best on phones). Otherwise, copy it and paste it into your group chat.'));
 
     modal.appendChild(body);
     $('#profileOverlay').classList.add('open');
