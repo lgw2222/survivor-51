@@ -561,7 +561,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-29 16:53 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-29 17:58 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -2941,6 +2941,15 @@ const firebaseConfig = {
   measurementId: "G-9EKGXNRKS8"
 };
 
+/* Admin-set tribe reassignments (castawayId -> 'purple'|'yellow'|'tbd'),
+   layered on top of each castaway's static baseline tribe from
+   contestants.json. Declared up here (ahead of lsGet/lsSet just below) so
+   it's initialized before the very first castaway-grid render call, which
+   happens synchronously near the bottom of this file. See currentTribe()
+   and the "Manage Tribes" box in Enter Scores. Synced via Firebase the same
+   way as the rest of the TV Draft data, so a swap made on one device shows
+   up everywhere. */
+let tribeOverrides = {};
 /* ---------- tiny helpers ---------- */
 function $(sel, root){ return (root||document).querySelector(sel); }
 function $all(sel, root){ return Array.from((root||document).querySelectorAll(sel)); }
@@ -2969,6 +2978,7 @@ function safeLS(){
 const LS = safeLS();
 function lsGet(key, fallback){ if(!LS) return fallback; try{ const v=LS.getItem(key); return v?JSON.parse(v):fallback; }catch(e){ return fallback; } }
 function lsSet(key, val){ if(!LS) return; try{ LS.setItem(key, JSON.stringify(val)); }catch(e){} }
+tribeOverrides = lsGet('s51_tribe_overrides', {}) || {};
 function uid(){ return 'p' + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4); }
 function roomCode(){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<5;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return s; }
 
@@ -3147,12 +3157,24 @@ function photoBlock(c, extraClass){
 function tribeLabel(t){
   return t==='purple' ? '🟣 Savu' : t==='yellow' ? '🟡 Toka' : 'Tribe TBD';
 }
+/* A castaway's CURRENT tribe — since the season can have swaps, this checks
+   the admin-set override map (tribeOverrides, synced via Firebase like
+   everything else) before falling back to the static baseline tribe from
+   contestants.json. Every display site should read through this rather than
+   `c.tribe` directly, so a tribe swap updates the castaway everywhere at
+   once instead of needing each card/list/table fixed individually. */
+function currentTribe(c){
+  if(!c) return null;
+  const override = (typeof tribeOverrides !== 'undefined' && tribeOverrides) ? tribeOverrides[c.id] : null;
+  return override || c.tribe || null;
+}
 /* Small inline, tribe-colored chip for a castaway's name in any list or
    table row (as opposed to the absolute-positioned .tribe-badge used on
    card corners) — used so a castaway's tribe is visible wherever they show
    up across the app, not just on their card. */
 function tribeChip(c){
-  return el('span',{class:'tribe-chip ' + (c.tribe || 'tbd')}, tribeLabel(c.tribe));
+  const t = currentTribe(c);
+  return el('span',{class:'tribe-chip ' + (t || 'tbd')}, tribeLabel(t));
 }
 function castawayCard(c, opts){
   opts = opts || {};
@@ -3160,8 +3182,9 @@ function castawayCard(c, opts){
   card.appendChild(photoBlock(c));
   if(opts.badge) card.appendChild(el('div',{class:'badge'}, opts.badge));
   if(opts.showTribe !== false){
-    card.appendChild(el('div',{class:'tribe-badge ' + (c.tribe || 'tbd')}, tribeLabel(c.tribe)));
-    card.dataset.tribe = c.tribe || '';
+    const t = currentTribe(c);
+    card.appendChild(el('div',{class:'tribe-badge ' + (t || 'tbd')}, tribeLabel(t)));
+    card.dataset.tribe = t || '';
   }
   card.appendChild(el('div',{class:'info'},
     el('div',{class:'nm'}, c.short),
@@ -3180,7 +3203,7 @@ function renderCastawayGrid(){
   grid.innerHTML='';
   CASTAWAYS.forEach(c => {
     const card = castawayCard(c);
-    if(castawayTribeFilter && c.tribe !== castawayTribeFilter) card.classList.add('tribe-dimmed');
+    if(castawayTribeFilter && currentTribe(c) !== castawayTribeFilter) card.classList.add('tribe-dimmed');
     grid.appendChild(card);
   });
 }
@@ -3620,6 +3643,20 @@ function defaultTvNames(n){
 function saveTv(){ lsSet('s51_tv', tvState); if(firebaseReady) fbDb.ref('tvDraft/state').set(tvState); }
 function saveTvSetup(){ lsSet('s51_tv_setup', tvSetup); if(firebaseReady) fbDb.ref('tvDraft/setup').set(tvSetup); }
 function saveTvScoring(newScoring){ lsSet('s51_tv_scoring', newScoring); if(firebaseReady) fbDb.ref('tvDraft/scoring').set(newScoring); }
+function saveTribeOverrides(newOverrides){
+  tribeOverrides = newOverrides || {};
+  lsSet('s51_tribe_overrides', tribeOverrides);
+  if(firebaseReady) fbDb.ref('tvDraft/tribeOverrides').set(tribeOverrides);
+}
+/* Tribe chips/badges show up on nearly every tab (Castaways grid, Enter
+   Scores, Weekly Breakdown, Standings, Teams, steal/honorary pickers), so a
+   tribe swap needs to refresh all of them, not just whichever tab is open
+   right now — cheap since these are just DOM re-renders. */
+function refreshTribeViews(){
+  if(typeof renderCastawayGrid === 'function') renderCastawayGrid();
+  if(typeof renderScoring === 'function') renderScoring();
+  if(typeof renderTeamsTab === 'function') renderTeamsTab();
+}
 
 function tvFlash(teamName, castawayShort){
   const f = el('div',{class:'tv-flash'},
@@ -3884,6 +3921,13 @@ if(firebaseReady){
     lsSet('s51_tv_scoring', normalizeScoring(remote));
     renderScoring();
     renderTeamsTab();
+  });
+  fbDb.ref('tvDraft/tribeOverrides').on('value', snap=>{
+    const remote = snap.val();
+    if(remote === null){ fbDb.ref('tvDraft/tribeOverrides').set(tribeOverrides); return; }
+    tribeOverrides = remote || {};
+    lsSet('s51_tribe_overrides', tribeOverrides);
+    refreshTribeViews();
   });
 }
 
@@ -4489,8 +4533,18 @@ function castawayWeekPoints(scoring, castawayId, week){
 function castawaySeasonPoints(scoring, castawayId){
   return (scoring.weeks||[]).reduce((sum,w)=> sum + castawayWeekPoints(scoring, castawayId, w), 0);
 }
+/* A steal's points are ALWAYS derived live from the stolen castaway's
+   current week score — never a stale snapshot taken at pick time. That way
+   correcting or entering a score after the steal was made (or moving it to
+   the right week) automatically flows through to every team that stole
+   that castaway. The stored `.pts` field is kept only as a legacy fallback
+   for old steal entries that predate having a castawayId. */
+function stealPointsLive(scoring, s, week){
+  if(s.castawayId) return castawayWeekPoints(scoring, s.castawayId, week);
+  return Number(s.pts)||0;
+}
 function stealBonusForWeek(scoring, teamId, week){
-  return ((scoring.steals||{})[week]||[]).filter(s=>s.teamId===teamId).reduce((s,x)=>s+(Number(x.pts)||0),0);
+  return ((scoring.steals||{})[week]||[]).filter(s=>s.teamId===teamId).reduce((s,x)=>s+stealPointsLive(scoring,x,week),0);
 }
 function stealBonusSeason(scoring, teamId){
   return (scoring.weeks||[]).reduce((sum,w)=> sum + stealBonusForWeek(scoring, teamId, w), 0);
@@ -4823,7 +4877,8 @@ function scoringTeamPages(source){
           }
           row.appendChild(left);
           const right = el('div',{style:'display:flex;align-items:center;gap:8px;flex:none'});
-          right.appendChild(el('div',{style:'color:var(--torch);font-family:\'Bebas Neue\';white-space:nowrap'}, (s.pts>=0?'+':'') + s.pts));
+          const livePts = stealPointsLive(scoring, s, w);
+          right.appendChild(el('div',{style:'color:var(--torch);font-family:\'Bebas Neue\';white-space:nowrap'}, (livePts>=0?'+':'') + livePts));
           if(source.isAdmin){
             const rm = el('button',{class:'btn danger', style:'padding:2px 9px;font-size:0.66rem'}, '✕');
             rm.addEventListener('click', ()=>{
@@ -4951,7 +5006,7 @@ function openHonoraryPicker(source, team){
     const card = el('div',{class:'card'});
     card.dataset.name = (c.name + ' ' + c.short).toLowerCase();
     card.appendChild(photoBlock(c));
-    card.appendChild(el('div',{class:'tribe-badge ' + (c.tribe || 'tbd')}, tribeLabel(c.tribe)));
+    card.appendChild(el('div',{class:'tribe-badge ' + (currentTribe(c) || 'tbd')}, tribeLabel(currentTribe(c))));
     card.appendChild(el('div',{class:'info'}, el('div',{class:'nm'}, c.short)));
     card.addEventListener('click', ()=>{
       const ids = (scoring.honorary||{})[team.id] || [];
@@ -4983,7 +5038,7 @@ function teamRosterCard(c, source, team, opts){
   card.appendChild(photoBlock(c));
   card.appendChild(el('div',{class:'badge'}, pts + ' pts'));
   if(opts.honorary) card.appendChild(el('div',{class:'irrelevant-tag'}, 'IRRELEVANT'));
-  card.appendChild(el('div',{class:'tribe-badge ' + (c.tribe || 'tbd')}, tribeLabel(c.tribe)));
+  card.appendChild(el('div',{class:'tribe-badge ' + (currentTribe(c) || 'tbd')}, tribeLabel(currentTribe(c))));
   card.appendChild(el('div',{class:'info'},
     el('div',{class:'nm'}, c.short),
     el('div',{class:'oc'}, c.occupation)
@@ -5137,7 +5192,7 @@ function openStealPicker(source, team, week){
       const card = el('div',{class:'card' + (takenTeam ? ' steal-taken' : '')});
       card.dataset.name = (c.name + ' ' + c.short).toLowerCase();
       card.appendChild(photoBlock(c));
-      card.appendChild(el('div',{class:'tribe-badge ' + (c.tribe || 'tbd')}, tribeLabel(c.tribe)));
+      card.appendChild(el('div',{class:'tribe-badge ' + (currentTribe(c) || 'tbd')}, tribeLabel(currentTribe(c))));
       card.appendChild(el('div',{class:'info'}, el('div',{class:'nm'}, c.short)));
       if(takenTeam){
         card.title = 'Already stolen this week by ' + takenTeam.name;
@@ -5172,17 +5227,18 @@ function openStealPicker(source, team, week){
     body.appendChild(stealNameHead);
     body.appendChild(el('div',{class:'modal-meta'}, 'Steal for ' + team.name + ' — Week ' + week));
 
-    // Auto-fill from whatever this castaway already earned that week in the
-    // scoring spreadsheet (Enter Scores), since a "steal" takes their
-    // already-assigned points rather than making up a new number. Still
-    // editable, in case the commissioner wants to adjust it.
-    const autoPts = castawayWeekPoints(scoring, c.id, week);
-    const ptsInp = el('input',{type:'number', step:'1', value:String(autoPts)});
+    // Points are ALWAYS derived live from whatever this castaway earns that
+    // week in the scoring spreadsheet (Enter Scores) — never a fixed number
+    // picked here. That way, if a score gets entered, corrected, or moved
+    // to the right week after the steal is locked in, the points update
+    // automatically for every team that stole them, with nothing to re-edit.
+    const livePts = castawayWeekPoints(scoring, c.id, week);
     const noteInp = el('input',{type:'text', placeholder:'e.g. Stole a vote at tribal (optional)'});
     body.appendChild(el('div',{style:'margin-top:14px'},
-      el('label',{class:'field'}, 'Points'), ptsInp,
+      el('label',{class:'field'}, 'Points (live)'),
+      el('div',{style:'font-family:\'Bebas Neue\';font-size:1.4rem;color:var(--torch)'}, (livePts>=0?'+':'') + livePts + ' pts'),
       el('div',{style:'margin-top:4px;font-size:0.72rem;color:var(--sand-dim)'},
-        'Auto-filled from ' + c.short + '’s Week ' + week + ' score (' + autoPts + ' pts) — edit if you want a different amount.')
+        'Always matches ' + c.short + '’s current Week ' + week + ' score in Enter Scores — updates automatically if that score changes later.')
     ));
     body.appendChild(el('div',{style:'margin-top:12px'}, el('label',{class:'field'}, 'What happened?'), noteInp));
 
@@ -5191,10 +5247,8 @@ function openStealPicker(source, team, week){
     backBtn.addEventListener('click', renderPickStep);
     const lockBtn = el('button',{class:'btn primary'}, '🔒 Lock In Steal');
     lockBtn.addEventListener('click', ()=>{
-      const pts = parseInt(ptsInp.value);
-      if(isNaN(pts)){ toast('Enter a point value'); return; }
       const weekSteals = (scoring.steals && scoring.steals[week]) || [];
-      const entry = { teamId: team.id, pts, note: noteInp.value.trim(), castawayId: c.id };
+      const entry = { teamId: team.id, note: noteInp.value.trim(), castawayId: c.id };
       const updated = { ...scoring, steals: { ...(scoring.steals||{}), [week]: [...weekSteals, entry] } };
       source.save(updated);
       AudioFX.success();
@@ -5265,6 +5319,74 @@ function scoringWeekly(source){
   return wrap;
 }
 
+/* Admin control for reassigning a castaway's current tribe as the season
+   goes on (swaps, shuffles, absorbing a dissolved tribe, etc.) — without
+   touching contestants.json. Shows every castaway with their current tribe
+   and one-click buttons to move them; changes save immediately (no separate
+   "Save" step) and sync via Firebase like everything else, so a swap made
+   here shows up correctly wherever that castaway appears in the app. */
+function manageTribesBox(){
+  const box = el('div',{class:'card-box', style:'margin-bottom:18px'});
+  const headRow = el('div',{style:'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px'});
+  headRow.appendChild(el('h3',{style:'margin:0;font-size:1rem'}, '🔄 Manage Tribes'));
+  const hasOverrides = tribeOverrides && Object.keys(tribeOverrides).length > 0;
+  if(hasOverrides){
+    const resetBtn = el('button',{class:'btn', style:'padding:4px 10px;font-size:0.72rem'}, 'Reset to Original Tribes');
+    resetBtn.addEventListener('click', ()=>{
+      if(!confirm('Clear all tribe swaps and go back to each castaway\'s original tribe?')) return;
+      saveTribeOverrides({});
+      toast('Tribe overrides cleared');
+      setTimeout(refreshTribeViews, 150);
+    });
+    headRow.appendChild(resetBtn);
+  }
+  box.appendChild(headRow);
+  box.appendChild(el('p',{style:'margin:6px 0 12px;font-size:0.78rem;color:var(--sand-dim)'},
+    'Season\'s getting chaotic? Move a castaway to a new tribe here — it updates their tribe everywhere in the app immediately (chips, badges, bulk-apply-by-tribe, everything).'));
+  const searchWrap = el('div',{class:'score-search'});
+  const searchInp = el('input',{type:'text', placeholder:'🔍 Search a castaway...'});
+  searchWrap.appendChild(searchInp);
+  box.appendChild(searchWrap);
+  const grid = el('div',{class:'tribe-manage-grid', style:'display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;margin-top:10px'});
+  CASTAWAYS.forEach(c=>{
+    const t = currentTribe(c);
+    const row = el('div',{style:'display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;background:var(--jungle2)'});
+    row.dataset.name = (c.name + ' ' + c.short).toLowerCase();
+    const thumb = el('div',{style:'width:30px;height:30px;border-radius:50%;overflow:hidden;flex:none;background:var(--jungle3,#233)'});
+    const img = el('img',{src:c.photo});
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+    img.onerror = function(){ this.remove(); };
+    thumb.appendChild(img);
+    row.appendChild(thumb);
+    row.appendChild(el('div',{style:'flex:1;min-width:0;font-size:0.85rem;font-weight:600'}, c.short));
+    const btns = el('div',{style:'display:flex;gap:6px;flex:none'});
+    [['purple','🟣 Savu'],['yellow','🟡 Toka'],['tbd','❔ TBD']].forEach(([key,label])=>{
+      const active = (t||'tbd') === key;
+      const b = el('button',{class:'btn' + (active?' primary':''), style:'padding:4px 9px;font-size:0.68rem'}, label);
+      b.addEventListener('click', ()=>{
+        if(active) return;
+        const updated = { ...tribeOverrides };
+        if(key === (c.tribe || 'tbd')) delete updated[c.id];
+        else updated[c.id] = key;
+        saveTribeOverrides(updated);
+        toast(c.short + ' moved to ' + tribeLabel(key));
+        setTimeout(refreshTribeViews, 150);
+      });
+      btns.appendChild(b);
+    });
+    row.appendChild(btns);
+    grid.appendChild(row);
+  });
+  box.appendChild(grid);
+  searchInp.addEventListener('input', ()=>{
+    const q = searchInp.value.trim().toLowerCase();
+    $all('div', grid).forEach(row=>{
+      if(!row.dataset.name) return;
+      row.style.display = (!q || row.dataset.name.includes(q)) ? '' : 'none';
+    });
+  });
+  return box;
+}
 function scoringEnter(source){
   const { teams, scoring, isAdmin } = source;
   const wrap = el('div',{});
@@ -5272,6 +5394,7 @@ function scoringEnter(source){
     wrap.appendChild(el('div',{class:'notice'}, 'Only the commissioner (draft host) can enter scores for this room. Everyone can still view Standings and the Weekly Breakdown.'));
     return wrap;
   }
+  wrap.appendChild(manageTribesBox());
   const weeks = scoring.weeks || [];
   if(scoringSelectedWeek===null || !weeks.includes(scoringSelectedWeek)) scoringSelectedWeek = weeks[weeks.length-1] || null;
 
@@ -5372,7 +5495,7 @@ function scoringEnter(source){
     $all('input[type=number]', table).forEach(inp=>{
       if(inp.dataset.cat !== cat) return;
       const c = byId(inp.dataset.castaway);
-      if(c && c.tribe === tribe){ inp.value = String(Math.max(0, val)); count++; }
+      if(c && currentTribe(c) === tribe){ inp.value = String(Math.max(0, val)); count++; }
     });
     if(!count){ toast('No drafted castaways on that tribe this week'); return; }
     toast('Applied to ' + count + ' castaway' + (count===1?'':'s') + ' — click Save Week ' + w + ' to lock it in');
@@ -5390,7 +5513,8 @@ function scoringEnter(source){
     });
   });
 
-  const saveBtn = el('button',{class:'btn primary', style:'margin-top:16px'}, '💾 Save Week ' + w);
+  const btnRow = el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;margin-top:16px'});
+  const saveBtn = el('button',{class:'btn primary'}, '💾 Save Week ' + w);
   saveBtn.addEventListener('click', ()=>{
     const entries = { ...(scoring.entries[w]||{}) };
     $all('input[type=number]', table).forEach(inp=>{
@@ -5411,7 +5535,26 @@ function scoringEnter(source){
     toast('Week ' + w + ' scores saved');
     setTimeout(renderScoring, 150);
   });
-  wrap.appendChild(saveBtn);
+  btnRow.appendChild(saveBtn);
+  // Clears every entered category value AND any "Out?" elimination flag for
+  // THIS week only — for fixing a fat-fingered week (like scores accidentally
+  // typed into Week 13 instead of Week 1). Other weeks, steals, and the week
+  // list itself are untouched.
+  const clearWeekBtn = el('button',{class:'btn danger'}, '🗑️ Clear Week ' + w);
+  clearWeekBtn.addEventListener('click', ()=>{
+    if(!confirm('Clear all entered scores and "Out?" flags for Week ' + w + '? This cannot be undone. Other weeks and steals are not affected.')) return;
+    const entries = { ...scoring.entries };
+    delete entries[w];
+    const eliminated = {};
+    Object.keys(scoring.eliminated||{}).forEach(cid=>{ if(scoring.eliminated[cid] !== w) eliminated[cid] = scoring.eliminated[cid]; });
+    const updated = { ...scoring, entries, eliminated };
+    source.save(updated);
+    AudioFX.success();
+    toast('Week ' + w + ' cleared');
+    setTimeout(renderScoring, 150);
+  });
+  btnRow.appendChild(clearWeekBtn);
+  wrap.appendChild(btnRow);
   wrap.appendChild(scoringSteals(source, w));
   return wrap;
 }
@@ -5434,7 +5577,8 @@ function scoringSteals(source, week){
     row.appendChild(el('div',{class:'steal-team'},
       (team?team.name:'Unknown team') + (castaway ? ' — ' + castaway.short : '') + (s.note ? ' — ' + s.note : '')));
     const right = el('div',{style:'display:flex;align-items:center;gap:10px'});
-    right.appendChild(el('div',{class:'steal-pts'}, (s.pts>=0?'+':'') + s.pts + ' pts'));
+    const livePts = stealPointsLive(scoring, s, week);
+    right.appendChild(el('div',{class:'steal-pts'}, (livePts>=0?'+':'') + livePts + ' pts'));
     if(isAdmin){
       const rm = el('button',{class:'btn danger', style:'padding:4px 10px;font-size:0.7rem'}, 'Remove');
       rm.addEventListener('click', ()=>{
@@ -5552,7 +5696,7 @@ function scoringCategories(source){
   return wrap;
 }
 
-const BACKUP_KEYS = ['s51_tv','s51_tv_setup','s51_tv_scoring','s51_mock','s51_mock_setup','s51_mock_scoring','s51_live_room','s51_categories_template','s51_confessional'];
+const BACKUP_KEYS = ['s51_tv','s51_tv_setup','s51_tv_scoring','s51_tribe_overrides','s51_mock','s51_mock_setup','s51_mock_scoring','s51_live_room','s51_categories_template','s51_confessional'];
 function buildBackupPayload(){
   const payload = { _app:'survivor51-draft-backup', _version:1, _exportedAt:new Date().toISOString() };
   BACKUP_KEYS.forEach(k=> payload[k] = lsGet(k, null));
@@ -5596,6 +5740,7 @@ function scoringBackupBox(){
           if('s51_tv' in payload && payload.s51_tv!=null) fbDb.ref('tvDraft/state').set(payload.s51_tv);
           if('s51_tv_setup' in payload && payload.s51_tv_setup!=null) fbDb.ref('tvDraft/setup').set(payload.s51_tv_setup);
           if('s51_tv_scoring' in payload && payload.s51_tv_scoring!=null) fbDb.ref('tvDraft/scoring').set(payload.s51_tv_scoring);
+          if('s51_tribe_overrides' in payload && payload.s51_tribe_overrides!=null) fbDb.ref('tvDraft/tribeOverrides').set(payload.s51_tribe_overrides);
         }
         toast('Backup restored — reloading…');
         setTimeout(()=> location.reload(), 700);
