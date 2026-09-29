@@ -563,7 +563,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-29 19:12 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-29 19:23 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -4885,6 +4885,14 @@ function stealOrderBox(source){
 /* Same "share as a text" pattern as the post-steal alert — most league-mates
    don't have the app open, so the order has to travel as an actual message
    Garrott can copy or hand to his phone's Messages app. */
+/* A "claim your team" deep link — points at wherever THIS page is actually
+   hosted (no hardcoded URL), and carries which team + which week so
+   whoever taps it lands straight on that team's steal pick, no hunting
+   through tabs required. See checkClaimLink() near the bottom of the file
+   for what happens when someone opens a link like this. */
+function buildClaimLink(teamId, week){
+  return location.origin + location.pathname + '?claim=' + encodeURIComponent(teamId) + '&week=' + encodeURIComponent(week);
+}
 function openStealOrderMessage(source, week, order){
   const { teams } = source;
   AudioFX.whoosh();
@@ -4899,15 +4907,20 @@ function openStealOrderMessage(source, week, order){
   const body = el('div',{class:'modal-body', style:'padding-top:16px'});
   body.appendChild(el('h2',{style:'font-size:1.5rem'}, '🥷 Steal Order — Week ' + week));
 
+  // Each team gets its OWN claim link in the same message — tapping it
+  // takes that person straight to claiming their team and picking their
+  // Week W steal, so nobody has to hunt for the app or their team page.
   const lines = order.map((teamId,i)=>{
     const t = teams.find(x=>x.id===teamId);
-    return (ORDER_EMOJI[i] || (String(i+1)+'.')) + ' ' + (t ? t.name : 'Unknown');
+    const num = ORDER_EMOJI[i] || (String(i+1)+'.');
+    if(!t) return num + ' Unknown';
+    return num + ' ' + t.name + ': ' + buildClaimLink(t.id, week);
   });
   const message = '🥷 Time to pick your Week ' + week + ' steals! Order (last place goes first):\n' +
-    lines.join('\n') + '\nReply with who you want to steal and I\'ll lock it in!';
+    lines.join('\n') + '\nTap YOUR team\'s link above to claim your team and lock in your pick!';
 
   body.appendChild(el('div',{style:'margin-top:4px'}, el('label',{class:'field'}, 'Message to send')));
-  const msgArea = el('textarea',{rows:'6'});
+  const msgArea = el('textarea',{rows:'9'});
   msgArea.value = message;
   body.appendChild(msgArea);
 
@@ -6430,6 +6443,77 @@ function confessionalLeaderboard(data, episodes){
 
   return wrap;
 }
+
+/* =========================================================================
+   CLAIM LINKS — the other half of buildClaimLink() above (in
+   openStealOrderMessage). Someone opens the shared URL with ?claim=<teamId>
+   &week=<w> in it (from the steal order text) and lands on a "Claim your
+   team" confirmation before anything happens — a deliberate tap, not an
+   auto-submit, so a link accidentally opened (or forwarded to the wrong
+   person) doesn't silently lock in a pick. Confirming drops them straight
+   onto that team's page with the steal picker for that week already open,
+   ready to choose a castaway and hit Lock In Steal themselves. No separate
+   login: the TV Draft has always been wide open to anyone with the link
+   (isAdmin is true for everyone in this mode, same as before this feature),
+   so this doesn't change who *can* act — it just gets them there in one tap
+   instead of Garrott doing every pick by hand. */
+function renderClaimTeamScreen(teamId, week){
+  const source = scoringSource();
+  if(!source){
+    toast('The draft isn\'t set up yet — ask for a new link once it is.');
+    return;
+  }
+  const team = source.teams.find(t=>t.id===teamId);
+  if(!team){
+    toast('Couldn\'t find that team — ask for a fresh link.');
+    return;
+  }
+  AudioFX.whoosh();
+  const modal = $('#profileModal');
+  modal.innerHTML = '';
+  const head = el('div',{class:'modal-head', style:'min-height:0'});
+  const closeBtn = el('button',{class:'modal-close', html:ICONS.close});
+  closeBtn.addEventListener('click', closeProfile);
+  head.appendChild(closeBtn);
+  modal.appendChild(head);
+
+  const body = el('div',{class:'modal-body', style:'padding-top:16px;text-align:center'});
+  body.appendChild(el('h2',{style:'font-size:1.6rem'}, '🏆 Claim ' + team.name));
+  body.appendChild(el('div',{class:'modal-meta'}, 'Tap below to open ' + team.name + '\'s page and pick your Week ' + week + ' steal.'));
+  const claimBtn = el('button',{class:'btn primary', style:'margin-top:20px;font-size:1rem;padding:14px 22px'}, '🏆 Claim ' + team.name + ' & Pick Steal');
+  claimBtn.addEventListener('click', ()=>{
+    closeProfile();
+    // Clear the query string so refreshing or re-sharing the tab doesn't
+    // re-trigger this screen.
+    if(window.history && history.replaceState) history.replaceState(null, '', location.pathname);
+    $all('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    const teamsNavBtn = $('nav.tabs button[data-tab=teams]');
+    if(teamsNavBtn) teamsNavBtn.classList.add('active');
+    $all('.panel').forEach(p=>p.classList.remove('active'));
+    const teamsPanel = $('#panel-teams');
+    if(teamsPanel) teamsPanel.classList.add('active');
+    scoringSelectedTeam = team.id;
+    scoringSelectedWeek = week;
+    renderTeamsTab();
+    setTimeout(()=>{
+      const freshSource = scoringSource();
+      const freshTeam = freshSource ? freshSource.teams.find(t=>t.id===team.id) : null;
+      if(freshSource && freshTeam) openStealPicker(freshSource, freshTeam, week);
+      else toast('Couldn\'t open the steal picker — try tapping Pick Steal on your team page.');
+    }, 200);
+  });
+  body.appendChild(claimBtn);
+  modal.appendChild(body);
+  $('#profileOverlay').classList.add('open');
+}
+(function checkClaimLink(){
+  try{
+    const params = new URLSearchParams(location.search);
+    const teamId = params.get('claim');
+    const week = params.get('week');
+    if(teamId && week) renderClaimTeamScreen(teamId, week);
+  }catch(e){ console.error('Claim link check failed', e); }
+})();
 
 </script>
 </body>
