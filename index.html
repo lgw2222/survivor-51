@@ -561,7 +561,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-29 15:44 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-29 16:53 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -3598,7 +3598,7 @@ function defaultRealTvState(){
   return { teams: JSON.parse(JSON.stringify(REAL_TV_DRAFT_TEAMS)), order:[], pickIndex:20, pool:[], status:'complete', history: JSON.parse(JSON.stringify(REAL_TV_DRAFT_HISTORY)) };
 }
 
-let tvState = lsGet('s51_tv', null);
+let tvState = normalizeTvState(lsGet('s51_tv', null));
 let tvSetup = lsGet('s51_tv_setup', { teamCount:6, rounds:1, snake:true, names:[] });
 if(tvState===null && !lsGet('s51_tv_seeded', false)){
   tvState = defaultRealTvState();
@@ -3867,7 +3867,7 @@ if(firebaseReady){
   fbDb.ref('tvDraft/state').on('value', snap=>{
     const remote = snap.val();
     if(remote === null){ fbDb.ref('tvDraft/state').set(tvState); return; }
-    tvState = remote;
+    tvState = normalizeTvState(remote);
     lsSet('s51_tv', tvState);
     renderTv();
     renderTeamsTab();
@@ -3880,8 +3880,8 @@ if(firebaseReady){
   });
   fbDb.ref('tvDraft/scoring').on('value', snap=>{
     const remote = snap.val();
-    if(remote === null){ fbDb.ref('tvDraft/scoring').set(lsGet('s51_tv_scoring', null) || defaultScoring()); return; }
-    lsSet('s51_tv_scoring', remote);
+    if(remote === null){ fbDb.ref('tvDraft/scoring').set(normalizeScoring(lsGet('s51_tv_scoring', null))); return; }
+    lsSet('s51_tv_scoring', normalizeScoring(remote));
     renderScoring();
     renderTeamsTab();
   });
@@ -4387,6 +4387,36 @@ function defaultScoring(){
   // use "+ Add Week" (works the same everywhere) if your season runs longer.
   return { categories: getCategoriesTemplate(), weeks:[...DEFAULT_SEASON_WEEKS], entries:{}, steals:{}, eliminated:{}, winnerId:null, honorary:{} };
 }
+/* Firebase Realtime Database silently DROPS any field that is an empty
+   object/array (or null) when you .set() it — an empty {} or [] simply isn't
+   stored, so reading it back gives undefined instead of {} / []. A brand new
+   scoring record (before any scores are entered) is almost ALL empty objects
+   (entries/steals/eliminated/honorary), so a scoring object that has round-
+   tripped through Firebase can come back with those fields missing entirely.
+   Code all over the app assumes they're always at least {} (e.g.
+   scoring.entries[week] with no guard on scoring.entries itself), so a
+   missing field crashes rendering entirely — always run any scoring object
+   that may have come from Firebase (or from localStorage, which mirrors it)
+   through this before using it, to backfill the proper empty defaults. */
+function normalizeScoring(s){
+  s = s || {};
+  return {
+    categories: s.categories || getCategoriesTemplate(),
+    weeks: s.weeks || [...DEFAULT_SEASON_WEEKS],
+    entries: s.entries || {},
+    steals: s.steals || {},
+    eliminated: s.eliminated || {},
+    winnerId: s.winnerId != null ? s.winnerId : null,
+    honorary: s.honorary || {}
+  };
+}
+/* Same idea for the TV Draft's roster/state record — order and pool are
+   empty arrays once the draft is complete, so they're exactly the fields
+   Firebase would drop from a round-tripped copy. */
+function normalizeTvState(s){
+  if(!s) return s;
+  return { ...s, order: s.order || [], pool: s.pool || [] };
+}
 
 /* One-time patch (runs idempotently on every load, old and new browsers
    alike): Kristin Flickinger — the one castaway nobody drafted — gets added
@@ -4399,7 +4429,7 @@ function defaultScoring(){
   if(!wai) return;
   const draftedIds = tvState.teams.flatMap(t=>t.picks||[]);
   if(draftedIds.includes('kristin')) return;
-  const scoring = lsGet('s51_tv_scoring', null) || defaultScoring();
+  const scoring = normalizeScoring(lsGet('s51_tv_scoring', null));
   const honorary = { ...(scoring.honorary||{}) };
   const waiHonorary = honorary[wai.id] || [];
   if(waiHonorary.includes('kristin')) return;
@@ -4427,7 +4457,7 @@ function scoringSource(){
     return {
       type:'live', teams,
       isAdmin: isHostOfRoom(liveRoomState),
-      scoring: liveRoomState.scoring || defaultScoring(),
+      scoring: normalizeScoring(liveRoomState.scoring),
       save(newScoring){ roomRef(myRoomCode).child('scoring').set(newScoring); }
     };
   }
@@ -4436,7 +4466,7 @@ function scoringSource(){
     return {
       type:'tv', teams,
       isAdmin:true,
-      scoring: lsGet('s51_tv_scoring', null) || defaultScoring(),
+      scoring: normalizeScoring(lsGet('s51_tv_scoring', null)),
       save: saveTvScoring
     };
   }
@@ -4445,7 +4475,7 @@ function scoringSource(){
     return {
       type:'mock', teams,
       isAdmin:true,
-      scoring: lsGet('s51_mock_scoring', null) || defaultScoring(),
+      scoring: normalizeScoring(lsGet('s51_mock_scoring', null)),
       save(newScoring){ lsSet('s51_mock_scoring', newScoring); }
     };
   }
