@@ -561,7 +561,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-29 15:28 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-29 15:44 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -3613,8 +3613,13 @@ function defaultTvNames(n){
   for(let i=0;i<n;i++) names.push(tvSetup.names[i] || ('Team ' + (i+1)));
   return names;
 }
-function saveTv(){ lsSet('s51_tv', tvState); }
-function saveTvSetup(){ lsSet('s51_tv_setup', tvSetup); }
+/* Every save also pushes to Firebase (when configured) so the real TV Draft
+   — roster, setup, and (below) scoring — is the SAME data on every device,
+   not just this browser's localStorage. localStorage is still written too,
+   as an instant local cache and an offline fallback. */
+function saveTv(){ lsSet('s51_tv', tvState); if(firebaseReady) fbDb.ref('tvDraft/state').set(tvState); }
+function saveTvSetup(){ lsSet('s51_tv_setup', tvSetup); if(firebaseReady) fbDb.ref('tvDraft/setup').set(tvSetup); }
+function saveTvScoring(newScoring){ lsSet('s51_tv_scoring', newScoring); if(firebaseReady) fbDb.ref('tvDraft/scoring').set(newScoring); }
 
 function tvFlash(teamName, castawayShort){
   const f = el('div',{class:'tv-flash'},
@@ -3761,7 +3766,7 @@ function renderTvDrafting(root){
     const undoBtn = el('button',{class:'btn'}, '↶ Undo Last Pick');
     undoBtn.addEventListener('click', tvUndo);
     const newBtn = el('button',{class:'btn primary'}, 'Start New TV Draft');
-    newBtn.addEventListener('click', ()=>{ tvState=null; lsSet('s51_tv', null); renderTv(); window.scrollTo(0,0); });
+    newBtn.addEventListener('click', ()=>{ tvState=null; lsSet('s51_tv', null); if(firebaseReady) fbDb.ref('tvDraft/state').set(null); renderTv(); window.scrollTo(0,0); });
     const exportBtn = el('button',{class:'btn'}, '⬇️ Export CSV');
     exportBtn.addEventListener('click', ()=> exportDraftCSV({ type:'tv', teams: tvState.teams }));
     controls.appendChild(undoBtn); controls.appendChild(newBtn); controls.appendChild(exportBtn); controls.appendChild(fullscreenBtn());
@@ -3820,6 +3825,7 @@ function tvReset(){
   if(!confirm('Reset the TV draft? This clears all picks.')) return;
   tvState = null;
   lsSet('s51_tv', null);
+  if(firebaseReady) fbDb.ref('tvDraft/state').set(null);
   renderTv();
   window.scrollTo(0,0);
 }
@@ -3842,6 +3848,44 @@ try{
     firebaseReady = true;
   }
 }catch(e){ console.error('Firebase init failed', e); firebaseReady = false; }
+
+/* ---------- TV Draft sync (the real season draft — ONE shared record) ----------
+   Unlike the Live Draft room above (many rooms, joined by code), the real TV
+   Draft — Bula/Sainoi/Wai/Goji — is a single record that should look the same
+   on every device: phone, any desktop browser, incognito or not. localStorage
+   alone can't do that (it's per-browser, which is exactly why the same person's
+   points could look different on different devices/browsers). Once Firebase is
+   configured, it becomes the shared source of truth for the TV Draft's roster,
+   setup, and scoring: every save below pushes to Firebase, and every open tab
+   listens for changes there and re-renders — so entering a score on the phone
+   updates the desktop too. localStorage is still written on every save as an
+   instant local cache and an offline fallback if Firebase can't be reached.
+   The FIRST device to connect after this is installed "bootstraps" Firebase
+   with whatever it already has locally; everyone after that just adopts
+   Firebase's copy. See the chat reply for a one-time, safe rollout order. */
+if(firebaseReady){
+  fbDb.ref('tvDraft/state').on('value', snap=>{
+    const remote = snap.val();
+    if(remote === null){ fbDb.ref('tvDraft/state').set(tvState); return; }
+    tvState = remote;
+    lsSet('s51_tv', tvState);
+    renderTv();
+    renderTeamsTab();
+  });
+  fbDb.ref('tvDraft/setup').on('value', snap=>{
+    const remote = snap.val();
+    if(remote === null){ fbDb.ref('tvDraft/setup').set(tvSetup); return; }
+    tvSetup = remote;
+    lsSet('s51_tv_setup', tvSetup);
+  });
+  fbDb.ref('tvDraft/scoring').on('value', snap=>{
+    const remote = snap.val();
+    if(remote === null){ fbDb.ref('tvDraft/scoring').set(lsGet('s51_tv_scoring', null) || defaultScoring()); return; }
+    lsSet('s51_tv_scoring', remote);
+    renderScoring();
+    renderTeamsTab();
+  });
+}
 
 let myRoomCode = lsGet('s51_live_room', null);
 let liveRoomState = null;
@@ -4361,7 +4405,7 @@ function defaultScoring(){
   if(waiHonorary.includes('kristin')) return;
   if(Object.values(honorary).flat().includes('kristin')) return;
   honorary[wai.id] = [...waiHonorary, 'kristin'];
-  lsSet('s51_tv_scoring', { ...scoring, honorary });
+  saveTvScoring({ ...scoring, honorary });
 })();
 function addScoringWeek(source, scoring){
   const weeks = scoring.weeks || [];
@@ -4393,7 +4437,7 @@ function scoringSource(){
       type:'tv', teams,
       isAdmin:true,
       scoring: lsGet('s51_tv_scoring', null) || defaultScoring(),
-      save(newScoring){ lsSet('s51_tv_scoring', newScoring); }
+      save: saveTvScoring
     };
   }
   if(mockState && mockState.status==='complete'){
@@ -5488,7 +5532,10 @@ function scoringBackupBox(){
   const box = el('div',{class:'card-box', style:'margin-bottom:14px'});
   box.appendChild(el('h3',{style:'margin:0 0 6px'}, '💾 Backup & Restore'));
   box.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.82rem;margin:0 0 12px'},
-    'TV Draft and Mock Draft results live only in THIS browser — clearing your cache or "site data" wipes them for good, with no way to get them back. Download a backup right after your draft (and again anytime you enter scores), and keep the file somewhere safe. Live Draft rooms are backed up automatically on the server, but this also saves your room connection.'));
+    (firebaseReady
+      ? 'The TV Draft (roster + scoring) syncs through the cloud now, so it\'s safe even if you clear this browser\'s data — but Mock Draft results still live only in THIS browser and clearing "site data" wipes them for good.'
+      : 'TV Draft and Mock Draft results live only in THIS browser — clearing your cache or "site data" wipes them for good, with no way to get them back.') +
+    ' Download a backup anytime as extra insurance, and keep the file somewhere safe. Live Draft rooms are backed up automatically on the server, but this also saves your room connection.'));
   const dlBtn = el('button',{class:'btn primary'}, '⬇️ Download Backup');
   dlBtn.addEventListener('click', ()=>{
     const payload = buildBackupPayload();
@@ -5511,6 +5558,15 @@ function scoringBackupBox(){
         const payload = JSON.parse(reader.result);
         if(payload._app !== 'survivor51-draft-backup') throw new Error('not a backup file');
         BACKUP_KEYS.forEach(k=>{ if(k in payload && payload[k]!=null) lsSet(k, payload[k]); });
+        // The TV Draft also lives in Firebase (see the sync block above) so
+        // every device stays in sync — push the restored copy there too,
+        // otherwise the very next sync from Firebase would just overwrite
+        // what was just restored with whatever was there before.
+        if(firebaseReady){
+          if('s51_tv' in payload && payload.s51_tv!=null) fbDb.ref('tvDraft/state').set(payload.s51_tv);
+          if('s51_tv_setup' in payload && payload.s51_tv_setup!=null) fbDb.ref('tvDraft/setup').set(payload.s51_tv_setup);
+          if('s51_tv_scoring' in payload && payload.s51_tv_scoring!=null) fbDb.ref('tvDraft/scoring').set(payload.s51_tv_scoring);
+        }
         toast('Backup restored — reloading…');
         setTimeout(()=> location.reload(), 700);
       }catch(e){
