@@ -563,7 +563,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-29 19:23 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-29 20:55 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -4885,13 +4885,27 @@ function stealOrderBox(source){
 /* Same "share as a text" pattern as the post-steal alert — most league-mates
    don't have the app open, so the order has to travel as an actual message
    Garrott can copy or hand to his phone's Messages app. */
-/* A "claim your team" deep link — points at wherever THIS page is actually
-   hosted (no hardcoded URL), and carries which team + which week so
+/* A "claim your team" deep link — carries which team + which week so
    whoever taps it lands straight on that team's steal pick, no hunting
    through tabs required. See checkClaimLink() near the bottom of the file
-   for what happens when someone opens a link like this. */
+   for what happens when someone opens a link like this.
+   Normally this uses wherever THIS page is actually being viewed from
+   (location.origin + location.pathname), so it stays correct if the site
+   ever moves. But when Garrott is looking at a LOCAL copy of the file
+   (testing on his own PC before uploading, or double-clicking the
+   downloaded file — page loads as file:///C:/Users/... instead of
+   https://...), that address only exists on his computer: it can't be
+   clicked as a real link by a texting app, and even if it could, it would
+   point teammates at a file on HIS PC, not anywhere they can actually
+   reach. So in that case this falls back to the real published GitHub
+   Pages URL instead, which is always a proper clickable https:// link. If
+   the site's published address ever changes, update DEPLOYED_APP_URL. */
+const DEPLOYED_APP_URL = 'https://lgw2222.github.io/survivor-51/';
 function buildClaimLink(teamId, week){
-  return location.origin + location.pathname + '?claim=' + encodeURIComponent(teamId) + '&week=' + encodeURIComponent(week);
+  const base = (location.protocol === 'http:' || location.protocol === 'https:')
+    ? (location.origin + location.pathname)
+    : DEPLOYED_APP_URL;
+  return base + '?claim=' + encodeURIComponent(teamId) + '&week=' + encodeURIComponent(week);
 }
 function openStealOrderMessage(source, week, order){
   const { teams } = source;
