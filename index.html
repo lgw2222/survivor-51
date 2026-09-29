@@ -563,7 +563,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-29 20:55 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-29 21:18 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -5780,11 +5780,30 @@ function scoringEnter(source){
 function scoringSteals(source, week){
   const { teams, scoring, isAdmin } = source;
   const box = el('div',{class:'card-box', style:'margin-top:18px'});
-  box.appendChild(el('h3',{style:'margin:0 0 6px;font-size:1rem'}, '🥷 Steals & Bonus Points — Week ' + week));
+  const headRow = el('div',{style:'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:6px'});
+  headRow.appendChild(el('h3',{style:'margin:0;font-size:1rem'}, '🥷 Steals & Bonus Points — Week ' + week));
+  box.appendChild(headRow);
   box.appendChild(el('p',{style:'margin:0 0 12px;font-size:0.78rem;color:var(--sand-dim)'},
     'Award bonus points for stolen votes, advantage steals, or other one-off plays that fall outside the category scoring above.'));
 
   const weekSteals = (scoring.steals && scoring.steals[week]) || [];
+  // Clears every steal for THIS week in one go — for when the steal order
+  // got skipped or picks happened out of turn and it's easier to just redo
+  // the whole week's round than remove them one at a time. Also flips
+  // every team back to "Waiting" in the Steal Order box above, since that
+  // status is read live off scoring.steals[week].
+  if(isAdmin && weekSteals.length){
+    const resetBtn = el('button',{class:'btn danger', style:'padding:5px 12px;font-size:0.72rem'}, '🔄 Reset Week ' + week + ' Steals');
+    resetBtn.addEventListener('click', ()=>{
+      if(!confirm('Remove all ' + weekSteals.length + ' steal' + (weekSteals.length===1?'':'s') + ' recorded for Week ' + week + '? This cannot be undone — handy if the steal order got skipped and you need to redo the round.')) return;
+      const updated = { ...scoring, steals: { ...(scoring.steals||{}), [week]: [] } };
+      source.save(updated);
+      toast('Week ' + week + ' steals reset');
+      setTimeout(renderScoring, 150);
+      setTimeout(renderTeamsTab, 150);
+    });
+    headRow.appendChild(resetBtn);
+  }
   const list = el('div',{class:'steal-list'});
   if(!weekSteals.length){
     list.appendChild(el('div',{style:'font-size:0.8rem;color:var(--sand-dim)'}, 'No steals recorded for this week yet.'));
