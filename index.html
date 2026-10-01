@@ -563,7 +563,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-09-29 21:18 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-10-01 19:23 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -3953,6 +3953,38 @@ if(firebaseReady){
     lsSet('s51_tribe_overrides', tribeOverrides);
     refreshTribeViews();
   });
+
+  /* ---------- One-time Week 1 data recovery (Oct 2026) ----------
+     The "Reset Scoring Data" button on the Export tab got triggered on the
+     live site (that button now requires typing RESET, so it can't happen
+     by accident again), which wiped every entered score and steal. This
+     restores the real Week 1 category scores from Garrott's own backup
+     spreadsheet -- the one solid record of what was actually entered
+     before the wipe -- the first time this file loads with Firebase up.
+     It writes ONLY to tvDraft/scoring/entries/1, leaving categories,
+     honorary, weeks, steals, other weeks, and the whole roster/draft
+     completely untouched. It runs once per browser (a localStorage flag)
+     and, as a second safety net, only if Week 1 entries are still
+     genuinely empty at the moment it checks -- so it can never overwrite
+     scores someone has since re-entered by hand, even if this file is
+     opened fresh on another device before the flag is set there too. */
+  (function recoverWeek1Once(){
+    const FLAG = 's51_week1_recovery_2026_10_applied';
+    if(lsGet(FLAG, false)) return;
+    lsSet(FLAG, true);
+    const recovered = {
+      carter:{team_immunity:1}, cristian:{team_immunity:1}, eric:{team_immunity:1},
+      alexis:{team_immunity:1}, linnea:{team_immunity:1}, sharonda:{team_immunity:1},
+      ori:{team_immunity:1}, ana:{team_immunity:1}, kristin:{team_immunity:1},
+      rob:{team_immunity:1, found_idol:1}
+    };
+    fbDb.ref('tvDraft/scoring/entries/1').once('value').then(snap=>{
+      if(snap.val()) return; // already has real data -- don't touch it
+      return fbDb.ref('tvDraft/scoring/entries/1').set(recovered).then(()=>{
+        toast('Week 1 scores restored');
+      });
+    }).catch(()=>{});
+  })();
 }
 
 let myRoomCode = lsGet('s51_live_room', null);
@@ -6024,10 +6056,12 @@ function scoringExport(source){
   if(isAdmin){
     const box3 = el('div',{class:'card-box'});
     box3.appendChild(el('h3',{style:'margin:0 0 6px;color:var(--torch)'}, '⚠️ Reset Scoring Data'));
-    box3.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.82rem;margin:0 0 12px'}, 'Clears all entered weeks, points, eliminations, and the declared winner. Teams, picks, and your category weights are kept.'));
+    box3.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.82rem;margin:0 0 12px'}, 'Permanently erases every week\'s entered scores, every steal, and the declared winner — for the whole season, for every team, on every device (it syncs the same way everything else does). Teams, picks, and your category weights are kept. There is no undo and no automatic backup; the only way back is a backup file downloaded beforehand.'));
     const resetScoreBtn = el('button',{class:'btn danger'}, 'Reset Scoring Data');
     resetScoreBtn.addEventListener('click', ()=>{
-      if(!confirm('Reset all scoring data? Weekly points, eliminations, and the declared winner will be cleared. This cannot be undone.')) return;
+      const typed = prompt('This erases ALL entered scores, steals, eliminations, and the declared winner for the entire season — for every team, everywhere this app is open. It cannot be undone.\n\nType RESET to confirm.');
+      if(typed === null) return;
+      if(typed.trim().toUpperCase() !== 'RESET'){ toast('Reset cancelled — nothing was changed'); return; }
       source.save({ categories: scoring.categories, weeks:[...DEFAULT_SEASON_WEEKS], entries:{}, steals:{}, eliminated:{}, winnerId:null, honorary: scoring.honorary||{} });
       toast('Scoring data reset');
       setTimeout(renderScoring, 150);
