@@ -563,7 +563,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-10-01 19:23 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-10-07 13:48 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -6259,11 +6259,14 @@ function renderAnalystRankings(){
 const CONFESSIONAL_SEED_TIMES = { '1': {
   devin:168, lewis:135, jenna:131, jelly:89, kilby:71, brady:64, rob:64, kristin:59, eric:56, ana:52,
   patt:45, mike:36, sharonda:36, 'thien-an':34, carter:31, linnea:29, maggie:25, alexis:22, cristian:13, ori:13, aaliyah:38
+}, '2': {
+  devin:36, jelly:81, lewis:33, rob:102, jenna:18, sharonda:87, brady:54, kilby:30, kristin:35, eric:38,
+  patt:47, linnea:50, alexis:47, ori:46, mike:15, maggie:18, 'thien-an':0, carter:0, cristian:0, ana:52
 }};
 const CONFESSIONAL_SEED_ELIM = { aaliyah:'1' };
 const CONFESSIONAL_SEED_LINKS = { '1': 'https://www.reddit.com/r/survivor/s/CaQmZvCmli' };
 function defaultConfessional(){
-  return { episodes:['1'], times: JSON.parse(JSON.stringify(CONFESSIONAL_SEED_TIMES)), eliminated: { ...CONFESSIONAL_SEED_ELIM }, links: { ...CONFESSIONAL_SEED_LINKS } };
+  return { episodes:['1','2'], times: JSON.parse(JSON.stringify(CONFESSIONAL_SEED_TIMES)), eliminated: { ...CONFESSIONAL_SEED_ELIM }, links: { ...CONFESSIONAL_SEED_LINKS } };
 }
 function getConfessional(){ return lsGet('s51_confessional', null) || defaultConfessional(); }
 function saveConfessional(data){ lsSet('s51_confessional', data); }
