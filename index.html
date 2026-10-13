@@ -502,6 +502,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
       <button data-tab="teams">🏝️ Teams</button>
       <button data-tab="scoring">Scoring</button>
       <button data-tab="rankings">Rankings</button>
+      <button data-tab="wheel">🎡 Wheel</button>
     </nav>
   </div>
 </header>
@@ -557,13 +558,18 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
     <div id="rankingsRoot"></div>
   </section>
 
+  <!-- PLAYER WHEEL -->
+  <section id="panel-wheel" class="panel">
+    <div id="wheelRoot"></div>
+  </section>
+
 </div>
 
 <div class="bamboo-divider bottom" aria-hidden="true"></div>
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-10-13 18:02 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-10-13 18:41 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -3358,6 +3364,7 @@ $all('nav.tabs button').forEach(btn=>{
     if(btn.dataset.tab === 'scoring' && typeof renderScoring === 'function') renderScoring();
     if(btn.dataset.tab === 'rankings' && typeof renderRankings === 'function') renderRankings();
     if(btn.dataset.tab === 'teams' && typeof renderTeamsTab === 'function') renderTeamsTab();
+    if(btn.dataset.tab === 'wheel' && typeof renderWheel === 'function') renderWheel();
   });
 });
 
@@ -4084,6 +4091,13 @@ if(firebaseReady){
     lsSet('s51_tv_scoring', remoteScoring);
     renderScoring();
     renderTeamsTab();
+    if(typeof renderWheel === 'function') renderWheel();
+  });
+  fbDb.ref('tvDraft/voting').on('value', snap=>{
+    // each tribal council lives at its own path (tvDraft/voting/<id>), so editing one
+    // can never overwrite another — a stale device only ever touches what it edits.
+    lsSet('s51_voting_overrides', snap.val() || {});
+    if(typeof rankingsSubTab !== 'undefined' && rankingsSubTab === 'voting' && typeof renderRankings === 'function' && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('#votingEditor'))) renderRankings();
   });
   fbDb.ref('tvDraft/tribeOverrides').on('value', snap=>{
     const remote = snap.val();
@@ -4693,7 +4707,21 @@ function scoringSource(){
   }
   return null;
 }
+/* ELIMINATIONS: scoring.eliminated[castawayId] = the week they went out. A
+   castaway still earns for the week they were eliminated, but NOTHING in any
+   later week — even if a score was typed in for them. (Steals of an out
+   castaway also score 0 for the same reason, since steal points are derived
+   from castawayWeekPoints.) */
+function isOutBeforeWeek(scoring, castawayId, week){
+  const e = scoring && scoring.eliminated && scoring.eliminated[castawayId];
+  if(!e) return false;
+  const weeks = (scoring.weeks || []).map(String);
+  const ei = weeks.indexOf(String(e)), wi = weeks.indexOf(String(week));
+  if(ei < 0 || wi < 0) return false;
+  return wi > ei;
+}
 function castawayWeekPoints(scoring, castawayId, week){
+  if(isOutBeforeWeek(scoring, castawayId, week)) return 0;
   const row = (scoring.entries[week]||{})[castawayId];
   if(!row) return 0;
   return scoring.categories.reduce((sum,c)=> sum + (Number(row[c.key])||0) * (Number(c.weight)||0), 0);
@@ -5510,12 +5538,17 @@ function openStealPicker(source, team, week){
     CASTAWAYS.forEach(c=>{
       const takenTeamId = stolenBy[c.id];
       const takenTeam = takenTeamId ? (source.teams||[]).find(t=>t.id===takenTeamId) : null;
-      const card = el('div',{class:'card' + (takenTeam ? ' steal-taken' : '')});
+      const outNow = isOutBeforeWeek(scoring, c.id, week);
+      const card = el('div',{class:'card' + ((takenTeam || outNow) ? ' steal-taken' : '')});
       card.dataset.name = (c.name + ' ' + c.short).toLowerCase();
       card.appendChild(photoBlock(c));
       card.appendChild(el('div',{class:'tribe-badge ' + (currentTribe(c) || 'tbd')}, tribeLabel(currentTribe(c))));
       card.appendChild(el('div',{class:'info'}, el('div',{class:'nm'}, c.short)));
-      if(takenTeam){
+      if(outNow){
+        card.title = 'Eliminated in Week ' + scoring.eliminated[c.id];
+        card.appendChild(el('div',{class:'oc', style:'color:#ff8a7a;font-weight:700;padding:0 8px 8px'}, 'OUT wk ' + scoring.eliminated[c.id]));
+        card.addEventListener('click', ()=> toast(c.short + ' was eliminated in Week ' + scoring.eliminated[c.id] + ' — can\'t be stolen'));
+      } else if(takenTeam){
         card.title = 'Already stolen this week by ' + takenTeam.name;
         card.addEventListener('click', ()=> toast(c.short + ' was already stolen by ' + takenTeam.name + ' this week'));
       } else {
@@ -5779,6 +5812,43 @@ function scoringEnter(source){
   if(!scoringSelectedWeek){ wrap.appendChild(el('p',{style:'color:var(--sand-dim)'}, 'Add a week above to start entering scores.')); return wrap; }
   const w = scoringSelectedWeek;
 
+  // ---- Eliminations for this week: one tap per castaway, saved right away ----
+  const rosterIds = [];
+  teams.forEach(t=> teamScoringRoster(scoring, t).forEach(cid=>{ if(!rosterIds.includes(cid)) rosterIds.push(cid); }));
+  const elimMap = { ...(scoring.eliminated || {}) };
+  const elimBox = el('div',{class:'card-box', style:'margin:0 0 14px;border-color:var(--flame-red)'});
+  elimBox.appendChild(el('h3',{style:'margin:0 0 4px;font-size:1rem'}, '☠️ Who was eliminated in Week ' + w + '?'));
+  elimBox.appendChild(el('p',{style:'margin:0 0 10px;font-size:0.78rem;color:var(--sand-dim)'},
+    'Tap anyone who was voted out, quit, or was medically evacuated this week. They still score for Week ' + w + ', but they earn nothing in any later week (their rows lock and steals can\'t pick them). Tap again to undo.'));
+  const chipRow = el('div',{style:'display:flex;flex-wrap:wrap;gap:8px'});
+  const alreadyOut = [];
+  rosterIds.forEach(cid=>{
+    const c = byId(cid); if(!c) return;
+    if(isOutBeforeWeek(scoring, cid, w)){ alreadyOut.push(c.short + ' (wk ' + scoring.eliminated[cid] + ')'); return; }
+    const chip = el('button',{class:'btn', style:'padding:6px 12px;font-size:0.82rem'}, c.short);
+    const paint = ()=>{
+      const on = elimMap[cid] === w;
+      chip.style.background = on ? 'var(--flame-red)' : '';
+      chip.style.color = on ? '#fff' : '';
+      chip.style.borderColor = on ? 'var(--flame-red)' : '';
+      chip.textContent = (on ? '☠️ ' : '') + c.short;
+    };
+    paint();
+    chip.addEventListener('click', ()=>{
+      if(elimMap[cid] === w){ delete elimMap[cid]; }
+      else { elimMap[cid] = w; }
+      paint();
+      const chk = table.querySelector('input[data-elim="' + cid + '"]');
+      if(chk) chk.checked = elimMap[cid] === w;
+      source.save({ ...scoring, eliminated: { ...elimMap } });
+      toast(elimMap[cid] === w ? c.short + ' marked out in Week ' + w + ' — no points from Week ' + (parseInt(w)+1 || 'next') + ' on' : c.short + ' is back in the game');
+    });
+    chipRow.appendChild(chip);
+  });
+  elimBox.appendChild(chipRow);
+  if(alreadyOut.length) elimBox.appendChild(el('div',{style:'margin-top:10px;font-size:0.78rem;color:var(--sand-dim)'}, 'Already out (locked this week): ' + alreadyOut.join(', ') + '. To change one, open the week they were eliminated.'));
+  wrap.appendChild(elimBox);
+
   const searchWrap = el('div',{class:'score-search'});
   const searchInp = el('input',{type:'text', placeholder:'🔍 Type a name to find their row...'});
   searchWrap.appendChild(searchInp);
@@ -5802,6 +5872,8 @@ function scoringEnter(source){
     const c = byId(cid);
     if(!c) return;
     const row = el('tr',{});
+    const lockedOut = isOutBeforeWeek(scoring, cid, w);
+    if(lockedOut) row.style.opacity = '0.45';
     row.dataset.name = (c.name + ' ' + c.short + ' ' + team.name).toLowerCase();
     const nameCell = el('td',{});
     const nameWrap = el('div',{class:'snm-cell'});
@@ -5810,6 +5882,7 @@ function scoringEnter(source){
     nameWrap.appendChild(img);
     nameWrap.appendChild(el('span',{}, c.short + ' (' + team.name + (honorary ? ' — Irrelevant' : '') + ')'));
     nameWrap.appendChild(tribeChip(c));
+    if(lockedOut) nameWrap.appendChild(el('span',{class:'elim-tag'}, 'OUT since wk ' + scoring.eliminated[cid] + ' — no points'));
     nameCell.appendChild(nameWrap);
     row.appendChild(nameCell);
     const existing = ((scoring.entries[w]||{})[cid])||{};
@@ -5817,6 +5890,7 @@ function scoringEnter(source){
       const td = el('td',{});
       const inp = el('input',{type:'number', min:'0', step:'1', value:String(existing[cat.key]||0)});
       inp.dataset.castaway = cid; inp.dataset.cat = cat.key;
+      if(lockedOut) inp.disabled = true;
       td.appendChild(inp);
       row.appendChild(td);
     });
@@ -5824,6 +5898,7 @@ function scoringEnter(source){
     const outChk = el('input',{type:'checkbox'});
     outChk.dataset.elim = cid;
     outChk.checked = scoring.eliminated && scoring.eliminated[cid] === w;
+    if(lockedOut) outChk.disabled = true;
     outTd.appendChild(outChk);
     row.appendChild(outTd);
     row.appendChild(el('td',{style:'font-family:\'Bebas Neue\';color:var(--torch)'}, String(castawayWeekPoints(scoring,cid,w))));
@@ -5855,7 +5930,7 @@ function scoringEnter(source){
     const cat = bulkCatSel.value, tribe = bulkTribeSel.value;
     let count = 0;
     $all('input[type=number]', table).forEach(inp=>{
-      if(inp.dataset.cat !== cat) return;
+      if(inp.dataset.cat !== cat || inp.disabled) return;
       const c = byId(inp.dataset.castaway);
       if(c && currentTribe(c) === tribe){ inp.value = String(Math.max(0, val)); count++; }
     });
@@ -5880,6 +5955,7 @@ function scoringEnter(source){
   saveBtn.addEventListener('click', ()=>{
     const entries = { ...(scoring.entries[w]||{}) };
     $all('input[type=number]', table).forEach(inp=>{
+      if(inp.disabled) return;   // eliminated in an earlier week — locked
       const cid = inp.dataset.castaway, cat = inp.dataset.cat;
       const v = Math.max(0, parseInt(inp.value)||0);
       if(!entries[cid]) entries[cid] = {};
@@ -5887,6 +5963,7 @@ function scoringEnter(source){
     });
     const eliminated = { ...(scoring.eliminated||{}) };
     $all('input[type=checkbox]', table).forEach(chk=>{
+      if(chk.disabled) return;
       const cid = chk.dataset.elim;
       if(chk.checked) eliminated[cid] = w;
       else if(eliminated[cid]===w) delete eliminated[cid];
@@ -6077,7 +6154,7 @@ function scoringCategories(source){
   return wrap;
 }
 
-const BACKUP_KEYS = ['s51_tv','s51_tv_setup','s51_tv_scoring','s51_tribe_overrides','s51_mock','s51_mock_setup','s51_mock_scoring','s51_live_room','s51_categories_template','s51_confessional'];
+const BACKUP_KEYS = ['s51_tv','s51_tv_setup','s51_tv_scoring','s51_tribe_overrides','s51_mock','s51_mock_setup','s51_mock_scoring','s51_live_room','s51_categories_template','s51_confessional','s51_wheel'];
 function buildBackupPayload(){
   const payload = { _app:'survivor51-draft-backup', _version:1, _exportedAt:new Date().toISOString() };
   BACKUP_KEYS.forEach(k=> payload[k] = lsGet(k, null));
@@ -6339,7 +6416,7 @@ renderScoring();
 let rankingsSubTab = 'analyst';
 function rankingsSubnav(active){
   const nav = el('div',{class:'subtabs'});
-  const tabs = [['analyst','📊 Analyst Rankings'],['confessional','🎥 Confessional Time']];
+  const tabs = [['analyst','📊 Analyst Rankings'],['confessional','🎥 Confessional Time'],['voting','🗳️ Voting History']];
   tabs.forEach(([id,label])=>{
     const b = el('button',{class: active===id ? 'on' : ''}, label);
     b.addEventListener('click', ()=>{ rankingsSubTab = id; renderRankings(); });
@@ -6353,6 +6430,7 @@ function renderRankings(){
   root.innerHTML = '';
   root.appendChild(rankingsSubnav(rankingsSubTab));
   if(rankingsSubTab === 'confessional') root.appendChild(renderConfessionalTracker());
+  else if(rankingsSubTab === 'voting') root.appendChild(renderVotingHistory());
   else root.appendChild(renderAnalystRankings());
 }
 
@@ -6425,13 +6503,30 @@ const CONFESSIONAL_SEED_TIMES = { '1': {
 }, '2': {
   devin:36, jelly:81, lewis:33, rob:102, jenna:18, sharonda:87, brady:54, kilby:30, kristin:35, eric:38,
   patt:47, linnea:50, alexis:47, ori:46, mike:15, maggie:18, 'thien-an':0, carter:0, cristian:0, ana:52
+}, '3': {
+  devin:178, lewis:81, carter:215, brady:92, kilby:88, jelly:14, jenna:8, eric:54, sharonda:15, ori:62,
+  kristin:11, linnea:21, alexis:30, 'thien-an':43, maggie:32, mike:10, cristian:0, patt:16, rob:55
 }};
-const CONFESSIONAL_SEED_ELIM = { aaliyah:'1' };
+// Ep1 Aaliyah voted out, Ep2 Ana voted out, Ep3 Patt voted out and Rob quit.
+const CONFESSIONAL_SEED_ELIM = { aaliyah:'1', ana:'2', patt:'3', rob:'3' };
 const CONFESSIONAL_SEED_LINKS = { '1': 'https://www.reddit.com/r/survivor/s/CaQmZvCmli' };
 function defaultConfessional(){
-  return { episodes:['1','2'], times: JSON.parse(JSON.stringify(CONFESSIONAL_SEED_TIMES)), eliminated: { ...CONFESSIONAL_SEED_ELIM }, links: { ...CONFESSIONAL_SEED_LINKS } };
+  return { episodes:['1','2','3'], times: JSON.parse(JSON.stringify(CONFESSIONAL_SEED_TIMES)), eliminated: { ...CONFESSIONAL_SEED_ELIM }, links: { ...CONFESSIONAL_SEED_LINKS } };
 }
-function getConfessional(){ return lsGet('s51_confessional', null) || defaultConfessional(); }
+/* A browser that already saved its own copy would otherwise never see newly
+   seeded episodes/eliminations. Merge the verified seed data underneath the
+   saved copy: anything the user already entered or edited wins; anything
+   missing (a new episode, a missing castaway time, an elimination) is filled
+   in from the seed. */
+function getConfessional(){
+  const saved = lsGet('s51_confessional', null);
+  const seed = defaultConfessional();
+  if(!saved) return seed;
+  const episodes = Array.from(new Set([...(saved.episodes||[]), ...seed.episodes])).sort((a,b)=>parseInt(a)-parseInt(b) || String(a).localeCompare(String(b)));
+  const times = { ...(saved.times||{}) };
+  Object.keys(seed.times).forEach(ep=>{ times[ep] = { ...seed.times[ep], ...(times[ep]||{}) }; });
+  return { ...saved, episodes, times, eliminated: { ...seed.eliminated, ...(saved.eliminated||{}) }, links: { ...seed.links, ...(saved.links||{}) } };
+}
 function saveConfessional(data){ lsSet('s51_confessional', data); }
 function fmtMMSS(totalSeconds){
   const s = Math.max(0, Math.round(totalSeconds||0));
@@ -6804,6 +6899,557 @@ function renderClaimTeamScreen(teamId, week){
     });
   }
 })();
+
+
+/* =========================================================================
+   PLAYER WHEEL
+   A spin wheel of everyone still in the game. Eliminated castaways are
+   dropped automatically (read live from the shared scoring data, plus the
+   confessional tracker's eliminations). Spin as many rounds as you set —
+   each pick is written down and comes off the wheel, then keep spinning.
+   Everything is remembered on this device (and is part of Backup & Restore).
+   ========================================================================= */
+var WHEEL_KEY = 's51_wheel';
+var wheelRot = 0, wheelSpinning = false, wheelLast = null, wheelResize = null;
+
+function wheelState(){
+  const s = lsGet(WHEEL_KEY, null) || {};
+  return {
+    label: s.label || '',
+    spins: Math.max(1, parseInt(s.spins) || 4),
+    filter: s.filter || 'all',
+    picks: Array.isArray(s.picks) ? s.picks : [],
+    history: Array.isArray(s.history) ? s.history : []
+  };
+}
+function wheelSave(s){ lsSet(WHEEL_KEY, s); }
+function wheelOutSet(){
+  const out = new Set();
+  const sc = normalizeScoring(lsGet('s51_tv_scoring', null));
+  Object.keys(sc.eliminated || {}).forEach(id=>{ if(sc.eliminated[id]) out.add(id); });
+  const conf = getConfessional();
+  Object.keys(conf.eliminated || {}).forEach(id=>{ if(conf.eliminated[id]) out.add(id); });
+  return out;
+}
+function wheelFilterOptions(){
+  const opts = [['all','Everyone still in the game'], ['tribe:purple','🟣 Savu tribe only'], ['tribe:yellow','🟡 Toka tribe only']];
+  if(tvState && Array.isArray(tvState.teams)) tvState.teams.forEach(t=> opts.push(['team:' + t.id, t.name + ' (fantasy team)']));
+  return opts;
+}
+function wheelPool(filter, out){
+  let list = CASTAWAYS.filter(c=> !out.has(c.id));
+  if(filter.startsWith('tribe:')){
+    list = list.filter(c=> currentTribe(c) === filter.slice(6));
+  } else if(filter.startsWith('team:')){
+    const tid = filter.slice(5);
+    const team = tvState && Array.isArray(tvState.teams) ? tvState.teams.find(t=>t.id === tid) : null;
+    const sc = normalizeScoring(lsGet('s51_tv_scoring', null));
+    const ids = new Set([...(team ? (team.picks||[]) : []), ...((sc.honorary||{})[tid] || [])]);
+    list = list.filter(c=> ids.has(c.id));
+  }
+  return list;
+}
+function wheelRemaining(st, out){
+  const picked = new Set(st.picks.map(p=>p.id));
+  return wheelPool(st.filter, out).filter(c=> !picked.has(c.id));
+}
+
+function wheelDraw(canvas, slices, rot){
+  const size = canvas.clientWidth;
+  if(!size) return;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(size * dpr); canvas.height = Math.round(size * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, size, size);
+  const cx = size/2, cy = size/2, R = size/2 - 10;
+  const n = slices.length;
+  if(!n){
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.fillStyle = '#1d4635'; ctx.fill();
+    ctx.lineWidth = 3; ctx.strokeStyle = '#c9a668'; ctx.stroke();
+    ctx.fillStyle = '#ecdfc0'; ctx.font = '600 16px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('No one left on the wheel', cx, cy);
+    return;
+  }
+  const sa = Math.PI * 2 / n;
+  slices.forEach((c, i)=>{
+    const a0 = rot + i*sa;
+    const t = currentTribe(c);
+    const light = i % 2 === 0;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, a0, a0 + sa); ctx.closePath();
+    ctx.fillStyle = t === 'purple' ? (light ? '#7b4fc9' : '#5d3a9e') : t === 'yellow' ? (light ? '#e8c53d' : '#caa626') : (light ? '#3b6b55' : '#2c5443');
+    ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = '#0a1712'; ctx.stroke();
+    // name, running along the slice toward the rim
+    ctx.save();
+    ctx.translate(cx, cy); ctx.rotate(a0 + sa/2);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = t === 'yellow' ? '#1a1200' : '#ffffff';
+    const arcH = 2 * (R*0.62) * Math.sin(Math.min(sa/2, Math.PI/2));
+    let fs = Math.max(10, Math.min(21, arcH * 0.55));
+    ctx.font = '700 ' + fs + 'px Inter, sans-serif';
+    const maxW = R * 0.70;
+    while(ctx.measureText(c.short).width > maxW && fs > 9){ fs -= 1; ctx.font = '700 ' + fs + 'px Inter, sans-serif'; }
+    ctx.fillText(c.short, R - 14, 0);
+    ctx.restore();
+  });
+  // rim + hub
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.lineWidth = 4; ctx.strokeStyle = '#c9a668'; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, Math.max(18, R*0.12), 0, Math.PI*2); ctx.fillStyle = '#0a1712'; ctx.fill();
+  ctx.lineWidth = 3; ctx.strokeStyle = '#ecdfc0'; ctx.stroke();
+  ctx.font = Math.max(14, R*0.1) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ff7a33';
+  ctx.fillText('🔥', cx, cy + 1);
+  // fixed pointer at the top
+  ctx.beginPath(); ctx.moveTo(cx - 15, 1); ctx.lineTo(cx + 15, 1); ctx.lineTo(cx, 30); ctx.closePath();
+  ctx.fillStyle = '#ff7a33'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#0a1712'; ctx.stroke();
+}
+
+function wheelRandom(){
+  try{ const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] / 4294967296; }catch(e){ return Math.random(); }
+}
+function wheelIndexAtPointer(rot, n){
+  const sa = Math.PI * 2 / n;
+  const a = (((-Math.PI/2 - rot) % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
+  return Math.min(n - 1, Math.floor(a / sa));
+}
+
+function wheelSpin(canvas){
+  if(wheelSpinning) return;
+  const st = wheelState();
+  const slices = wheelRemaining(st, wheelOutSet());
+  if(!slices.length || st.picks.length >= st.spins) return;
+  wheelSpinning = true;
+  wheelLast = null;
+  try{ AudioFX.whoosh(); }catch(e){}
+  const n = slices.length, sa = Math.PI * 2 / n;
+  const idx = Math.floor(wheelRandom() * n);
+  const jitter = (wheelRandom() - 0.5) * sa * 0.7;
+  const target = -Math.PI/2 - (idx + 0.5) * sa + jitter;
+  const cur = wheelRot % (Math.PI*2);
+  let delta = (((target - cur) % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
+  delta += Math.PI * 2 * (5 + Math.floor(wheelRandom() * 3));
+  const start = wheelRot, dur = 4800 + wheelRandom() * 900, t0 = performance.now();
+  let lastSlice = -1;
+  document.querySelectorAll('#wheelRoot button, #wheelRoot select, #wheelRoot input').forEach(b=>{ b.disabled = true; });
+  function frame(now){
+    const p = Math.min(1, (now - t0) / dur);
+    const e = 1 - Math.pow(1 - p, 4);
+    wheelRot = start + delta * e;
+    wheelDraw(canvas, slices, wheelRot);
+    const sl = wheelIndexAtPointer(wheelRot, n);
+    if(sl !== lastSlice){ lastSlice = sl; if(p < 0.97){ try{ AudioFX.tick(); }catch(err){} } }
+    if(p < 1){ requestAnimationFrame(frame); return; }
+    const winner = slices[wheelIndexAtPointer(wheelRot, n)];
+    const cur2 = wheelState();
+    cur2.picks.push({ id: winner.id, at: Date.now() });
+    wheelSave(cur2);
+    wheelLast = winner.id;
+    wheelSpinning = false;
+    try{ AudioFX.drum(); setTimeout(()=>AudioFX.success(), 250); }catch(err){}
+    renderWheel();
+  }
+  requestAnimationFrame(frame);
+}
+
+function wheelResultsText(label, ids){
+  return (label ? label + '\n' : 'Wheel picks\n') + ids.map((id, i)=> (i+1) + '. ' + ((byId(id)||{}).short || id)).join('\n');
+}
+
+function renderWheel(){
+  const root = $('#wheelRoot');
+  if(!root || wheelSpinning) return;
+  const st = wheelState();
+  const out = wheelOutSet();
+  const slices = wheelRemaining(st, out);
+  const done = st.picks.length >= st.spins;
+  root.innerHTML = '';
+
+  root.appendChild(el('div',{class:'section-head'},
+    el('div',{},
+      el('h2',{}, '🎡 Player Wheel'),
+      el('p',{}, 'Only castaways still in the game are on the wheel — anyone eliminated drops off automatically. Each pick is written down and comes off the wheel, then spin again.'))));
+
+  // --- controls ---
+  const box = el('div',{class:'card-box', style:'margin-bottom:14px'});
+  const row = el('div',{style:'display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end'});
+  const labelInp = el('input',{type:'text', placeholder:'e.g. Challenge pairings', value: st.label, style:'width:100%'});
+  labelInp.addEventListener('input', ()=>{ const s = wheelState(); s.label = labelInp.value; wheelSave(s); });
+  row.appendChild(el('div',{style:'flex:2;min-width:200px'}, el('label',{class:'field'}, 'What is this wheel for?'), labelInp));
+  const spinsInp = el('input',{type:'number', min:'1', max:'30', value:String(st.spins), style:'width:100%'});
+  spinsInp.addEventListener('change', ()=>{ const s = wheelState(); s.spins = Math.max(1, Math.min(30, parseInt(spinsInp.value) || 1)); wheelSave(s); renderWheel(); });
+  row.appendChild(el('div',{style:'flex:0 0 110px'}, el('label',{class:'field'}, 'Spins'), spinsInp));
+  const sel = el('select',{style:'width:100%'});
+  wheelFilterOptions().forEach(([v, l])=>{ const o = el('option',{value:v}, l); if(v === st.filter) o.selected = true; sel.appendChild(o); });
+  sel.addEventListener('change', ()=>{ const s = wheelState(); s.filter = sel.value; wheelSave(s); renderWheel(); });
+  row.appendChild(el('div',{style:'flex:1;min-width:190px'}, el('label',{class:'field'}, 'Who is on the wheel'), sel));
+  box.appendChild(row);
+  const outNames = CASTAWAYS.filter(c=>out.has(c.id)).map(c=>c.short);
+  box.appendChild(el('div',{style:'margin-top:10px;font-size:0.8rem;color:var(--sand-dim)'},
+    'On the wheel now: ' + slices.length + ' · Out of the game: ' + (outNames.length ? outNames.join(', ') : 'nobody yet')));
+  root.appendChild(box);
+
+  // --- wheel ---
+  const stage = el('div',{style:'display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:16px'});
+  const canvas = el('canvas',{style:'width:100%;max-width:460px;aspect-ratio:1/1;display:block'});
+  stage.appendChild(canvas);
+  const btnRow = el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;justify-content:center'});
+  const canSpin = !done && slices.length > 0;
+  const spinBtn = el('button',{class:'btn primary', style:'font-size:1.05rem;padding:12px 28px'},
+    done ? '✅ All ' + st.spins + ' spins done' : (slices.length ? '🎡 SPIN  (' + (st.picks.length + 1) + ' of ' + st.spins + ')' : 'Nobody left to spin'));
+  spinBtn.disabled = !canSpin;
+  spinBtn.addEventListener('click', ()=> wheelSpin(canvas));
+  btnRow.appendChild(spinBtn);
+  const undoBtn = el('button',{class:'btn'}, '↩︎ Undo last pick');
+  undoBtn.disabled = !st.picks.length;
+  undoBtn.addEventListener('click', ()=>{ const s = wheelState(); s.picks.pop(); wheelSave(s); wheelLast = null; renderWheel(); });
+  btnRow.appendChild(undoBtn);
+  const resetBtn = el('button',{class:'btn danger'}, 'Start over');
+  resetBtn.disabled = !st.picks.length;
+  resetBtn.addEventListener('click', ()=>{
+    if(!confirm('Put everyone back on the wheel and clear this round\'s picks?')) return;
+    const s = wheelState(); s.picks = []; wheelSave(s); wheelLast = null; renderWheel();
+  });
+  btnRow.appendChild(resetBtn);
+  stage.appendChild(btnRow);
+  root.appendChild(stage);
+
+  // --- latest pick ---
+  if(wheelLast && byId(wheelLast)){
+    const c = byId(wheelLast);
+    const reveal = el('div',{class:'card-box', style:'display:flex;align-items:center;gap:16px;justify-content:center;margin-bottom:14px;border-color:var(--torch)'});
+    const ph = photoBlock(c); ph.style.width = '84px'; ph.style.height = '84px'; ph.style.borderRadius = '50%'; ph.style.overflow = 'hidden'; ph.style.flex = '0 0 auto';
+    reveal.appendChild(ph);
+    reveal.appendChild(el('div',{},
+      el('div',{style:'font-size:0.78rem;color:var(--sand-dim);text-transform:uppercase;letter-spacing:.08em'}, 'Spin ' + st.picks.length + ' of ' + st.spins),
+      el('div',{style:'font-size:1.8rem;font-weight:800;color:var(--ember)'}, c.short),
+      tribeChip(c)));
+    root.appendChild(reveal);
+  }
+
+  // --- picks written down ---
+  const picksBox = el('div',{class:'card-box', style:'margin-bottom:14px'});
+  picksBox.appendChild(el('h3',{style:'margin:0 0 8px'}, '📝 Picks' + (st.label ? ' — ' + st.label : '')));
+  if(!st.picks.length){
+    picksBox.appendChild(el('div',{style:'color:var(--sand-dim);font-size:0.85rem'}, 'Nothing picked yet. Spin the wheel — each winner is written here and removed from the wheel.'));
+  } else {
+    st.picks.forEach((p, i)=>{
+      const c = byId(p.id);
+      if(!c) return;
+      const r = el('div',{style:'display:flex;align-items:center;gap:10px;padding:6px 0;border-top:' + (i ? '1px solid var(--line)' : 'none')});
+      r.appendChild(el('div',{style:'width:26px;font-weight:800;color:var(--torch)'}, String(i+1)));
+      const img = el('img',{src:c.photo, alt:c.short, style:'width:34px;height:34px;border-radius:50%;object-fit:cover'});
+      img.onerror = function(){ this.style.display = 'none'; };
+      r.appendChild(img);
+      r.appendChild(el('div',{style:'flex:1;font-weight:700'}, c.short));
+      r.appendChild(tribeChip(c));
+      picksBox.appendChild(r);
+    });
+    const actions = el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;margin-top:12px'});
+    const copyBtn = el('button',{class:'btn'}, '📋 Copy results');
+    copyBtn.addEventListener('click', ()=> copyToClipboard(wheelResultsText(st.label, st.picks.map(p=>p.id))));
+    actions.appendChild(copyBtn);
+    const saveBtn = el('button',{class:'btn primary'}, '💾 Save round & start a new wheel');
+    saveBtn.addEventListener('click', ()=>{
+      const s = wheelState();
+      s.history.unshift({ label: s.label, at: Date.now(), picks: s.picks.map(p=>p.id) });
+      s.history = s.history.slice(0, 30);
+      s.picks = []; s.label = '';
+      wheelSave(s); wheelLast = null; toast('Round saved'); renderWheel();
+    });
+    actions.appendChild(saveBtn);
+    picksBox.appendChild(actions);
+  }
+  root.appendChild(picksBox);
+
+  // --- saved rounds ---
+  if(st.history.length){
+    const hb = el('div',{class:'card-box'});
+    hb.appendChild(el('h3',{style:'margin:0 0 8px'}, '🗂️ Saved rounds'));
+    st.history.forEach((h, i)=>{
+      const when = new Date(h.at).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+      const names = (h.picks||[]).map(id=> (byId(id)||{}).short || id).join(' → ');
+      const r = el('div',{style:'display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0;border-top:' + (i ? '1px solid var(--line)' : 'none')});
+      r.appendChild(el('div',{style:'flex:1;min-width:200px'},
+        el('div',{style:'font-weight:700'}, (h.label || 'Wheel round') + ' · ' + when),
+        el('div',{style:'font-size:0.82rem;color:var(--sand-dim)'}, names)));
+      const cp = el('button',{class:'btn', style:'padding:5px 12px;font-size:0.76rem'}, 'Copy');
+      cp.addEventListener('click', ()=> copyToClipboard(wheelResultsText(h.label, h.picks||[])));
+      const del = el('button',{class:'btn danger', style:'padding:5px 12px;font-size:0.76rem'}, 'Delete');
+      del.addEventListener('click', ()=>{ const s = wheelState(); s.history.splice(i, 1); wheelSave(s); renderWheel(); });
+      r.appendChild(cp); r.appendChild(del);
+      hb.appendChild(r);
+    });
+    root.appendChild(hb);
+  }
+
+  wheelDraw(canvas, slices, wheelRot);
+}
+window.addEventListener('resize', ()=>{
+  clearTimeout(wheelResize);
+  wheelResize = setTimeout(()=>{ const p = document.getElementById('panel-wheel'); if(p && p.classList.contains('active') && !wheelSpinning) renderWheel(); }, 200);
+});
+
+
+/* =========================================================================
+   VOTING HISTORY (Rankings tab)
+   One entry per tribal council: who went home, and who each player voted
+   for. Stats per player: votes cast, how many were for the person who went
+   home ("voted right"), accuracy %, and votes received. The seed below is
+   transcribed from the season's voting-history table; new tribal councils
+   are added in the editor at the bottom of the tab, stored per council in
+   the cloud (tvDraft/voting/<id>) so every device sees the same history.
+   Special entries instead of a name: Shot in the Dark, Exiled, Didn't vote.
+   ========================================================================= */
+const VOTING_SEED = [
+  { id:'1',  order:1, label:'Episode 1', out:'aaliyah', kind:'voted out', result:'6-2',
+    votes:{ brady:'aaliyah', devin:'jenna', jelly:'jenna', kilby:'aaliyah', maggie:'aaliyah', mike:'aaliyah', 'thien-an':'aaliyah', patt:'aaliyah' },
+    notes:{ jenna:'Shot in the Dark', aaliyah:'Shot in the Dark', lewis:'Exiled' } },
+  { id:'2',  order:2, label:'Episode 2', out:'ana', kind:'voted out', result:'6-4',
+    votes:{ alexis:'ana', carter:'eric', cristian:'ana', eric:'ana', kristin:'ana', linnea:'ana', ori:'eric', sharonda:'ana', rob:'eric', ana:'eric' },
+    notes:{} },
+  { id:'3a', order:3, label:'Episode 3 — Savu', out:'rob', kind:'quit', result:'Quit — no vote', votes:{}, notes:{} },
+  { id:'3b', order:4, label:'Episode 3 — Post-mutiny', out:'patt', kind:'voted out', result:'6-5',
+    votes:{ brady:'kilby', carter:'patt', devin:'kilby', jelly:'kilby', jenna:'patt', kilby:'patt', lewis:'patt', maggie:'patt', mike:'kilby', 'thien-an':'patt', patt:'kilby' },
+    notes:{} }
+];
+var votingSort = 'accuracy';
+const VOTING_SPECIAL = { '__sitd':'Shot in the Dark', '__exile':'Exiled', '__none':"Didn't vote" };
+
+function getVotingCouncils(){
+  const map = {};
+  VOTING_SEED.forEach(c=>{ map[c.id] = JSON.parse(JSON.stringify(c)); });
+  const ov = lsGet('s51_voting_overrides', {}) || {};
+  Object.keys(ov).forEach(id=>{
+    const o = ov[id];
+    if(!o) return;
+    if(o.deleted){ delete map[id]; return; }
+    map[id] = { id, order: Number(o.order)||0, label: o.label || ('Council ' + id), out: o.out || '', kind: o.kind || 'voted out', result: o.result || '', votes: o.votes || {}, notes: o.notes || {} };
+  });
+  return Object.values(map).sort((a,b)=> (a.order - b.order) || String(a.id).localeCompare(String(b.id)));
+}
+function saveVotingCouncil(c){
+  const ov = lsGet('s51_voting_overrides', {}) || {};
+  ov[c.id] = c;
+  lsSet('s51_voting_overrides', ov);
+  if(firebaseReady) trackWrite(fbDb.ref('tvDraft/voting/' + c.id).set(c));
+}
+function deleteVotingCouncil(id){
+  const ov = lsGet('s51_voting_overrides', {}) || {};
+  ov[id] = { deleted:true };
+  lsSet('s51_voting_overrides', ov);
+  if(firebaseReady) trackWrite(fbDb.ref('tvDraft/voting/' + id).set({ deleted:true }));
+}
+function votingStats(councils){
+  const st = {};
+  CASTAWAYS.forEach(c=>{ st[c.id] = { cast:0, right:0, received:0, picks:[] }; });
+  councils.forEach(co=>{
+    Object.keys(co.votes||{}).forEach(voter=>{
+      const target = co.votes[voter];
+      if(!st[voter]) return;
+      const right = target === co.out;
+      st[voter].cast++; if(right) st[voter].right++;
+      st[voter].picks.push({ co, target, right });
+      if(st[target]) st[target].received++;
+    });
+  });
+  return st;
+}
+function votingPct(s){ return s.cast ? Math.round(100 * s.right / s.cast) : null; }
+
+function renderVotingHistory(){
+  const councils = getVotingCouncils();
+  const stats = votingStats(councils);
+  const sc = normalizeScoring(lsGet('s51_tv_scoring', null));
+  const wrap = el('div',{});
+  wrap.appendChild(el('div',{class:'section-head'}, el('div',{},
+    el('h2',{}, '🗳️ Voting History'),
+    el('p',{}, 'Who voted for whom at every tribal council. ✓ = voted for the person who went home, ✗ = voted for someone who stayed. Shot in the Dark, exile and quit episodes don\'t count as votes.'))));
+
+  const totalVotes = Object.values(stats).reduce((a,s)=>a + s.cast, 0);
+  wrap.appendChild(el('div',{style:'font-size:0.82rem;color:var(--sand-dim);margin:-4px 0 14px'},
+    totalVotes + ' votes cast across ' + councils.length + ' tribal council' + (councils.length===1?'':'s') + '.'));
+
+  // ---- leaderboard ----
+  const sorts = [['accuracy','🎯 Most accurate'],['received','🎯 Most votes against'],['cast','🗳️ Most votes cast']];
+  const sortRow = el('div',{class:'subtabs', style:'margin-bottom:10px'});
+  sorts.forEach(([id,label])=>{
+    const b = el('button',{class: votingSort===id ? 'on' : ''}, label);
+    b.addEventListener('click', ()=>{ votingSort = id; renderRankings(); });
+    sortRow.appendChild(b);
+  });
+  wrap.appendChild(sortRow);
+
+  const people = CASTAWAYS.slice().sort((a,b)=>{
+    const sa = stats[a.id], sb = stats[b.id];
+    if(votingSort === 'received') return (sb.received - sa.received) || (sb.cast - sa.cast) || a.short.localeCompare(b.short);
+    if(votingSort === 'cast') return (sb.cast - sa.cast) || ((votingPct(sb)||0) - (votingPct(sa)||0)) || a.short.localeCompare(b.short);
+    const pa = votingPct(sa), pb = votingPct(sb);
+    if(pa === null && pb === null) return a.short.localeCompare(b.short);
+    if(pa === null) return 1; if(pb === null) return -1;
+    return (pb - pa) || (sb.cast - sa.cast) || a.short.localeCompare(b.short);
+  });
+  const list = el('div',{class:'lb-list'});
+  people.forEach((c, i)=>{
+    const s = stats[c.id];
+    const pct = votingPct(s);
+    const row = el('div',{class:'lb-row'});
+    row.appendChild(el('div',{class:'lb-rank'}, String(i+1)));
+    const img = el('img',{class:'lb-thumb', src:c.photo, alt:c.short});
+    img.onerror = function(){ this.style.display = 'none'; };
+    row.appendChild(img);
+    const info = el('div',{style:'flex:1;min-width:0'});
+    const nameLine = el('div',{class:'lb-name'}, c.short);
+    nameLine.appendChild(tribeChip(c));
+    if(sc.eliminated && sc.eliminated[c.id]) nameLine.appendChild(el('span',{class:'elim-tag'}, 'OUT wk ' + sc.eliminated[c.id]));
+    info.appendChild(nameLine);
+    const picksTxt = councils.map(co=>{
+      const t = (co.votes||{})[c.id];
+      if(t){ const tc = byId(t); return (co.label.replace('Episode ','Ep ').replace(/ — .*/,'') ) + ': ' + (tc ? tc.short : t) + (t === co.out ? ' ✓' : ' ✗'); }
+      const note = (co.notes||{})[c.id];
+      return note ? (co.label.replace('Episode ','Ep ').replace(/ — .*/,'') + ': ' + note) : null;
+    }).filter(Boolean).join('  ·  ');
+    info.appendChild(el('div',{class:'lb-sub'}, picksTxt || 'No votes yet'));
+    row.appendChild(info);
+    const right = el('div',{style:'text-align:right;white-space:nowrap'});
+    right.appendChild(el('div',{style:'font-family:\'Bebas Neue\';font-size:1.5rem;color:var(--torch);line-height:1'}, pct === null ? '—' : pct + '%'));
+    right.appendChild(el('div',{style:'font-size:0.72rem;color:var(--sand-dim)'}, s.right + '/' + s.cast + ' right'));
+    right.appendChild(el('div',{style:'font-size:0.72rem;color:var(--sand-dim)'}, s.received + ' vote' + (s.received===1?'':'s') + ' against'));
+    row.appendChild(right);
+    list.appendChild(row);
+  });
+  wrap.appendChild(list);
+
+  // ---- grid ----
+  wrap.appendChild(el('h3',{style:'margin:24px 0 10px;font-size:1rem'}, '📋 Full Voting Grid'));
+  const scroller = el('div',{style:'overflow-x:auto;border:1px solid var(--line);border-radius:12px'});
+  const table = el('table',{class:'score-table', style:'min-width:' + (130 + councils.length*120) + 'px'});
+  const hr = el('tr',{}, el('th',{style:'text-align:left'}, 'Voter'));
+  councils.forEach(co=> hr.appendChild(el('th',{}, co.label)));
+  table.appendChild(el('thead',{}, hr));
+  const tb = el('tbody',{});
+  const outRow = el('tr',{}, el('td',{style:'font-weight:700'}, 'Went home'));
+  councils.forEach(co=>{
+    const oc = byId(co.out);
+    outRow.appendChild(el('td',{style:'font-weight:700;color:var(--ember)'}, (oc ? oc.short : '—') + (co.kind && co.kind !== 'voted out' ? ' (' + co.kind + ')' : '') + (co.result ? ' · ' + co.result : '')));
+  });
+  tb.appendChild(outRow);
+  CASTAWAYS.slice().sort((a,b)=>a.short.localeCompare(b.short)).forEach(c=>{
+    const tr = el('tr',{}, el('td',{}, c.short));
+    councils.forEach(co=>{
+      const t = (co.votes||{})[c.id];
+      const td = el('td',{style:'text-align:center'});
+      if(t){
+        const tc = byId(t);
+        const right = t === co.out;
+        const bg = tc && tc.tribe === 'purple' ? '#5d3a9e' : (tc && tc.tribe === 'yellow' ? '#caa626' : '#3b6b55');
+        const fg = tc && tc.tribe === 'yellow' ? '#1a1200' : '#fff';
+        const chip = el('span',{style:'display:inline-block;padding:3px 9px;border-radius:6px;font-weight:700;font-size:0.82rem;background:' + bg + ';color:' + fg + (right ? ';box-shadow:0 0 0 2px #ecdfc0' : '')}, (tc ? tc.short : t) + (right ? ' ✓' : ''));
+        td.appendChild(chip);
+      } else {
+        const note = (co.notes||{})[c.id];
+        td.appendChild(el('span',{style:'color:var(--sand-dim);font-size:0.78rem;font-style:italic'}, note || '—'));
+      }
+      tr.appendChild(td);
+    });
+    tb.appendChild(tr);
+  });
+  table.appendChild(tb);
+  scroller.appendChild(table);
+  wrap.appendChild(scroller);
+  wrap.appendChild(el('p',{style:'margin:8px 0 0;font-size:0.74rem;color:var(--sand-dim)'}, 'Cell color = the tribe of the person voted for. A ringed ✓ cell means that vote sent them home.'));
+
+  wrap.appendChild(votingEditorBox(councils));
+  return wrap;
+}
+
+function votingEditorBox(councils){
+  const box = el('div',{id:'votingEditor', class:'card-box', style:'margin-top:24px'});
+  box.appendChild(el('h3',{style:'margin:0 0 4px;font-size:0.95rem'}, '✏️ Add / Edit a Tribal Council'));
+  box.appendChild(el('p',{style:'margin:0 0 12px;font-size:0.76rem;color:var(--sand-dim)'},
+    'After each tribal council: pick who went home, then set who each person voted for (leave blank for anyone who wasn\'t at that tribal). Saves for everyone, on every device.'));
+
+  const picker = el('select',{style:'width:100%;margin-bottom:12px'});
+  picker.appendChild(el('option',{value:'__new'}, '➕ New tribal council'));
+  councils.forEach(co=> picker.appendChild(el('option',{value:co.id}, 'Edit: ' + co.label)));
+  box.appendChild(picker);
+  const form = el('div',{});
+  box.appendChild(form);
+
+  function build(id){
+    form.innerHTML = '';
+    const existing = id === '__new' ? null : councils.find(c=>c.id===id);
+    const order = existing ? existing.order : (councils.reduce((m,c)=>Math.max(m, c.order), 0) + 1);
+    const labelInp = el('input',{type:'text', placeholder:'e.g. Episode 4', value: existing ? existing.label : 'Episode ' + (councils.length ? '' : '') });
+    if(!existing) labelInp.value = '';
+    const outSel = el('select',{});
+    outSel.appendChild(el('option',{value:''}, '— who went home —'));
+    CASTAWAYS.slice().sort((a,b)=>a.short.localeCompare(b.short)).forEach(c=>{ const o = el('option',{value:c.id}, c.short); if(existing && existing.out === c.id) o.selected = true; outSel.appendChild(o); });
+    const kindSel = el('select',{});
+    ['voted out','quit','medically evacuated','no one'].forEach(k=>{ const o = el('option',{value:k}, k); if(existing && existing.kind === k) o.selected = true; kindSel.appendChild(o); });
+    const resultInp = el('input',{type:'text', placeholder:'e.g. 6-4', value: existing ? (existing.result||'') : ''});
+    const top = el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px'},
+      el('div',{style:'flex:2;min-width:170px'}, el('label',{class:'field'}, 'Label'), labelInp),
+      el('div',{style:'flex:2;min-width:170px'}, el('label',{class:'field'}, 'Went home'), outSel),
+      el('div',{style:'flex:1;min-width:130px'}, el('label',{class:'field'}, 'How'), kindSel),
+      el('div',{style:'flex:1;min-width:90px'}, el('label',{class:'field'}, 'Vote count'), resultInp));
+    form.appendChild(top);
+
+    const t = el('table',{class:'score-table'});
+    t.appendChild(el('thead',{}, el('tr',{}, el('th',{}, 'Voter'), el('th',{}, 'Voted for'))));
+    const tb = el('tbody',{});
+    const selects = {};
+    CASTAWAYS.slice().sort((a,b)=>a.short.localeCompare(b.short)).forEach(c=>{
+      const sel = el('select',{style:'width:100%'});
+      sel.appendChild(el('option',{value:''}, '— wasn\'t at tribal —'));
+      Object.keys(VOTING_SPECIAL).forEach(k=> sel.appendChild(el('option',{value:k}, VOTING_SPECIAL[k])));
+      CASTAWAYS.slice().sort((a,b)=>a.short.localeCompare(b.short)).forEach(tc=>{ if(tc.id !== c.id || true) sel.appendChild(el('option',{value:tc.id}, tc.short)); });
+      if(existing){
+        const v = (existing.votes||{})[c.id];
+        const note = (existing.notes||{})[c.id];
+        if(v) sel.value = v;
+        else if(note){ const k = Object.keys(VOTING_SPECIAL).find(k=> VOTING_SPECIAL[k] === note); if(k) sel.value = k; }
+      }
+      selects[c.id] = sel;
+      tb.appendChild(el('tr',{}, el('td',{}, c.short), el('td',{}, sel)));
+    });
+    t.appendChild(tb);
+    form.appendChild(el('div',{style:'overflow-x:auto'}, t));
+
+    const btns = el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;margin-top:12px'});
+    const save = el('button',{class:'btn primary'}, '💾 Save tribal council');
+    save.addEventListener('click', ()=>{
+      const label = labelInp.value.trim();
+      if(!label){ toast('Give it a label, like Episode 4'); return; }
+      if(!outSel.value && kindSel.value !== 'no one'){ toast('Pick who went home'); return; }
+      const votes = {}, notes = {};
+      Object.keys(selects).forEach(cid=>{
+        const v = selects[cid].value;
+        if(!v) return;
+        if(VOTING_SPECIAL[v]) notes[cid] = VOTING_SPECIAL[v]; else votes[cid] = v;
+      });
+      const cid = existing ? existing.id : ('c' + Date.now());
+      saveVotingCouncil({ id: cid, order, label, out: outSel.value, kind: kindSel.value, result: resultInp.value.trim(), votes, notes });
+      AudioFX.success();
+      toast('Tribal council saved');
+      renderRankings();
+    });
+    btns.appendChild(save);
+    if(existing){
+      const del = el('button',{class:'btn danger'}, 'Delete this council');
+      del.addEventListener('click', ()=>{
+        if(!confirm('Delete "' + existing.label + '" from the voting history?')) return;
+        deleteVotingCouncil(existing.id);
+        toast('Deleted');
+        renderRankings();
+      });
+      btns.appendChild(del);
+    }
+    form.appendChild(btns);
+  }
+  picker.addEventListener('change', ()=> build(picker.value));
+  build('__new');
+  return box;
+}
 
 </script>
 </body>
