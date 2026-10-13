@@ -563,7 +563,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-10-07 13:48 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-10-13 17:44 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -3666,7 +3666,44 @@ function defaultTvNames(n){
    as an instant local cache and an offline fallback. */
 function saveTv(){ lsSet('s51_tv', tvState); if(firebaseReady) fbDb.ref('tvDraft/state').set(tvState); }
 function saveTvSetup(){ lsSet('s51_tv_setup', tvSetup); if(firebaseReady) fbDb.ref('tvDraft/setup').set(tvSetup); }
-function saveTvScoring(newScoring){ lsSet('s51_tv_scoring', newScoring); if(firebaseReady) fbDb.ref('tvDraft/scoring').set(newScoring); }
+/* ---------- Auto-saved version history for TV Draft scoring ----------
+   Firebase only ever holds the CURRENT copy, so when scores get wiped (a
+   reset on some device, a stale page overwriting newer data) there is
+   nothing to rewind to. This keeps a rolling set of recent snapshots in
+   Firebase (tvDraftHistory/scoring/<timestamp>) so a wipe is always
+   recoverable from Export -> Backup & Restore -> "Show saved versions".
+   Snapshots are taken (a) at most every 10 min while saving, (b) the
+   moment a device sees the shared scores SHRINK (it still holds the
+   pre-wipe copy), (c) right before Reset Scoring Data / a restore. */
+let lastScoringStash = 0;
+const SCORING_HISTORY_KEEP = 60;
+function scoringSize(s){
+  if(!s) return 0;
+  let n = 0;
+  Object.values(s.entries||{}).forEach(w=>{
+    if(w) Object.values(w).forEach(r=>{ if(r && Object.values(r).some(v=>Number(v)>0)) n++; });
+  });
+  Object.values(s.steals||{}).forEach(arr=>{ n += (arr||[]).length; });
+  return n;
+}
+function stashScoringHistory(snapshot, reason){
+  if(!firebaseReady || !snapshot || !scoringSize(snapshot)) return;
+  const at = Date.now();
+  lastScoringStash = at;
+  fbDb.ref('tvDraftHistory/scoring/' + at).set({ at, reason, size: scoringSize(snapshot), scoring: JSON.parse(JSON.stringify(snapshot)) })
+    .then(()=> fbDb.ref('tvDraftHistory/scoring').once('value'))
+    .then(snap=>{
+      const keys = Object.keys(snap.val() || {}).sort();
+      keys.slice(0, Math.max(0, keys.length - SCORING_HISTORY_KEEP)).forEach(k=> fbDb.ref('tvDraftHistory/scoring/' + k).remove());
+    })
+    .catch(()=>{});
+}
+function saveTvScoring(newScoring){
+  const prev = normalizeScoring(lsGet('s51_tv_scoring', null));
+  if(firebaseReady && Date.now() - lastScoringStash > 10*60*1000) stashScoringHistory(prev, 'autosave');
+  lsSet('s51_tv_scoring', newScoring);
+  if(firebaseReady) fbDb.ref('tvDraft/scoring').set(newScoring);
+}
 function saveTribeOverrides(newOverrides){
   tribeOverrides = newOverrides || {};
   lsSet('s51_tribe_overrides', tribeOverrides);
@@ -3942,7 +3979,12 @@ if(firebaseReady){
   fbDb.ref('tvDraft/scoring').on('value', snap=>{
     const remote = snap.val();
     if(remote === null){ fbDb.ref('tvDraft/scoring').set(normalizeScoring(lsGet('s51_tv_scoring', null))); return; }
-    lsSet('s51_tv_scoring', normalizeScoring(remote));
+    const remoteScoring = normalizeScoring(remote);
+    const localScoring = normalizeScoring(lsGet('s51_tv_scoring', null));
+    // Shared scores just got SMALLER than what this device last had — this
+    // device still holds the pre-wipe copy, so keep it before it's replaced.
+    if(scoringSize(localScoring) > scoringSize(remoteScoring) && Date.now() - lastScoringStash > 30*1000) stashScoringHistory(localScoring, 'before-shrink');
+    lsSet('s51_tv_scoring', remoteScoring);
     renderScoring();
     renderTeamsTab();
   });
@@ -6023,6 +6065,57 @@ function scoringBackupBox(){
   });
   restoreRow.appendChild(fileInp);
   box.appendChild(restoreRow);
+
+  // Rewind: the app keeps recent snapshots of the TV Draft scores in the
+  // cloud (see stashScoringHistory) — pick one to bring it back.
+  const histRow = el('div',{style:'margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)'});
+  histRow.appendChild(el('label',{class:'field'}, '🕘 Rewind — auto-saved versions of the TV Draft scores'));
+  histRow.appendChild(el('p',{style:'margin:0 0 10px;font-size:0.78rem;color:var(--sand-dim)'},
+    'The app quietly keeps recent copies of the scores and steals in the cloud (every ~10 minutes of activity, and right before any wipe). If something goes blank, pick the newest version that still has your weeks and steals.'));
+  const histBtn = el('button',{class:'btn'}, '🕘 Show saved versions');
+  const histList = el('div',{style:'margin-top:10px;display:flex;flex-direction:column;gap:6px'});
+  const REASONS = { autosave:'auto-save', 'before-shrink':'caught before a wipe', 'before-reset':'before a reset', 'before-restore':'before a restore' };
+  histBtn.addEventListener('click', ()=>{
+    if(!firebaseReady){ toast('Needs the cloud connection'); return; }
+    histList.innerHTML = '';
+    histList.appendChild(el('div',{style:'font-size:0.8rem;color:var(--sand-dim)'}, 'Loading…'));
+    fbDb.ref('tvDraftHistory/scoring').once('value').then(snap=>{
+      const all = snap.val() || {};
+      const keys = Object.keys(all).sort().reverse();
+      histList.innerHTML = '';
+      if(!keys.length){
+        histList.appendChild(el('div',{style:'font-size:0.8rem;color:var(--sand-dim)'}, 'No saved versions yet — they start being kept from now on.'));
+        return;
+      }
+      keys.forEach(k=>{
+        const v = all[k] || {};
+        const sc = normalizeScoring(v.scoring);
+        const weeksWith = Object.keys(sc.entries||{}).filter(w=> sc.entries[w] && Object.values(sc.entries[w]).some(r=> r && Object.values(r).some(x=>Number(x)>0))).sort((a,b)=>parseInt(a)-parseInt(b));
+        const stealsN = Object.values(sc.steals||{}).reduce((s,a)=> s + ((a||[]).length), 0);
+        const when = new Date(Number(v.at || k)).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+        const row = el('div',{style:'display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border-radius:8px;background:var(--jungle2)'});
+        row.appendChild(el('div',{style:'flex:1;min-width:180px;font-size:0.8rem'},
+          el('div',{style:'font-weight:700'}, when + ' · ' + (REASONS[v.reason] || v.reason || 'saved')),
+          el('div',{style:'color:var(--sand-dim)'}, 'Weeks with scores: ' + (weeksWith.join(', ') || 'none') + ' · ' + stealsN + ' steal' + (stealsN===1?'':'s'))));
+        const rb = el('button',{class:'btn', style:'padding:5px 12px;font-size:0.76rem'}, 'Restore this');
+        rb.addEventListener('click', ()=>{
+          if(!confirm('Restore the scores from ' + when + '? This replaces the current TV Draft scores and steals on every device (the current version is saved first, so you can undo this).')) return;
+          stashScoringHistory(normalizeScoring(lsGet('s51_tv_scoring', null)), 'before-restore');
+          saveTvScoring(sc);
+          toast('Scores restored — reloading…');
+          setTimeout(()=> location.reload(), 800);
+        });
+        row.appendChild(rb);
+        histList.appendChild(row);
+      });
+    }).catch(()=>{
+      histList.innerHTML = '';
+      histList.appendChild(el('div',{style:'font-size:0.8rem;color:var(--sand-dim)'}, 'Couldn\'t load saved versions right now.'));
+    });
+  });
+  histRow.appendChild(histBtn);
+  histRow.appendChild(histList);
+  box.appendChild(histRow);
   return box;
 }
 
@@ -6062,6 +6155,7 @@ function scoringExport(source){
       const typed = prompt('This erases ALL entered scores, steals, eliminations, and the declared winner for the entire season — for every team, everywhere this app is open. It cannot be undone.\n\nType RESET to confirm.');
       if(typed === null) return;
       if(typed.trim().toUpperCase() !== 'RESET'){ toast('Reset cancelled — nothing was changed'); return; }
+      if(source.type === 'tv') stashScoringHistory(normalizeScoring(scoring), 'before-reset');
       source.save({ categories: scoring.categories, weeks:[...DEFAULT_SEASON_WEEKS], entries:{}, steals:{}, eliminated:{}, winnerId:null, honorary: scoring.honorary||{} });
       toast('Scoring data reset');
       setTimeout(renderScoring, 150);
