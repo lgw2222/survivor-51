@@ -563,7 +563,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-10-13 17:44 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-10-13 17:58 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -3664,8 +3664,45 @@ function defaultTvNames(n){
    — roster, setup, and (below) scoring — is the SAME data on every device,
    not just this browser's localStorage. localStorage is still written too,
    as an instant local cache and an offline fallback. */
-function saveTv(){ lsSet('s51_tv', tvState); if(firebaseReady) fbDb.ref('tvDraft/state').set(tvState); }
-function saveTvSetup(){ lsSet('s51_tv_setup', tvSetup); if(firebaseReady) fbDb.ref('tvDraft/setup').set(tvSetup); }
+function saveTv(){ lsSet('s51_tv', tvState); if(firebaseReady) trackWrite(fbDb.ref('tvDraft/state').set(tvState)); }
+function saveTvSetup(){ lsSet('s51_tv_setup', tvSetup); if(firebaseReady) trackWrite(fbDb.ref('tvDraft/setup').set(tvSetup)); }
+
+/* ---------- Visible cloud-save status ----------
+   A small pill in the corner that tells you, every time, whether your last
+   change actually reached the cloud. "Saved ✓" only appears after Firebase
+   itself confirms the write, so a silent failure can never look like success.
+   Also warns when the phone/computer has lost its connection. */
+let syncPillEl = null, syncOnline = null, syncLast = null, syncPending = 0, syncError = null;
+function renderSyncPill(){
+  if(!document.body) return;
+  if(!syncPillEl){
+    syncPillEl = document.createElement('div');
+    syncPillEl.id = 'syncPill';
+    syncPillEl.style.cssText = 'position:fixed;left:10px;bottom:10px;z-index:9000;padding:6px 11px;border-radius:999px;font:600 12px/1.2 system-ui,sans-serif;background:rgba(10,24,20,.92);border:1px solid rgba(255,255,255,.18);color:#d8cfae;box-shadow:0 2px 10px rgba(0,0,0,.4);max-width:78vw;pointer-events:none';
+    document.body.appendChild(syncPillEl);
+  }
+  let txt, color;
+  if(syncError){ txt = '⚠️ NOT SAVED to cloud — ' + syncError; color = '#ff6b5b'; }
+  else if(syncOnline === false){ txt = '⚠️ Offline — changes will save when you reconnect'; color = '#ffb347'; }
+  else if(syncPending > 0){ txt = '⏳ Saving…'; color = '#d8cfae'; }
+  else if(syncLast){ txt = '✅ Saved to cloud ' + syncLast.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); color = '#6fe0a8'; }
+  else if(syncOnline){ txt = '☁️ Connected'; color = '#6fe0a8'; }
+  else { txt = '☁️ Connecting…'; color = '#d8cfae'; }
+  syncPillEl.textContent = txt;
+  syncPillEl.style.color = color;
+}
+function trackWrite(promise){
+  syncPending++; renderSyncPill();
+  return Promise.resolve(promise).then(()=>{
+    syncPending = Math.max(0, syncPending-1); syncError = null; syncLast = new Date(); renderSyncPill();
+  }).catch(e=>{
+    syncPending = Math.max(0, syncPending-1);
+    syncError = (e && e.code === 'PERMISSION_DENIED') ? 'database refused the write (rules)' : ((e && e.message) || 'unknown error');
+    renderSyncPill();
+    console.error('Cloud save failed', e);
+    toast('⚠️ That change did NOT save to the cloud');
+  });
+}
 /* ---------- Auto-saved version history for TV Draft scoring ----------
    Firebase only ever holds the CURRENT copy, so when scores get wiped (a
    reset on some device, a stale page overwriting newer data) there is
@@ -3676,7 +3713,7 @@ function saveTvSetup(){ lsSet('s51_tv_setup', tvSetup); if(firebaseReady) fbDb.r
    moment a device sees the shared scores SHRINK (it still holds the
    pre-wipe copy), (c) right before Reset Scoring Data / a restore. */
 let lastScoringStash = 0;
-const SCORING_HISTORY_KEEP = 60;
+const SCORING_HISTORY_KEEP = 150;
 function scoringSize(s){
   if(!s) return 0;
   let n = 0;
@@ -3698,11 +3735,64 @@ function stashScoringHistory(snapshot, reason){
     })
     .catch(()=>{});
 }
-function saveTvScoring(newScoring){
-  const prev = normalizeScoring(lsGet('s51_tv_scoring', null));
-  if(firebaseReady && Date.now() - lastScoringStash > 10*60*1000) stashScoringHistory(prev, 'autosave');
-  lsSet('s51_tv_scoring', newScoring);
-  if(firebaseReady) fbDb.ref('tvDraft/scoring').set(newScoring);
+/* ---------- Surgical scoring saves (the fix for "it keeps going blank") ----------
+   The old code saved by .set()-ing the WHOLE scoring record from whatever copy
+   the device happened to hold. Any device with an older/emptier copy (a phone
+   that hadn't synced, a cleared browser, a cached old page, a claim link opened
+   on a friend's phone) would therefore overwrite the entire season with its
+   stale copy. Now a save only writes the individual values that actually
+   CHANGED compared with the last copy this device saw from the cloud (one
+   Firebase multi-path update), so a stale device can only ever touch the exact
+   thing its user just edited — never other weeks, other castaways, or steals.
+   Plus a guard that refuses any save that would erase most of the scores
+   unless it's an explicit, confirmed Reset/Restore. */
+let lastRemoteScoring = null;   // last copy seen from the cloud (normalized)
+function objectifyTop(x){
+  // Firebase hands back numeric-keyed objects ("1","2",...) as arrays with
+  // null holes — turn those back into plain objects so paths line up.
+  if(Array.isArray(x)){ const o = {}; x.forEach((v,i)=>{ if(v != null) o[i] = v; }); return o; }
+  return (x && typeof x === 'object') ? x : {};
+}
+function flattenScoring(s){
+  const out = {};
+  const walk = (v, path)=>{
+    if(v && typeof v === 'object' && !Array.isArray(v)){
+      Object.keys(v).forEach(k=> walk(v[k], path + '/' + k));
+    } else out[path] = (v === undefined) ? null : v;
+  };
+  s = s || {};
+  ['categories','weeks','winnerId'].forEach(k=>{ if(k in s) walk(s[k], k); });
+  ['entries','steals','eliminated','honorary','stealOrder'].forEach(k=> walk(objectifyTop(s[k]), k));
+  return out;
+}
+function diffScoring(base, next){
+  const a = flattenScoring(base), b = flattenScoring(next), up = {};
+  const same = (x,y)=> JSON.stringify(x) === JSON.stringify(y);
+  Object.keys(b).forEach(k=>{ if(!(k in a) || !same(a[k], b[k])) up[k.replace(/^\//,'')] = b[k]; });
+  Object.keys(a).forEach(k=>{ if(!(k in b)) up[k.replace(/^\//,'')] = null; });
+  // drop bare container markers that flatten produced for empty objects
+  Object.keys(up).forEach(k=>{ if(/^(entries|steals|eliminated|honorary|stealOrder)$/.test(k) && up[k] && typeof up[k]==='object') delete up[k]; });
+  return up;
+}
+function saveTvScoring(newScoring, opts){
+  opts = opts || {};
+  const local = normalizeScoring(lsGet('s51_tv_scoring', null));
+  const base = lastRemoteScoring || local;
+  const next = normalizeScoring(newScoring);
+  const sizeBase = scoringSize(base), sizeNext = scoringSize(next);
+  if(!opts.allowShrink && sizeBase >= 6 && sizeNext < sizeBase * 0.5){
+    toast('🛑 Blocked: that would erase most of the saved scores. Nothing was changed.');
+    console.warn('Blocked scoring save that would shrink', sizeBase, '->', sizeNext);
+    setTimeout(()=>{ if(typeof renderScoring==='function') renderScoring(); }, 50);
+    return;
+  }
+  if(firebaseReady && Date.now() - lastScoringStash > 10*60*1000) stashScoringHistory(base, 'autosave');
+  lsSet('s51_tv_scoring', next);
+  if(!firebaseReady) return;
+  const up = diffScoring(base, next);
+  if(!Object.keys(up).length) return;
+  lastRemoteScoring = next;
+  trackWrite(fbDb.ref('tvDraft/scoring').update(up));
 }
 function saveTribeOverrides(newOverrides){
   tribeOverrides = newOverrides || {};
@@ -3984,6 +4074,13 @@ if(firebaseReady){
     // Shared scores just got SMALLER than what this device last had — this
     // device still holds the pre-wipe copy, so keep it before it's replaced.
     if(scoringSize(localScoring) > scoringSize(remoteScoring) && Date.now() - lastScoringStash > 30*1000) stashScoringHistory(localScoring, 'before-shrink');
+    // Once per page load (at most every 6 hours per browser), keep a dated
+    // snapshot of whatever the cloud holds right now.
+    if(!lastRemoteScoring && scoringSize(remoteScoring) > 0 && Date.now() - Number(lsGet('s51_last_daily_stash', 0)) > 6*3600*1000){
+      lsSet('s51_last_daily_stash', Date.now());
+      setTimeout(()=> stashScoringHistory(remoteScoring, 'daily'), 1500);
+    }
+    lastRemoteScoring = remoteScoring;
     lsSet('s51_tv_scoring', remoteScoring);
     renderScoring();
     renderTeamsTab();
@@ -3996,37 +4093,9 @@ if(firebaseReady){
     refreshTribeViews();
   });
 
-  /* ---------- One-time Week 1 data recovery (Oct 2026) ----------
-     The "Reset Scoring Data" button on the Export tab got triggered on the
-     live site (that button now requires typing RESET, so it can't happen
-     by accident again), which wiped every entered score and steal. This
-     restores the real Week 1 category scores from Garrott's own backup
-     spreadsheet -- the one solid record of what was actually entered
-     before the wipe -- the first time this file loads with Firebase up.
-     It writes ONLY to tvDraft/scoring/entries/1, leaving categories,
-     honorary, weeks, steals, other weeks, and the whole roster/draft
-     completely untouched. It runs once per browser (a localStorage flag)
-     and, as a second safety net, only if Week 1 entries are still
-     genuinely empty at the moment it checks -- so it can never overwrite
-     scores someone has since re-entered by hand, even if this file is
-     opened fresh on another device before the flag is set there too. */
-  (function recoverWeek1Once(){
-    const FLAG = 's51_week1_recovery_2026_10_applied';
-    if(lsGet(FLAG, false)) return;
-    lsSet(FLAG, true);
-    const recovered = {
-      carter:{team_immunity:1}, cristian:{team_immunity:1}, eric:{team_immunity:1},
-      alexis:{team_immunity:1}, linnea:{team_immunity:1}, sharonda:{team_immunity:1},
-      ori:{team_immunity:1}, ana:{team_immunity:1}, kristin:{team_immunity:1},
-      rob:{team_immunity:1, found_idol:1}
-    };
-    fbDb.ref('tvDraft/scoring/entries/1').once('value').then(snap=>{
-      if(snap.val()) return; // already has real data -- don't touch it
-      return fbDb.ref('tvDraft/scoring/entries/1').set(recovered).then(()=>{
-        toast('Week 1 scores restored');
-      });
-    }).catch(()=>{});
-  })();
+  /* Connection indicator for the cloud-save pill (bottom-left). */
+  fbDb.ref('.info/connected').on('value', snap=>{ syncOnline = !!snap.val(); renderSyncPill(); });
+  renderSyncPill();
 }
 
 let myRoomCode = lsGet('s51_live_room', null);
@@ -5841,7 +5910,7 @@ function scoringEnter(source){
     const eliminated = {};
     Object.keys(scoring.eliminated||{}).forEach(cid=>{ if(scoring.eliminated[cid] !== w) eliminated[cid] = scoring.eliminated[cid]; });
     const updated = { ...scoring, entries, eliminated };
-    source.save(updated);
+    source.save(updated, { allowShrink:true });
     AudioFX.success();
     toast('Week ' + w + ' cleared');
     setTimeout(renderScoring, 150);
@@ -5871,7 +5940,7 @@ function scoringSteals(source, week){
     resetBtn.addEventListener('click', ()=>{
       if(!confirm('Remove all ' + weekSteals.length + ' steal' + (weekSteals.length===1?'':'s') + ' recorded for Week ' + week + '? This cannot be undone — handy if the steal order got skipped and you need to redo the round.')) return;
       const updated = { ...scoring, steals: { ...(scoring.steals||{}), [week]: [] } };
-      source.save(updated);
+      source.save(updated, { allowShrink:true });
       toast('Week ' + week + ' steals reset');
       setTimeout(renderScoring, 150);
       setTimeout(renderTeamsTab, 150);
@@ -6051,7 +6120,7 @@ function scoringBackupBox(){
         if(firebaseReady){
           if('s51_tv' in payload && payload.s51_tv!=null) fbDb.ref('tvDraft/state').set(payload.s51_tv);
           if('s51_tv_setup' in payload && payload.s51_tv_setup!=null) fbDb.ref('tvDraft/setup').set(payload.s51_tv_setup);
-          if('s51_tv_scoring' in payload && payload.s51_tv_scoring!=null) fbDb.ref('tvDraft/scoring').set(payload.s51_tv_scoring);
+          if('s51_tv_scoring' in payload && payload.s51_tv_scoring!=null){ stashScoringHistory(normalizeScoring(lastRemoteScoring || lsGet('s51_tv_scoring', null)), 'before-restore'); fbDb.ref('tvDraft/scoring').set(payload.s51_tv_scoring); }
           if('s51_tribe_overrides' in payload && payload.s51_tribe_overrides!=null) fbDb.ref('tvDraft/tribeOverrides').set(payload.s51_tribe_overrides);
         }
         toast('Backup restored — reloading…');
@@ -6074,7 +6143,7 @@ function scoringBackupBox(){
     'The app quietly keeps recent copies of the scores and steals in the cloud (every ~10 minutes of activity, and right before any wipe). If something goes blank, pick the newest version that still has your weeks and steals.'));
   const histBtn = el('button',{class:'btn'}, '🕘 Show saved versions');
   const histList = el('div',{style:'margin-top:10px;display:flex;flex-direction:column;gap:6px'});
-  const REASONS = { autosave:'auto-save', 'before-shrink':'caught before a wipe', 'before-reset':'before a reset', 'before-restore':'before a restore' };
+  const REASONS = { autosave:'auto-save', daily:'daily snapshot', 'before-shrink':'caught before a wipe', 'before-reset':'before a reset', 'before-restore':'before a restore' };
   histBtn.addEventListener('click', ()=>{
     if(!firebaseReady){ toast('Needs the cloud connection'); return; }
     histList.innerHTML = '';
@@ -6101,7 +6170,7 @@ function scoringBackupBox(){
         rb.addEventListener('click', ()=>{
           if(!confirm('Restore the scores from ' + when + '? This replaces the current TV Draft scores and steals on every device (the current version is saved first, so you can undo this).')) return;
           stashScoringHistory(normalizeScoring(lsGet('s51_tv_scoring', null)), 'before-restore');
-          saveTvScoring(sc);
+          saveTvScoring(sc, { allowShrink:true });
           toast('Scores restored — reloading…');
           setTimeout(()=> location.reload(), 800);
         });
@@ -6156,7 +6225,7 @@ function scoringExport(source){
       if(typed === null) return;
       if(typed.trim().toUpperCase() !== 'RESET'){ toast('Reset cancelled — nothing was changed'); return; }
       if(source.type === 'tv') stashScoringHistory(normalizeScoring(scoring), 'before-reset');
-      source.save({ categories: scoring.categories, weeks:[...DEFAULT_SEASON_WEEKS], entries:{}, steals:{}, eliminated:{}, winnerId:null, honorary: scoring.honorary||{} });
+      source.save({ categories: scoring.categories, weeks:[...DEFAULT_SEASON_WEEKS], entries:{}, steals:{}, eliminated:{}, winnerId:null, honorary: scoring.honorary||{} }, { allowShrink:true });
       toast('Scoring data reset');
       setTimeout(renderScoring, 150);
     });
