@@ -31,6 +31,7 @@
   --sand-dim:#c9bb98;
   --tribe-purple:#9b6bff;
   --tribe-yellow:#e8c53d;
+  --tribe-red:#ff5d7e;
   --line:rgba(236,223,192,0.14);
   --shadow:0 10px 30px rgba(0,0,0,0.45);
   --radius:14px;
@@ -110,10 +111,12 @@ nav.tabs button.active{background:linear-gradient(135deg,var(--torch),var(--flam
 .pill{font-size:0.72rem;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--sand-dim);background:transparent;font-family:inherit;}
 .pill.purple{border-color:var(--tribe-purple);color:var(--tribe-purple);}
 .pill.yellow{border-color:var(--tribe-yellow);color:var(--tribe-yellow);}
+.pill.red{border-color:var(--tribe-red);color:var(--tribe-red);}
 button.pill{cursor:pointer;transition:background .15s, transform .15s;}
 button.pill:hover{transform:translateY(-1px);}
 button.pill.purple.active{background:rgba(155,107,255,0.22);}
 button.pill.yellow.active{background:rgba(232,197,61,0.22);}
+button.pill.red.active{background:rgba(255,93,126,0.22);}
 .pill.tbd-note{border-style:dashed;font-size:0.66rem;opacity:0.75;}
 
 /* ===== Castaway grid ===== */
@@ -137,6 +140,7 @@ button.pill.yellow.active{background:rgba(232,197,61,0.22);}
 .card .tribe-badge{position:absolute;top:8px;right:8px;border-radius:999px;padding:2px 9px;font-size:0.62rem;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;backdrop-filter:blur(2px);}
 .card .tribe-badge.purple{background:rgba(155,107,255,0.85);color:#fff;}
 .card .tribe-badge.yellow{background:rgba(232,197,61,0.9);color:#1a1400;}
+.card .tribe-badge.red{background:rgba(214,45,86,0.9);color:#fff;}
 .card .tribe-badge.tbd{background:rgba(10,23,18,0.7);border:1px dashed var(--line);color:var(--sand-dim);}
 .card.tribe-dimmed{opacity:0.3;}
 .card.honorary-card{border-style:dashed;opacity:0.94;}
@@ -151,6 +155,18 @@ button.pill.yellow.active{background:rgba(232,197,61,0.22);}
 .tribe-chip{display:inline-flex;align-items:center;font-size:0.6rem;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;padding:1px 7px;border-radius:999px;margin-left:6px;white-space:nowrap;vertical-align:middle;}
 .tribe-chip.purple{background:rgba(155,107,255,0.22);color:var(--tribe-purple);border:1px solid rgba(155,107,255,0.5);}
 .tribe-chip.yellow{background:rgba(232,197,61,0.22);color:var(--tribe-yellow);border:1px solid rgba(232,197,61,0.5);}
+.tribe-chip.red{background:rgba(255,93,126,0.22);color:var(--tribe-red);border:1px solid rgba(255,93,126,0.55);}
+.tribe-prev{font-size:0.56rem;font-weight:600;color:var(--sand-dim);margin-left:4px;white-space:nowrap;vertical-align:middle;text-transform:none;letter-spacing:0;}
+.tribe-hist{width:100%;border-collapse:collapse;font-size:0.82rem;}
+.tribe-hist th{text-align:left;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--sand-dim);border-bottom:1px solid var(--line);white-space:nowrap;}
+.tribe-hist td{border-bottom:1px solid rgba(236,223,192,0.06);vertical-align:middle;}
+.tribe-hist th,.tribe-hist td{padding:6px 5px;}
+#tribeHistoryBox .tribe-hist th{white-space:normal;text-align:center;}
+.tribe-hist td.tcell{text-align:center;font-weight:700;font-size:0.76rem;border-radius:6px;}
+.tribe-hist td.tcell.purple{background:#5d3a9e;color:#fff;}
+.tribe-hist td.tcell.yellow{background:#caa626;color:#1a1200;}
+.tribe-hist td.tcell.red{background:#c42a4d;color:#fff;}
+.tribe-hist td.tcell.none{background:transparent;color:var(--sand-dim);font-weight:400;}
 .tribe-chip.tbd{background:rgba(255,255,255,0.05);color:var(--sand-dim);border:1px dashed var(--line);}
 
 /* ===== Rankings page ===== */
@@ -520,10 +536,12 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
       <div class="pill-row" id="tribeFilterRow">
         <button type="button" class="pill purple" data-tribe="purple">🟣 Savu (Purple)</button>
         <button type="button" class="pill yellow" data-tribe="yellow">🟡 Toka (Yellow)</button>
-        <span class="pill tbd-note">Lewis started on Exile Island, then joined Toka after Episode 1 — click a tribe to filter</span>
+        <button type="button" class="pill red" data-tribe="red">🔴 Dina (Red)</button>
+        <span class="pill tbd-note">Three tribes since Episode 4 — click a tribe to filter. Open anyone to see where they started.</span>
       </div>
     </div>
     <div class="grid" id="castawayGrid"></div>
+    <div id="tribeHistoryBox"></div>
   </section>
 
   <!-- DRAFT (Mock / TV / Live, combined) -->
@@ -569,7 +587,7 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 <footer class="note">
   <div class="beach-strip" aria-hidden="true">🥥&nbsp;&nbsp;🗿&nbsp;&nbsp;🐚&nbsp;&nbsp;🎋&nbsp;&nbsp;🐚&nbsp;&nbsp;🗿&nbsp;&nbsp;🥥</div>
   Built for a friends &amp; family Survivor 51 fantasy draft. Bios &amp; photos via official CBS/press cast reveal. Not affiliated with CBS, Paramount, or Survivor.
-  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-10-13 18:41 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
+  <div style="margin-top:6px;opacity:0.55;font-size:0.68rem;">Build 2026-10-16 14:11 UTC &mdash; if this looks out of date on your phone, hard-refresh or clear your browser cache.</div>
 </footer>
 
 <!-- Profile Modal -->
@@ -3185,7 +3203,75 @@ function photoBlock(c, extraClass){
   return wrap;
 }
 function tribeLabel(t){
-  return t==='purple' ? '🟣 Savu' : t==='yellow' ? '🟡 Toka' : 'Tribe TBD';
+  return t==='purple' ? '🟣 Savu' : t==='yellow' ? '🟡 Toka' : t==='red' ? '🔴 Dina' : 'Tribe TBD';
+}
+function tribeName(t){
+  return t==='purple' ? 'Savu' : t==='yellow' ? 'Toka' : t==='red' ? 'Dina' : 'TBD';
+}
+/* Season tribe history, from the Survivor 51 wiki's Castaways table:
+   [start (Ep 1–2), after the mutiny (Ep 3), expanded to three tribes (Ep 4+)].
+   A missing entry means they were already out of the game. purple = Savu,
+   yellow = Toka, red = Dina. Add a new slot to the arrays (and a phase
+   below) the next time the tribes change. */
+const TRIBE_PHASES = [
+  { label:'Start',            short:'Start',   fromEp:1 },
+  { label:'After mutiny',     short:'Mutiny',  fromEp:3 },
+  { label:'Expanded tribes',  short:'Expanded', fromEp:4 }
+];
+const TRIBE_HISTORY = {
+  aaliyah:['yellow'], ana:['purple'], rob:['purple'], patt:['yellow','yellow'],
+  jenna:['yellow','yellow','purple'],
+  alexis:['purple','purple','purple'], brady:['yellow','yellow','yellow'],
+  carter:['purple','yellow','yellow'], cristian:['purple','purple','red'],
+  kilby:['yellow','yellow','red'], devin:['yellow','yellow','purple'],
+  eric:['purple','purple','red'], jelly:['yellow','yellow','purple'],
+  kristin:['purple','purple','yellow'], lewis:['yellow','yellow','red'],
+  linnea:['purple','purple','red'], maggie:['yellow','yellow','yellow'],
+  mike:['yellow','yellow','yellow'], ori:['purple','purple','purple'],
+  sharonda:['purple','purple','red'], 'thien-an':['yellow','yellow','yellow']
+};
+function tribePhaseForEp(ep){
+  const n = parseInt(ep, 10) || 1;
+  let idx = 0;
+  TRIBE_PHASES.forEach((ph,i)=>{ if(n >= ph.fromEp) idx = i; });
+  return idx;
+}
+/* Which tribe someone was on during a given episode (null = not in the game). */
+function tribeAtEpisode(c, ep){
+  if(!c) return null;
+  const hist = TRIBE_HISTORY[c.id];
+  if(!hist) return c.tribe || null;
+  return hist[tribePhaseForEp(ep)] || null;
+}
+/* The tribe the season data says they're on right now (their last tribe). */
+function seedTribe(c){
+  if(!c) return null;
+  const hist = TRIBE_HISTORY[c.id];
+  if(hist && hist.length) return hist[hist.length-1];
+  return c.tribe || null;
+}
+/* Most recent DIFFERENT tribe before the current one, e.g. Kilby: Toka -> Dina
+   gives 'yellow'. Returns null if they've never switched. */
+function previousTribe(c){
+  if(!c) return null;
+  const cur = currentTribe(c);
+  const seq = (TRIBE_HISTORY[c.id] || (c.tribe ? [c.tribe] : [])).slice();
+  for(let i = seq.length-1; i >= 0; i--){ if(seq[i] && seq[i] !== cur) return seq[i]; }
+  return null;
+}
+/* "🟣 Savu → 🟡 Toka → 🟡 Toka" style trail for one castaway. */
+function tribeJourneyText(c){
+  const hist = TRIBE_HISTORY[c.id] || (c.tribe ? [c.tribe] : []);
+  const parts = hist.map((t,i)=> TRIBE_PHASES[i].short + ': ' + tribeName(t));
+  const cur = currentTribe(c);
+  if(cur && cur !== hist[hist.length-1]) parts.push('Now: ' + tribeName(cur));
+  return parts.join('  →  ');
+}
+function tribeColors(t, light){
+  if(t === 'purple') return [light ? '#7b4fc9' : '#5d3a9e', '#ffffff'];
+  if(t === 'yellow') return [light ? '#e8c53d' : '#caa626', '#1a1200'];
+  if(t === 'red')    return [light ? '#e2476a' : '#c42a4d', '#ffffff'];
+  return [light ? '#3b6b55' : '#2c5443', '#ffffff'];
 }
 /* A castaway's CURRENT tribe — since the season can have swaps, this checks
    the admin-set override map (tribeOverrides, synced via Firebase like
@@ -3196,7 +3282,7 @@ function tribeLabel(t){
 function currentTribe(c){
   if(!c) return null;
   const override = (typeof tribeOverrides !== 'undefined' && tribeOverrides) ? tribeOverrides[c.id] : null;
-  return override || c.tribe || null;
+  return override || seedTribe(c) || null;
 }
 /* Small inline, tribe-colored chip for a castaway's name in any list or
    table row (as opposed to the absolute-positioned .tribe-badge used on
@@ -3204,7 +3290,12 @@ function currentTribe(c){
    up across the app, not just on their card. */
 function tribeChip(c){
   const t = currentTribe(c);
-  return el('span',{class:'tribe-chip ' + (t || 'tbd')}, tribeLabel(t));
+  const prev = previousTribe(c);
+  const chip = el('span',{class:'tribe-chip ' + (t || 'tbd'), title: tribeJourneyText(c)}, tribeLabel(t));
+  if(!prev) return chip;
+  // Keep the chip a single node so every existing call site still works.
+  chip.appendChild(el('span',{class:'tribe-prev'}, '(was ' + tribeName(prev) + ')'));
+  return chip;
 }
 function castawayCard(c, opts){
   opts = opts || {};
@@ -3213,7 +3304,7 @@ function castawayCard(c, opts){
   if(opts.badge) card.appendChild(el('div',{class:'badge'}, opts.badge));
   if(opts.showTribe !== false){
     const t = currentTribe(c);
-    card.appendChild(el('div',{class:'tribe-badge ' + (t || 'tbd')}, tribeLabel(t)));
+    card.appendChild(el('div',{class:'tribe-badge ' + (t || 'tbd'), title: tribeJourneyText(c)}, tribeLabel(t)));
     card.dataset.tribe = t || '';
   }
   card.appendChild(el('div',{class:'info'},
@@ -3236,6 +3327,45 @@ function renderCastawayGrid(){
     if(castawayTribeFilter && currentTribe(c) !== castawayTribeFilter) card.classList.add('tribe-dimmed');
     grid.appendChild(card);
   });
+  renderTribeHistoryBox();
+}
+/* Who has been on which tribe, phase by phase. */
+function renderTribeHistoryBox(){
+  const host = document.getElementById('tribeHistoryBox');
+  if(!host) return;
+  host.innerHTML = '';
+  const box = el('div',{class:'card-box', style:'margin-top:24px'});
+  box.appendChild(el('h3',{style:'margin:0 0 4px;font-size:1rem'}, '🏕️ Tribe History'));
+  box.appendChild(el('p',{style:'margin:0 0 10px;font-size:0.76rem;color:var(--sand-dim)'},
+    'Where everyone started and every move since. Grey = already out of the game. Source: the Survivor 51 wiki castaways table.'));
+  const scroller = el('div',{style:'overflow-x:auto;border:1px solid var(--line);border-radius:12px'});
+  const table = el('table',{class:'tribe-hist', style:'min-width:0;width:100%'});
+  const hr = el('tr',{}, el('th',{style:'text-align:left;padding:8px 6px;font-size:0.68rem'}, 'Castaway'));
+  TRIBE_PHASES.forEach(ph=> hr.appendChild(el('th',{style:'padding:8px 6px;font-size:0.68rem'}, ph.short + (ph.fromEp>1 ? ' Ep ' + ph.fromEp + (ph===TRIBE_PHASES[TRIBE_PHASES.length-1] ? '+' : '') : ' Ep 1–2'))));
+  hr.appendChild(el('th',{style:'padding:8px 6px;font-size:0.68rem'}, 'Now'));
+  table.appendChild(el('thead',{}, hr));
+  const order = { red:0, yellow:1, purple:2 };
+  const people = CASTAWAYS.slice().sort((a,b)=>{
+    const oa = (currentTribe(a)==null?9:order[currentTribe(a)]), ob = (currentTribe(b)==null?9:order[currentTribe(b)]);
+    return (oa-ob) || a.short.localeCompare(b.short);
+  });
+  const tb = el('tbody',{});
+  people.forEach(c=>{
+    const hist = TRIBE_HISTORY[c.id] || [];
+    const tr = el('tr',{});
+    tr.appendChild(el('td',{style:'text-align:left;white-space:nowrap;cursor:pointer', onclick:()=>openProfile(c.id)}, c.short));
+    TRIBE_PHASES.forEach((ph,i)=>{
+      const tt = hist[i];
+      tr.appendChild(el('td',{class:'tcell ' + (tt || 'none')}, tt ? tribeName(tt) : '—'));
+    });
+    const cur = currentTribe(c);
+    tr.appendChild(el('td',{class:'tcell ' + (cur || 'none'), style:'box-shadow:inset 0 0 0 2px #ecdfc0'}, cur ? tribeName(cur) : '—'));
+    tb.appendChild(tr);
+  });
+  table.appendChild(tb);
+  scroller.appendChild(table);
+  box.appendChild(scroller);
+  host.appendChild(box);
 }
 $all('#tribeFilterRow button[data-tribe]').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -3272,6 +3402,7 @@ function openProfile(castawayId, draftOpts){
   const nameHead = el('h2',{}, c.name);
   nameHead.appendChild(tribeChip(c));
   body.appendChild(nameHead);
+  body.appendChild(el('div',{style:'font-size:0.74rem;color:var(--sand-dim);margin:-2px 0 8px'}, '🏕️ ' + tribeJourneyText(c)));
   body.appendChild(el('div',{class:'modal-meta'}, `Age ${c.age} &middot; ${c.occupation} &middot; From ${c.hometown}${c.current && c.current!==c.hometown ? ' &middot; Now living in '+c.current : ''}`.replace(/&middot;/g,'·')));
   body.appendChild(el('div',{class:'modal-quote'}, '"' + c.quote + '"'));
 
@@ -3737,7 +3868,9 @@ function stashScoringHistory(snapshot, reason){
   fbDb.ref('tvDraftHistory/scoring/' + at).set({ at, reason, size: scoringSize(snapshot), scoring: JSON.parse(JSON.stringify(snapshot)) })
     .then(()=> fbDb.ref('tvDraftHistory/scoring').once('value'))
     .then(snap=>{
-      const keys = Object.keys(snap.val() || {}).sort();
+      // named checkpoints (reason starts with "checkpoint") are never pruned
+      const all = snap.val() || {};
+      const keys = Object.keys(all).filter(k=> !String((all[k]||{}).reason||'').startsWith('checkpoint')).sort();
       keys.slice(0, Math.max(0, keys.length - SCORING_HISTORY_KEEP)).forEach(k=> fbDb.ref('tvDraftHistory/scoring/' + k).remove());
     })
     .catch(()=>{});
@@ -5726,9 +5859,9 @@ function manageTribesBox(){
   headRow.appendChild(el('h3',{style:'margin:0;font-size:1rem'}, '🔄 Manage Tribes'));
   const hasOverrides = tribeOverrides && Object.keys(tribeOverrides).length > 0;
   if(hasOverrides){
-    const resetBtn = el('button',{class:'btn', style:'padding:4px 10px;font-size:0.72rem'}, 'Reset to Original Tribes');
+    const resetBtn = el('button',{class:'btn', style:'padding:4px 10px;font-size:0.72rem'}, 'Reset to Season Tribes');
     resetBtn.addEventListener('click', ()=>{
-      if(!confirm('Clear all tribe swaps and go back to each castaway\'s original tribe?')) return;
+      if(!confirm('Clear your manual tribe edits and go back to the season\'s tribe data?')) return;
       saveTribeOverrides({});
       toast('Tribe overrides cleared');
       setTimeout(refreshTribeViews, 150);
@@ -5737,7 +5870,7 @@ function manageTribesBox(){
   }
   box.appendChild(headRow);
   box.appendChild(el('p',{style:'margin:6px 0 12px;font-size:0.78rem;color:var(--sand-dim)'},
-    'Season\'s getting chaotic? Move a castaway to a new tribe here — it updates their tribe everywhere in the app immediately (chips, badges, bulk-apply-by-tribe, everything).'));
+    'The season\'s tribe moves are already loaded (Savu, Toka, Dina — with where everyone started). Use this only to correct someone or after the next swap: it updates their tribe everywhere in the app immediately (chips, badges, bulk-apply-by-tribe, everything).'));
   const searchWrap = el('div',{class:'score-search'});
   const searchInp = el('input',{type:'text', placeholder:'🔍 Search a castaway...'});
   searchWrap.appendChild(searchInp);
@@ -5745,7 +5878,7 @@ function manageTribesBox(){
   const grid = el('div',{class:'tribe-manage-grid', style:'display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;margin-top:10px'});
   CASTAWAYS.forEach(c=>{
     const t = currentTribe(c);
-    const row = el('div',{style:'display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;background:var(--jungle2)'});
+    const row = el('div',{style:'display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;background:var(--jungle2);flex-wrap:wrap'});
     row.dataset.name = (c.name + ' ' + c.short).toLowerCase();
     const thumb = el('div',{style:'width:30px;height:30px;border-radius:50%;overflow:hidden;flex:none;background:var(--jungle3,#233)'});
     const img = el('img',{src:c.photo});
@@ -5753,15 +5886,16 @@ function manageTribesBox(){
     img.onerror = function(){ this.remove(); };
     thumb.appendChild(img);
     row.appendChild(thumb);
-    row.appendChild(el('div',{style:'flex:1;min-width:0;font-size:0.85rem;font-weight:600'}, c.short));
-    const btns = el('div',{style:'display:flex;gap:6px;flex:none'});
-    [['purple','🟣 Savu'],['yellow','🟡 Toka'],['tbd','❔ TBD']].forEach(([key,label])=>{
+    row.appendChild(el('div',{style:'flex:1;min-width:110px;font-size:0.85rem;font-weight:600'}, c.short,
+      el('div',{style:'font-size:0.62rem;font-weight:400;color:var(--sand-dim);margin-top:1px'}, tribeJourneyText(c))));
+    const btns = el('div',{style:'display:flex;gap:6px;flex:none;flex-wrap:wrap'});
+    [['purple','🟣 Savu'],['yellow','🟡 Toka'],['red','🔴 Dina'],['tbd','❔ TBD']].forEach(([key,label])=>{
       const active = (t||'tbd') === key;
       const b = el('button',{class:'btn' + (active?' primary':''), style:'padding:4px 9px;font-size:0.68rem'}, label);
       b.addEventListener('click', ()=>{
         if(active) return;
         const updated = { ...tribeOverrides };
-        if(key === (c.tribe || 'tbd')) delete updated[c.id];
+        if(key === (seedTribe(c) || 'tbd')) delete updated[c.id];
         else updated[c.id] = key;
         saveTribeOverrides(updated);
         toast(c.short + ' moved to ' + tribeLabel(key));
@@ -5920,6 +6054,7 @@ function scoringEnter(source){
   const bulkTribeSel = el('select',{});
   bulkTribeSel.appendChild(el('option',{value:'yellow'}, '🟡 Toka (Yellow)'));
   bulkTribeSel.appendChild(el('option',{value:'purple'}, '🟣 Savu (Purple)'));
+  bulkTribeSel.appendChild(el('option',{value:'red'}, '🔴 Dina (Red)'));
   bulkRow.appendChild(el('div',{}, el('label',{class:'field'}, 'Tribe'), bulkTribeSel));
   const bulkValInp = el('input',{type:'number', step:'1', placeholder:'e.g. 1', style:'width:90px'});
   bulkRow.appendChild(el('div',{}, el('label',{class:'field'}, 'Value'), bulkValInp));
@@ -6241,7 +6376,7 @@ function scoringBackupBox(){
         const when = new Date(Number(v.at || k)).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
         const row = el('div',{style:'display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border-radius:8px;background:var(--jungle2)'});
         row.appendChild(el('div',{style:'flex:1;min-width:180px;font-size:0.8rem'},
-          el('div',{style:'font-weight:700'}, when + ' · ' + (REASONS[v.reason] || v.reason || 'saved')),
+          el('div',{style:'font-weight:700'}, when + ' · ' + (REASONS[v.reason] || (String(v.reason||'').startsWith('checkpoint-') ? '⭐ Checkpoint: ' + String(v.reason).slice(11).replace(/-/g,' ') : (v.reason || 'saved')))),
           el('div',{style:'color:var(--sand-dim)'}, 'Weeks with scores: ' + (weeksWith.join(', ') || 'none') + ' · ' + stealsN + ' steal' + (stealsN===1?'':'s'))));
         const rb = el('button',{class:'btn', style:'padding:5px 12px;font-size:0.76rem'}, 'Restore this');
         rb.addEventListener('click', ()=>{
@@ -6259,7 +6394,16 @@ function scoringBackupBox(){
       histList.appendChild(el('div',{style:'font-size:0.8rem;color:var(--sand-dim)'}, 'Couldn\'t load saved versions right now.'));
     });
   });
+  const cpBtn = el('button',{class:'btn', style:'margin-left:8px'}, '⭐ Save a checkpoint now');
+  cpBtn.addEventListener('click', ()=>{
+    if(!firebaseReady){ toast('Needs the cloud connection'); return; }
+    const name = (prompt('Name this checkpoint (e.g. Week 4):', 'Week ') || '').trim();
+    if(!name) return;
+    stashScoringHistory(normalizeScoring(lastRemoteScoring || lsGet('s51_tv_scoring', null)), 'checkpoint-' + name.replace(/[^A-Za-z0-9 ]/g,'').replace(/\s+/g,'-').toLowerCase());
+    toast('Checkpoint saved — it is never auto-deleted');
+  });
   histRow.appendChild(histBtn);
+  histRow.appendChild(cpBtn);
   histRow.appendChild(histList);
   box.appendChild(histRow);
   return box;
@@ -6508,10 +6652,18 @@ const CONFESSIONAL_SEED_TIMES = { '1': {
   kristin:11, linnea:21, alexis:30, 'thien-an':43, maggie:32, mike:10, cristian:0, patt:16, rob:55
 }};
 // Ep1 Aaliyah voted out, Ep2 Ana voted out, Ep3 Patt voted out and Rob quit.
-const CONFESSIONAL_SEED_ELIM = { aaliyah:'1', ana:'2', patt:'3', rob:'3' };
+const CONFESSIONAL_SEED_ELIM = { aaliyah:'1', ana:'2', patt:'3', rob:'3', jenna:'4' };
+/* Confessional COUNTS (how many confessionals, not minutes) from the
+   @justrategic tracker posted on r/survivor — Episodes 1–4. */
+const CONFESSIONAL_SEED_COUNTS = {
+  '1': { brady:6, carter:2, kristin:7, maggie:2, mike:2, 'thien-an':3, alexis:2, devin:12, jelly:6, ori:2, cristian:1, eric:5, kilby:6, lewis:10, linnea:2, sharonda:2, jenna:3, patt:3, rob:4, ana:3, aaliyah:4 },
+  '2': { brady:4, carter:0, kristin:2, maggie:2, mike:1, 'thien-an':0, alexis:3, devin:1, jelly:4, ori:3, cristian:0, eric:2, kilby:3, lewis:2, linnea:5, sharonda:5, jenna:2, patt:3, rob:5, ana:3 },
+  '3': { brady:6, carter:10, kristin:1, maggie:2, mike:1, 'thien-an':2, alexis:2, devin:10, jelly:1, ori:4, cristian:0, eric:4, kilby:6, lewis:6, linnea:2, sharonda:2, jenna:1, patt:1, rob:1 },
+  '4': { brady:3, carter:2, kristin:3, maggie:2, mike:3, 'thien-an':2, alexis:2, devin:3, jelly:6, ori:2, cristian:1, eric:4, kilby:4, lewis:2, linnea:2, sharonda:2, jenna:6 }
+};
 const CONFESSIONAL_SEED_LINKS = { '1': 'https://www.reddit.com/r/survivor/s/CaQmZvCmli' };
 function defaultConfessional(){
-  return { episodes:['1','2','3'], times: JSON.parse(JSON.stringify(CONFESSIONAL_SEED_TIMES)), eliminated: { ...CONFESSIONAL_SEED_ELIM }, links: { ...CONFESSIONAL_SEED_LINKS } };
+  return { episodes:['1','2','3','4'], times: JSON.parse(JSON.stringify(CONFESSIONAL_SEED_TIMES)), counts: JSON.parse(JSON.stringify(CONFESSIONAL_SEED_COUNTS)), eliminated: { ...CONFESSIONAL_SEED_ELIM }, links: { ...CONFESSIONAL_SEED_LINKS } };
 }
 /* A browser that already saved its own copy would otherwise never see newly
    seeded episodes/eliminations. Merge the verified seed data underneath the
@@ -6525,7 +6677,9 @@ function getConfessional(){
   const episodes = Array.from(new Set([...(saved.episodes||[]), ...seed.episodes])).sort((a,b)=>parseInt(a)-parseInt(b) || String(a).localeCompare(String(b)));
   const times = { ...(saved.times||{}) };
   Object.keys(seed.times).forEach(ep=>{ times[ep] = { ...seed.times[ep], ...(times[ep]||{}) }; });
-  return { ...saved, episodes, times, eliminated: { ...seed.eliminated, ...(saved.eliminated||{}) }, links: { ...seed.links, ...(saved.links||{}) } };
+  const counts = { ...(saved.counts||{}) };
+  Object.keys(seed.counts).forEach(ep=>{ counts[ep] = { ...seed.counts[ep], ...(counts[ep]||{}) }; });
+  return { ...saved, episodes, times, counts, eliminated: { ...seed.eliminated, ...(saved.eliminated||{}) }, links: { ...seed.links, ...(saved.links||{}) } };
 }
 function saveConfessional(data){ lsSet('s51_confessional', data); }
 function fmtMMSS(totalSeconds){
@@ -6613,7 +6767,7 @@ function renderConfessionalTracker(){
     const url = prompt('Optional: paste the link to this week\'s tracker post (leave blank to skip):', '');
     const links = { ...(data.links||{}) };
     if(url && url.trim()) links[label] = url.trim();
-    const updated = { ...data, episodes:[...data.episodes, label], times: { ...data.times, [label]: {} }, links };
+    const updated = { ...data, episodes:[...data.episodes, label], times: { ...data.times, [label]: {} }, counts: { ...(data.counts||{}), [label]: {} }, links };
     saveConfessional(updated);
     toast('Episode ' + label + ' added — enter times below');
     renderRankings();
@@ -6639,7 +6793,7 @@ function confessionalEntryBox(data, defaultEp, episodes){
   const box = el('div',{class:'card-box', style:'margin-bottom:22px'});
   box.appendChild(el('h3',{style:'margin:0 0 4px;font-size:0.95rem'}, '✏️ Enter / Edit Confessional Times'));
   box.appendChild(el('p',{style:'margin:0 0 12px;font-size:0.76rem;color:var(--sand-dim)'},
-    'Times in minutes:seconds, straight off the tracker post (e.g. 2:48). Leave blank for anyone not shown that episode.'));
+    'Times in minutes:seconds, straight off the tracker post (e.g. 2:48), and/or the number of confessionals from the count chart. Leave blank for anyone not shown that episode.'));
 
   const picker = el('div',{class:'week-picker'});
   const buttons = [];
@@ -6664,13 +6818,16 @@ function confessionalEntryBox(data, defaultEp, episodes){
     tableWrap.innerHTML = '';
     const table = el('table',{class:'score-table'});
     table.appendChild(el('thead',{}, el('tr',{},
-      el('th',{}, 'Castaway'), el('th',{}, 'Confessional Time'), el('th',{}, 'Voted out this ep?')
+      el('th',{}, 'Castaway'), el('th',{}, 'Confessional Time'), el('th',{}, '# of confessionals'), el('th',{}, 'Voted out this ep?')
     )));
     const tbody = el('tbody',{});
     CASTAWAYS.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(c=>{
       const existing = (data.times[ep]||{})[c.id];
       const timeInp = el('input',{type:'text', placeholder:'e.g. 1:04', value: existing!=null ? fmtMMSS(existing) : ''});
       timeInp.dataset.castaway = c.id;
+      const existingCount = ((data.counts||{})[ep]||{})[c.id];
+      const countInp = el('input',{type:'text', inputmode:'numeric', placeholder:'e.g. 3', style:'width:70px', value: existingCount!=null ? String(existingCount) : ''});
+      countInp.dataset.castawayCount = c.id;
       const elimChk = el('input',{type:'checkbox'});
       elimChk.dataset.castawayElim = c.id;
       elimChk.checked = !!(data.eliminated && data.eliminated[c.id] === ep);
@@ -6679,10 +6836,13 @@ function confessionalEntryBox(data, defaultEp, episodes){
       img.onerror=function(){this.style.display='none';};
       nameWrap.appendChild(img);
       nameWrap.appendChild(el('span',{}, c.short));
-      nameWrap.appendChild(tribeChip(c));
+      const epTribe = tribeAtEpisode(c, ep);
+      if(epTribe){ nameWrap.appendChild(el('span',{class:'tribe-chip ' + epTribe, title:'Tribe during episode ' + ep}, tribeLabel(epTribe))); }
+      else nameWrap.appendChild(tribeChip(c));
       tbody.appendChild(el('tr',{},
         el('td',{}, nameWrap),
         el('td',{}, timeInp),
+        el('td',{}, countInp),
         el('td',{style:'text-align:center'}, elimChk)
       ));
     });
@@ -6697,7 +6857,14 @@ function confessionalEntryBox(data, defaultEp, episodes){
     const times = { ...(data.times[ep]||{}) };
     const eliminated = { ...(data.eliminated||{}) };
     let count = 0;
+    const counts = { ...((data.counts||{})[ep]||{}) };
     $all('input[type=text]', tableWrap).forEach(inp=>{
+      if(inp.dataset.castawayCount){
+        const n = parseInt(String(inp.value).trim(), 10);
+        if(!isNaN(n) && n >= 0) counts[inp.dataset.castawayCount] = n;
+        else delete counts[inp.dataset.castawayCount];
+        return;
+      }
       const cid = inp.dataset.castaway;
       const val = parseMMSS(inp.value);
       if(val != null){ times[cid] = val; count++; }
@@ -6708,7 +6875,7 @@ function confessionalEntryBox(data, defaultEp, episodes){
       if(chk.checked) eliminated[cid] = ep;
       else if(eliminated[cid] === ep) delete eliminated[cid];
     });
-    const updated = { ...data, times: { ...data.times, [ep]: times }, eliminated };
+    const updated = { ...data, times: { ...data.times, [ep]: times }, counts: { ...(data.counts||{}), [ep]: counts }, eliminated };
     saveConfessional(updated);
     AudioFX.success();
     toast('Saved Episode ' + ep + ' times for ' + count + ' castaway' + (count===1?'':'s'));
@@ -6769,6 +6936,51 @@ function confessionalLeaderboard(data, episodes){
     rankedOut.forEach((c,i)=> wrap.appendChild(buildRow(c, rankedStillIn.length+i+1)));
   }
 
+  wrap.appendChild(confessionalCountTable(data, episodes));
+  return wrap;
+}
+
+/* Confessional COUNT chart (number of confessionals per episode), with each
+   episode cell tinted by the tribe that person was on in that episode — so a
+   tribe switch is visible right in the numbers. */
+function confessionalCountTable(data, episodes){
+  const wrap = el('div',{});
+  const counts = data.counts || {};
+  const eps = episodes.filter(ep=> counts[ep] && Object.keys(counts[ep]).length);
+  if(!eps.length) return wrap;
+  wrap.appendChild(el('h3',{style:'margin:26px 0 4px;font-size:1rem'}, '🔢 Confessional Count — by Episode'));
+  wrap.appendChild(el('p',{style:'margin:0 0 10px;font-size:0.76rem;color:var(--sand-dim)'},
+    'How many confessionals each castaway got (chart by @justrategic). Cell color = the tribe they were on that episode. Avg = total ÷ episodes played.'));
+  const rows = CASTAWAYS.map(c=>{
+    let total = 0, played = 0;
+    eps.forEach(ep=>{ const n = (counts[ep]||{})[c.id]; if(n!=null){ total += n; played++; } });
+    return { c, total, played, avg: played ? total/played : 0, out: !!(data.eliminated && data.eliminated[c.id]) };
+  }).sort((a,b)=> (a.out - b.out) || (b.total - a.total) || a.c.short.localeCompare(b.c.short));
+  const scroller = el('div',{style:'overflow-x:auto;border:1px solid var(--line);border-radius:12px'});
+  const table = el('table',{class:'tribe-hist', style:'min-width:' + (220 + eps.length*58) + 'px'});
+  const hr = el('tr',{}, el('th',{style:'text-align:left'}, 'Castaway'));
+  eps.forEach(ep=> hr.appendChild(el('th',{}, 'E' + ep)));
+  hr.appendChild(el('th',{}, 'Total')); hr.appendChild(el('th',{}, 'Avg'));
+  table.appendChild(el('thead',{}, hr));
+  const tb = el('tbody',{});
+  rows.forEach(r=>{
+    const tr = el('tr',{});
+    const nameCell = el('td',{style:'text-align:left;white-space:nowrap'}, r.c.short);
+    nameCell.appendChild(tribeChip(r.c));
+    if(r.out) nameCell.appendChild(el('span',{class:'conf-elim-tag', style:'margin-left:6px'}, 'OUT EP ' + data.eliminated[r.c.id]));
+    tr.appendChild(nameCell);
+    eps.forEach(ep=>{
+      const n = (counts[ep]||{})[r.c.id];
+      const tr_ = tribeAtEpisode(r.c, ep);
+      tr.appendChild(el('td',{class:'tcell ' + (n!=null && tr_ ? tr_ : 'none'), style:'min-width:44px'}, n!=null ? String(n) : '—'));
+    });
+    tr.appendChild(el('td',{style:'text-align:center;font-weight:700'}, String(r.total)));
+    tr.appendChild(el('td',{style:'text-align:center;color:var(--sand-dim)'}, r.played ? r.avg.toFixed(2) : '—'));
+    tb.appendChild(tr);
+  });
+  table.appendChild(tb);
+  scroller.appendChild(table);
+  wrap.appendChild(scroller);
   return wrap;
 }
 
@@ -6932,7 +7144,7 @@ function wheelOutSet(){
   return out;
 }
 function wheelFilterOptions(){
-  const opts = [['all','Everyone still in the game'], ['tribe:purple','🟣 Savu tribe only'], ['tribe:yellow','🟡 Toka tribe only']];
+  const opts = [['all','Everyone still in the game'], ['tribe:purple','🟣 Savu tribe only'], ['tribe:yellow','🟡 Toka tribe only'], ['tribe:red','🔴 Dina tribe only']];
   if(tvState && Array.isArray(tvState.teams)) tvState.teams.forEach(t=> opts.push(['team:' + t.id, t.name + ' (fantasy team)']));
   return opts;
 }
@@ -6977,14 +7189,14 @@ function wheelDraw(canvas, slices, rot){
     const t = currentTribe(c);
     const light = i % 2 === 0;
     ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, a0, a0 + sa); ctx.closePath();
-    ctx.fillStyle = t === 'purple' ? (light ? '#7b4fc9' : '#5d3a9e') : t === 'yellow' ? (light ? '#e8c53d' : '#caa626') : (light ? '#3b6b55' : '#2c5443');
+    ctx.fillStyle = tribeColors(t, light)[0];
     ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = '#0a1712'; ctx.stroke();
     // name, running along the slice toward the rim
     ctx.save();
     ctx.translate(cx, cy); ctx.rotate(a0 + sa/2);
     ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = t === 'yellow' ? '#1a1200' : '#ffffff';
+    ctx.fillStyle = tribeColors(t, light)[1];
     const arcH = 2 * (R*0.62) * Math.sin(Math.min(sa/2, Math.PI/2));
     let fs = Math.max(10, Math.min(21, arcH * 0.55));
     ctx.font = '700 ' + fs + 'px Inter, sans-serif';
@@ -7210,8 +7422,19 @@ const VOTING_SEED = [
   { id:'3a', order:3, label:'Episode 3 — Savu', out:'rob', kind:'quit', result:'Quit — no vote', votes:{}, notes:{} },
   { id:'3b', order:4, label:'Episode 3 — Post-mutiny', out:'patt', kind:'voted out', result:'6-5',
     votes:{ brady:'kilby', carter:'patt', devin:'kilby', jelly:'kilby', jenna:'patt', kilby:'patt', lewis:'patt', maggie:'patt', mike:'kilby', 'thien-an':'patt', patt:'kilby' },
+    notes:{} },
+  { id:'4',  order:5, label:'Episode 4 — Savu', out:'jenna', kind:'voted out', result:'4-1',
+    votes:{ alexis:'jenna', devin:'jenna', jelly:'jenna', ori:'jenna', jenna:'alexis' },
     notes:{} }
 ];
+/* Which episode a council belongs to (ids like '3b' or a custom label such as
+   "Episode 6") — used to show each vote's tribe as it was at that time. */
+function councilEp(co){
+  const fromId = parseInt(String(co.id), 10);
+  if(!isNaN(fromId)) return fromId;
+  const m = String(co.label||'').match(/\d+/);
+  return m ? parseInt(m[0], 10) : 99;
+}
 var votingSort = 'accuracy';
 const VOTING_SPECIAL = { '__sitd':'Shot in the Dark', '__exile':'Exiled', '__none':"Didn't vote" };
 
@@ -7341,8 +7564,7 @@ function renderVotingHistory(){
       if(t){
         const tc = byId(t);
         const right = t === co.out;
-        const bg = tc && tc.tribe === 'purple' ? '#5d3a9e' : (tc && tc.tribe === 'yellow' ? '#caa626' : '#3b6b55');
-        const fg = tc && tc.tribe === 'yellow' ? '#1a1200' : '#fff';
+        const [bg, fg] = tribeColors(tc ? (tribeAtEpisode(tc, councilEp(co)) || currentTribe(tc)) : null, false);
         const chip = el('span',{style:'display:inline-block;padding:3px 9px;border-radius:6px;font-weight:700;font-size:0.82rem;background:' + bg + ';color:' + fg + (right ? ';box-shadow:0 0 0 2px #ecdfc0' : '')}, (tc ? tc.short : t) + (right ? ' ✓' : ''));
         td.appendChild(chip);
       } else {
@@ -7356,7 +7578,7 @@ function renderVotingHistory(){
   table.appendChild(tb);
   scroller.appendChild(table);
   wrap.appendChild(scroller);
-  wrap.appendChild(el('p',{style:'margin:8px 0 0;font-size:0.74rem;color:var(--sand-dim)'}, 'Cell color = the tribe of the person voted for. A ringed ✓ cell means that vote sent them home.'));
+  wrap.appendChild(el('p',{style:'margin:8px 0 0;font-size:0.74rem;color:var(--sand-dim)'}, 'Cell color = the tribe of the person voted for, as it was at that tribal. A ringed ✓ cell means that vote sent them home.'));
 
   wrap.appendChild(votingEditorBox(councils));
   return wrap;
