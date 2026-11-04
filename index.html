@@ -3816,7 +3816,17 @@ function renderSyncPill(){
   if(!syncPillEl){
     syncPillEl = document.createElement('div');
     syncPillEl.id = 'syncPill';
-    syncPillEl.style.cssText = 'position:fixed;left:10px;bottom:10px;z-index:9000;padding:6px 11px;border-radius:999px;font:600 12px/1.2 system-ui,sans-serif;background:rgba(10,24,20,.92);border:1px solid rgba(255,255,255,.18);color:#d8cfae;box-shadow:0 2px 10px rgba(0,0,0,.4);max-width:78vw;pointer-events:none';
+    syncPillEl.style.cssText = 'position:fixed;left:10px;bottom:10px;z-index:9000;padding:6px 11px;border-radius:999px;font:600 12px/1.2 system-ui,sans-serif;background:rgba(10,24,20,.92);border:1px solid rgba(255,255,255,.18);color:#d8cfae;box-shadow:0 2px 10px rgba(0,0,0,.4);max-width:92vw;cursor:pointer';
+    syncPillEl.title = 'Tap to force-reload the latest app + scores from the cloud';
+    syncPillEl.addEventListener('click', ()=>{
+      if(!confirm('Reload the newest app and pull the latest scores from the cloud on this device?\n\n(Nothing is deleted from the cloud.)')) return;
+      try{ LS && LS.removeItem('s51_tv_scoring'); }catch(e){}
+      const done = ()=> location.reload();
+      Promise.resolve()
+        .then(()=> (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) ? navigator.serviceWorker.getRegistrations().then(rs=>Promise.all(rs.map(r=>r.unregister()))) : null)
+        .then(()=> (window.caches && caches.keys) ? caches.keys().then(ks=>Promise.all(ks.map(k=>caches.delete(k)))) : null)
+        .then(done, done);
+    });
     document.body.appendChild(syncPillEl);
   }
   let txt, color;
@@ -3826,7 +3836,7 @@ function renderSyncPill(){
   else if(syncLast){ txt = '✅ Saved to cloud ' + syncLast.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); color = '#6fe0a8'; }
   else if(syncOnline){ txt = '☁️ Connected'; color = '#6fe0a8'; }
   else { txt = '☁️ Connecting…'; color = '#d8cfae'; }
-  syncPillEl.textContent = txt;
+  syncPillEl.textContent = txt + '  ·  v' + APP_BUILD + (syncHash ? ' #' + syncHash : '');
   syncPillEl.style.color = color;
 }
 function trackWrite(promise){
@@ -3887,6 +3897,39 @@ function stashScoringHistory(snapshot, reason){
    Plus a guard that refuses any save that would erase most of the scores
    unless it's an explicit, confirmed Reset/Restore. */
 let lastRemoteScoring = null;   // last copy seen from the cloud (normalized)
+const APP_BUILD = '2026-11-04a';
+let syncHash = '';
+/* Short fingerprint of the scores this device is showing (zeros ignored).
+   If the phone and the computer show the same code in the bottom-left pill,
+   they hold identical data; if not, one of them is stale. */
+function scoringHash(sc){
+  const f = flattenScoring(normalizeScoring(sc));
+  const keys = Object.keys(f).filter(k=> f[k] !== 0 && f[k] !== null && f[k] !== '' && !/^categories|^weeks/.test(k) ).sort();
+  let h = 2166136261;
+  const str = keys.map(k=>k+'='+JSON.stringify(f[k])).join('|');
+  for(let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return h.toString(36).slice(0,5).toUpperCase();
+}
+/* Re-draw everything that shows scores after a cloud update — but never
+   while someone is typing in a form (that used to wipe half-entered scores
+   when another device saved); it catches up as soon as they leave the field. */
+let scoringRenderPending = false;
+function userIsTypingInScores(){
+  const a = document.activeElement;
+  return !!(a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) && a.closest && (a.closest('#scoringRoot') || a.closest('#panel-teams')));
+}
+function refreshScoringViews(){
+  if(userIsTypingInScores()){ scoringRenderPending = true; return; }
+  scoringRenderPending = false;
+  renderScoring();
+  renderTeamsTab();
+  if(typeof renderWheel === 'function') renderWheel();
+  if(typeof refreshStealBoard === 'function') refreshStealBoard();
+}
+document.addEventListener('focusout', ()=>{
+  if(!scoringRenderPending) return;
+  setTimeout(()=>{ if(scoringRenderPending && !userIsTypingInScores()) refreshScoringViews(); }, 350);
+});
 function objectifyTop(x){
   // Firebase hands back numeric-keyed objects ("1","2",...) as arrays with
   // null holes — turn those back into plain objects so paths line up.
@@ -3908,7 +3951,7 @@ function flattenScoring(s){
 function diffScoring(base, next){
   const a = flattenScoring(base), b = flattenScoring(next), up = {};
   const same = (x,y)=> JSON.stringify(x) === JSON.stringify(y);
-  Object.keys(b).forEach(k=>{ if(!(k in a) || !same(a[k], b[k])) up[k.replace(/^\//,'')] = b[k]; });
+  Object.keys(b).forEach(k=>{ if(!(k in a) && b[k] === null) return; if(!(k in a) || !same(a[k], b[k])) up[k.replace(/^\//,'')] = b[k]; });
   Object.keys(a).forEach(k=>{ if(!(k in b)) up[k.replace(/^\//,'')] = null; });
   // drop bare container markers that flatten produced for empty objects
   Object.keys(up).forEach(k=>{ if(/^(entries|steals|eliminated|honorary|stealOrder)$/.test(k) && up[k] && typeof up[k]==='object') delete up[k]; });
@@ -3917,7 +3960,13 @@ function diffScoring(base, next){
 function saveTvScoring(newScoring, opts){
   opts = opts || {};
   const local = normalizeScoring(lsGet('s51_tv_scoring', null));
-  const base = lastRemoteScoring || local;
+  /* SYNC FIX: the base for the diff is the exact copy the person was looking
+     at when they made their edit (opts.base), NOT whatever copy this device
+     happens to hold from the cloud right now. Diffing a stale form against a
+     fresher cloud copy used to look like "the user deleted everything that
+     changed in between" (that is how a newer elimination got wiped). Now a
+     save only ever writes the values the person actually changed. */
+  const base = opts.base ? normalizeScoring(opts.base) : (lastRemoteScoring || local);
   const next = normalizeScoring(newScoring);
   const sizeBase = scoringSize(base), sizeNext = scoringSize(next);
   if(!opts.allowShrink && sizeBase >= 6 && sizeNext < sizeBase * 0.5){
@@ -3926,13 +3975,42 @@ function saveTvScoring(newScoring, opts){
     setTimeout(()=>{ if(typeof renderScoring==='function') renderScoring(); }, 50);
     return;
   }
-  if(firebaseReady && Date.now() - lastScoringStash > 10*60*1000) stashScoringHistory(base, 'autosave');
-  lsSet('s51_tv_scoring', next);
-  if(!firebaseReady) return;
+  if(firebaseReady && Date.now() - lastScoringStash > 10*60*1000) stashScoringHistory(lastRemoteScoring || base, 'autosave');
+  if(!firebaseReady){ lsSet('s51_tv_scoring', next); return; }
   const up = diffScoring(base, next);
   if(!Object.keys(up).length) return;
-  lastRemoteScoring = next;
-  trackWrite(fbDb.ref('tvDraft/scoring').update(up));
+  // The cloud listener fires immediately with the merged result and refreshes
+  // the local copy, so there is no separate local write here (writing the
+  // edited copy locally could briefly show stale values for other fields).
+  return trackWrite(fbDb.ref('tvDraft/scoring').update(up));
+}
+/* Locks in a steal safely: a Firebase transaction on just that week's list,
+   so two people picking at the same moment can't overwrite each other, and
+   the same castaway can't be taken twice in a week. */
+function lockInStealSafely(source, week, entry, fallbackUpdated){
+  if(!(firebaseReady && source && source.type==='tv')){
+    source.save(fallbackUpdated);
+    return Promise.resolve({ committed:true });
+  }
+  syncPending++; renderSyncPill();
+  let reason = null;
+  return fbDb.ref('tvDraft/scoring/steals/' + week).transaction(cur=>{
+    const arr = Array.isArray(cur) ? cur.slice() : (cur && typeof cur==='object' ? Object.values(cur) : []);
+    if(arr.some(x=>x && x.castawayId===entry.castawayId)){ reason = 'taken'; return; }
+    arr.push(entry);
+    return arr;
+  }).then(res=>{
+    syncPending = Math.max(0, syncPending-1); syncError = null;
+    if(res.committed) syncLast = new Date();
+    renderSyncPill();
+    return { committed: res.committed, reason };
+  }).catch(e=>{
+    syncPending = Math.max(0, syncPending-1);
+    syncError = (e && e.code === 'PERMISSION_DENIED') ? 'database refused the write (rules)' : ((e && e.message) || 'unknown error');
+    renderSyncPill();
+    toast('⚠️ That steal did NOT save to the cloud');
+    return { committed:false, reason:'error' };
+  });
 }
 function saveTribeOverrides(newOverrides){
   tribeOverrides = newOverrides || {};
@@ -4222,9 +4300,8 @@ if(firebaseReady){
     }
     lastRemoteScoring = remoteScoring;
     lsSet('s51_tv_scoring', remoteScoring);
-    renderScoring();
-    renderTeamsTab();
-    if(typeof renderWheel === 'function') renderWheel();
+    syncHash = scoringHash(remoteScoring); renderSyncPill();
+    refreshScoringViews();
   });
   fbDb.ref('tvDraft/voting').on('value', snap=>{
     // each tribal council lives at its own path (tvDraft/voting/<id>), so editing one
@@ -4822,11 +4899,12 @@ function scoringSource(){
   }
   if(tvState && tvState.status==='complete'){
     const teams = tvState.teams.map(t=>({ id:t.id, name:t.name, color:t.color, picks:t.picks }));
+    const snap = normalizeScoring(lsGet('s51_tv_scoring', null));
     return {
       type:'tv', teams,
       isAdmin:true,
-      scoring: normalizeScoring(lsGet('s51_tv_scoring', null)),
-      save: saveTvScoring
+      scoring: snap,
+      save(newScoring, o){ return saveTvScoring(newScoring, Object.assign({ base: snap }, o || {})); }
     };
   }
   if(mockState && mockState.status==='complete'){
@@ -5211,6 +5289,118 @@ function buildClaimLink(teamId, week){
     : DEPLOYED_APP_URL;
   return base + '?claim=' + encodeURIComponent(teamId) + '&week=' + encodeURIComponent(week);
 }
+const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+function smsHref(message){ return 'sms:' + (IS_IOS ? '&' : '?') + 'body=' + encodeURIComponent(message); }
+function buildBoardLink(week){
+  const base = (location.protocol === 'http:' || location.protocol === 'https:')
+    ? (location.origin + location.pathname)
+    : DEPLOYED_APP_URL;
+  return base + '?board=' + encodeURIComponent(week);
+}
+/* ---------- Steal board: who has picked, who is on the clock ----------
+   Everything is read live from scoring.stealOrder[week] + scoring.steals[week]
+   (both synced through Firebase), so every phone shows the same turn. */
+function stealOrderFor(source, week){
+  const st = (source.scoring.stealOrder || {})[week];
+  return (Array.isArray(st) && st.length) ? st.slice() : computeStealOrder(source);
+}
+function stealBoardState(source, week, extra){
+  const scoring = source.scoring;
+  const weekSteals = ((scoring.steals || {})[week] || []).filter(Boolean).slice();
+  if(extra && !weekSteals.some(x=>x.castawayId === extra.castawayId)) weekSteals.push(extra);
+  const rows = stealOrderFor(source, week).map(id=>{
+    const team = source.teams.find(t=>t.id === id);
+    const picks = weekSteals.filter(x=>x.teamId === id).map(x=> (byId(x.castawayId) || {}).short || x.castawayId || 'a steal');
+    return { id, team, picks, picked: picks.length > 0 };
+  }).filter(r=>r.team);
+  const clockIdx = rows.findIndex(r=>!r.picked);
+  return {
+    rows, clockIdx,
+    onClock: clockIdx >= 0 ? rows[clockIdx] : null,
+    next: (clockIdx >= 0 && clockIdx + 1 < rows.length) ? rows[clockIdx + 1] : null,
+    complete: clockIdx < 0
+  };
+}
+function stealBoardText(b){
+  return b.rows.map((r,i)=>{
+    const num = ORDER_EMOJI[i] || (String(i+1) + '.');
+    if(r.picked) return num + ' ' + r.team.name + ' ✅ ' + r.picks.join(' + ');
+    if(i === b.clockIdx) return num + ' ' + r.team.name + ' ⏳ ON THE CLOCK';
+    return num + ' ' + r.team.name + ' — waiting';
+  }).join('\n');
+}
+function buildStealAnnouncement(source, week, team, c, entry){
+  const b = stealBoardState(source, week, entry);
+  let msg = '🥷 STEAL LOCKED IN! ' + team.name + ' stole ' + c.short + ' for Week ' + week +
+    '. Whatever ' + c.short + ' scores this week, ' + team.name + ' gets those points too.' +
+    '\n\nSteal order — Week ' + week + ':\n' + stealBoardText(b);
+  if(b.complete) msg += '\n\n✅ All Week ' + week + ' steals are in!';
+  else {
+    msg += '\n\n👉 ' + b.onClock.team.name + ', you\'re up! Pick here: ' + buildClaimLink(b.onClock.id, week);
+    if(b.next) msg += '\n(On deck: ' + b.next.team.name + ')';
+  }
+  return msg;
+}
+function stealBoardList(b){
+  const list = el('div',{style:'display:flex;flex-direction:column;gap:6px;margin:12px 0;text-align:left'});
+  b.rows.forEach((r,i)=>{
+    const clock = i === b.clockIdx;
+    const row = el('div',{style:'display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:var(--jungle2);' +
+      (clock ? 'outline:2px solid #6fe0a8;' : '') + (r.picked ? 'opacity:.7;' : '')});
+    row.appendChild(el('div',{style:'font-family:\'Bebas Neue\';font-size:1.1rem;flex:none'}, ORDER_EMOJI[i] || (String(i+1)+'.')));
+    row.appendChild(el('div',{style:'flex:1;font-weight:700;color:' + r.team.color}, r.team.name));
+    row.appendChild(el('div',{style:'font-size:0.78rem;text-align:right;color:' + (clock ? '#6fe0a8' : 'var(--sand-dim)')},
+      r.picked ? '✅ ' + r.picks.join(' + ') : (clock ? '⏳ On the clock' : 'Waiting')));
+    list.appendChild(row);
+  });
+  return list;
+}
+let stealModalRepaint = null;
+function refreshStealBoard(){
+  const overlay = $('#profileOverlay'), modal = $('#profileModal');
+  if(!overlay || !modal || !overlay.classList.contains('open') || !stealModalRepaint) return;
+  if(!modal.querySelector('[data-steal-modal]')){ stealModalRepaint = null; return; }
+  stealModalRepaint();
+}
+function whenStealDataReady(cb){
+  let tries = 0;
+  const t = setInterval(()=>{
+    tries++;
+    const src = scoringSource();
+    const cloudOk = !firebaseReady || lastRemoteScoring !== null;
+    if(src && cloudOk){ clearInterval(t); cb(src); }
+    else if(tries > 40){ clearInterval(t); cb(src || null); }
+  }, 250);
+}
+function openStealBoard(week){
+  const modal = $('#profileModal');
+  function paint(){
+    const source = scoringSource();
+    modal.innerHTML = '';
+    const head = el('div',{class:'modal-head', style:'min-height:0'});
+    const closeBtn = el('button',{class:'modal-close', html:ICONS.close});
+    closeBtn.addEventListener('click', closeProfile);
+    head.appendChild(closeBtn);
+    modal.appendChild(head);
+    const body = el('div',{class:'modal-body', 'data-steal-modal':'board', style:'padding-top:16px'});
+    body.appendChild(el('h2',{style:'font-size:1.5rem'}, '🥷 Steal Board — Week ' + week));
+    if(!source || (firebaseReady && lastRemoteScoring === null)){
+      body.appendChild(el('div',{class:'modal-meta'}, 'Loading the latest picks…'));
+    } else {
+      const b = stealBoardState(source, week);
+      body.appendChild(el('div',{class:'modal-meta'}, b.complete ? '✅ All steals are in.' : '⏳ ' + b.onClock.team.name + ' is on the clock. Updates live.'));
+      body.appendChild(stealBoardList(b));
+      const msgBtn = el('a',{class:'btn', href:smsHref('🥷 Week ' + week + ' steal order:\n' + stealBoardText(b) + '\n\nLive board: ' + buildBoardLink(week))}, '📱 Text This');
+      body.appendChild(el('div',{class:'btn-row', style:'margin-top:10px'}, msgBtn));
+    }
+    modal.appendChild(body);
+  }
+  AudioFX.whoosh();
+  stealModalRepaint = paint;
+  paint();
+  $('#profileOverlay').classList.add('open');
+}
 function openStealOrderMessage(source, week, order){
   const { teams } = source;
   AudioFX.whoosh();
@@ -5235,7 +5425,9 @@ function openStealOrderMessage(source, week, order){
     return num + ' ' + t.name + ': ' + buildClaimLink(t.id, week);
   });
   const message = '🥷 Time to pick your Week ' + week + ' steals! Order (last place goes first):\n' +
-    lines.join('\n') + '\nTap YOUR team\'s link above to claim your team and lock in your pick!';
+    lines.join('\n') + '\nTap YOUR team\'s link above when it\'s your turn to claim your team and lock in your pick!' +
+    '\n\nAfter you lock it in, your phone opens a text with your pick and who\'s up next — hit Send in this chat so the next team knows they\'re on the clock.' +
+    '\nLive board (who\'s picked / who\'s up): ' + buildBoardLink(week);
 
   body.appendChild(el('div',{style:'margin-top:4px'}, el('label',{class:'field'}, 'Message to send')));
   const msgArea = el('textarea',{rows:'9'});
@@ -5246,8 +5438,11 @@ function openStealOrderMessage(source, week, order){
   const copyBtn = el('button',{class:'btn primary'}, '📋 Copy Message');
   copyBtn.addEventListener('click', ()=> copyToClipboard(msgArea.value));
   btnRow.appendChild(copyBtn);
-  const textBtn = el('a',{class:'btn', href:'sms:?body=' + encodeURIComponent(message)}, '📱 Text It');
+  const textBtn = el('a',{class:'btn', href:smsHref(message)}, '📱 Text It');
   btnRow.appendChild(textBtn);
+  const boardBtn = el('button',{class:'btn'}, '📋 Live Board');
+  boardBtn.addEventListener('click', ()=> openStealBoard(week));
+  btnRow.appendChild(boardBtn);
   const doneBtn = el('button',{class:'btn'}, 'Done');
   doneBtn.addEventListener('click', closeProfile);
   btnRow.appendChild(doneBtn);
@@ -5734,14 +5929,23 @@ function openStealPicker(source, team, week){
     backBtn.addEventListener('click', renderPickStep);
     const lockBtn = el('button',{class:'btn primary'}, '🔒 Lock In Steal');
     lockBtn.addEventListener('click', ()=>{
+      if(lockBtn.disabled) return;
+      lockBtn.disabled = true;
       const weekSteals = (scoring.steals && scoring.steals[week]) || [];
-      const entry = { teamId: team.id, note: noteInp.value.trim(), castawayId: c.id };
+      const entry = { teamId: team.id, note: noteInp.value.trim(), castawayId: c.id, at: Date.now() };
       const updated = { ...scoring, steals: { ...(scoring.steals||{}), [week]: [...weekSteals, entry] } };
-      source.save(updated);
-      AudioFX.success();
-      setTimeout(renderTeamsTab, 150);
-      setTimeout(renderScoring, 150);
-      renderMessageStep(c);
+      lockInStealSafely(source, week, entry, updated).then(res=>{
+        if(!res.committed){
+          lockBtn.disabled = false;
+          toast(res.reason==='taken' ? '⚠️ ' + c.short + ' was just stolen by someone else — pick again' : '⚠️ Steal was not saved — try again');
+          renderPickStep();
+          return;
+        }
+        AudioFX.success();
+        setTimeout(renderTeamsTab, 150);
+        setTimeout(renderScoring, 150);
+        renderMessageStep(c, entry);
+      });
     });
     btnRow.appendChild(backBtn);
     btnRow.appendChild(lockBtn);
@@ -5755,7 +5959,7 @@ function openStealPicker(source, team, week){
      anyone unless it's actively shared — this gives a ready-made message
      to copy or hand straight to the phone's Messages app, instead of
      Garrott having to type it out himself every time. */
-  function renderMessageStep(c){
+  function renderMessageStep(c, entry){
     modal.innerHTML = '';
     const head = el('div',{class:'modal-head', style:'min-height:0'});
     const closeBtn = el('button',{class:'modal-close', html:ICONS.close});
@@ -5767,30 +5971,37 @@ function openStealPicker(source, team, week){
     body.appendChild(el('h2',{style:'font-size:1.5rem'}, '🥷 Steal Locked In!'));
     body.appendChild(el('div',{class:'modal-meta'}, team.name + ' stole ' + c.short + ' — Week ' + week));
 
-    const livePts = castawayWeekPoints(scoring, c.id, week);
-    const message = '🥷 STEAL ALERT! ' + team.name + ' just stole ' + c.short + ' for Week ' + week +
-      '! Whatever ' + c.short + ' scores this week (currently +' + livePts + ' pts), ' + team.name + ' gets those points too.';
+    const freshSource = scoringSource() || source;
+    const message = buildStealAnnouncement(freshSource, week, team, c, entry);
+    const b = stealBoardState(freshSource, week, entry);
+    body.appendChild(el('div',{style:'margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--jungle2);font-size:0.86rem'},
+      b.complete ? '✅ That was the last pick — every team has stolen for Week ' + week + '.'
+                 : '👉 Next up: ' + b.onClock.team.name + (b.next ? ' (then ' + b.next.team.name + ')' : '')));
 
-    body.appendChild(el('div',{style:'margin-top:14px'}, el('label',{class:'field'}, 'Message to send')));
-    const msgArea = el('textarea',{rows:'4'});
+    body.appendChild(el('div',{style:'margin-top:14px'}, el('label',{class:'field'}, 'Message for the group chat')));
+    const msgArea = el('textarea',{rows:'11'});
     msgArea.value = message;
     body.appendChild(msgArea);
 
     const btnRow = el('div',{class:'btn-row', style:'margin-top:14px;flex-wrap:wrap'});
-    const copyBtn = el('button',{class:'btn primary'}, '📋 Copy Message');
+    const textBtn = el('a',{class:'btn primary', href:smsHref(message)}, '📱 Send to Group Chat');
+    msgArea.addEventListener('input', ()=> textBtn.setAttribute('href', smsHref(msgArea.value)));
+    btnRow.appendChild(textBtn);
+    const copyBtn = el('button',{class:'btn'}, '📋 Copy');
     copyBtn.addEventListener('click', ()=> copyToClipboard(msgArea.value));
     btnRow.appendChild(copyBtn);
-    const textBtn = el('a',{class:'btn', href:'sms:?body=' + encodeURIComponent(message)}, '📱 Text It');
-    btnRow.appendChild(textBtn);
     const doneBtn = el('button',{class:'btn'}, 'Done');
     doneBtn.addEventListener('click', closeProfile);
     btnRow.appendChild(doneBtn);
     body.appendChild(btnRow);
     body.appendChild(el('div',{style:'margin-top:10px;font-size:0.72rem;color:var(--sand-dim)'},
-      '"Text It" opens your phone\'s Messages app with this pre-filled (works best on phones). Otherwise, copy it and paste it into your group chat.'));
+      'Your Messages app opens by itself with this ready — pick the group chat and hit Send so the next team knows it\'s their turn. (If it didn\'t open, tap Send to Group Chat.)'));
 
     modal.appendChild(body);
     $('#profileOverlay').classList.add('open');
+    if(IS_MOBILE){
+      setTimeout(()=>{ if(document.body.contains(textBtn) && $('#profileOverlay').classList.contains('open')) window.location.href = textBtn.getAttribute('href'); }, 450);
+    }
   }
 
   renderPickStep();
@@ -6681,7 +6892,51 @@ function getConfessional(){
   Object.keys(seed.counts).forEach(ep=>{ counts[ep] = { ...seed.counts[ep], ...(counts[ep]||{}) }; });
   return { ...saved, episodes, times, counts, eliminated: { ...seed.eliminated, ...(saved.eliminated||{}) }, links: { ...seed.links, ...(saved.links||{}) } };
 }
-function saveConfessional(data){ lsSet('s51_confessional', data); }
+/* Confessional times used to live ONLY in this browser (localStorage), so a
+   time entered on the computer never showed on the phone. They now sync
+   through Firebase (tvDraft/confessional) the same careful way scores do:
+   a save writes only the values that changed from the copy the person was
+   looking at, so a stale device can't overwrite newer data. */
+let lastRemoteConf = null;
+function flattenConf(c){
+  const out = {};
+  const walk = (v, path)=>{
+    if(v && typeof v === 'object' && !Array.isArray(v)) Object.keys(v).forEach(k=> walk(v[k], path ? path + '/' + k : k));
+    else out[path] = (v === undefined) ? null : v;
+  };
+  walk(c || {}, '');
+  delete out[''];
+  return out;
+}
+function saveConfessional(data, base){
+  lsSet('s51_confessional', data);
+  if(!firebaseReady) return;
+  const a = flattenConf(base || lastRemoteConf || {}), b = flattenConf(data), up = {};
+  Object.keys(b).forEach(k=>{ if(!(k in a) || JSON.stringify(a[k]) !== JSON.stringify(b[k])) up[k] = b[k]; });
+  Object.keys(a).forEach(k=>{ if(!(k in b)) up[k] = null; });
+  if(!Object.keys(up).length) return;
+  trackWrite(fbDb.ref('tvDraft/confessional').update(up));
+}
+if(firebaseReady){
+  fbDb.ref('tvDraft/confessional').on('value', snap=>{
+    const remote = snap.val();
+    if(remote){
+      // Firebase hands numeric-keyed objects ("1","2",...) back as arrays with
+      // null holes — turn them back into plain objects so paths line up.
+      const objy = x => Array.isArray(x) ? Object.fromEntries(x.map((v,i)=>[String(i), v]).filter(([i,v])=> v != null)) : (x || {});
+      if(remote.episodes && !Array.isArray(remote.episodes)) remote.episodes = Object.values(remote.episodes);
+      remote.times = objy(remote.times); remote.counts = objy(remote.counts);
+      remote.links = objy(remote.links); remote.eliminated = objy(remote.eliminated);
+    }
+    lastRemoteConf = remote || null;
+    if(remote){
+      lsSet('s51_confessional', remote);
+      const a = document.activeElement;
+      const typing = a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) && a.closest && a.closest('#rankingsRoot');
+      if(!typing && typeof rankingsSubTab !== 'undefined' && rankingsSubTab === 'confessional' && $('#panel-rankings') && $('#panel-rankings').classList.contains('active')) renderRankings();
+    }
+  });
+}
 function fmtMMSS(totalSeconds){
   const s = Math.max(0, Math.round(totalSeconds||0));
   return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
@@ -6733,7 +6988,7 @@ function confessionalSourceLinksBox(data, episodes){
     const updatedLinks = { ...(data.links||{}) };
     if(url.trim()) updatedLinks[target] = url.trim();
     else delete updatedLinks[target];
-    saveConfessional({ ...data, links: updatedLinks });
+    saveConfessional({ ...data, links: updatedLinks }, data);
     toast('Link updated for Episode ' + target);
     renderRankings();
   });
@@ -6768,7 +7023,7 @@ function renderConfessionalTracker(){
     const links = { ...(data.links||{}) };
     if(url && url.trim()) links[label] = url.trim();
     const updated = { ...data, episodes:[...data.episodes, label], times: { ...data.times, [label]: {} }, counts: { ...(data.counts||{}), [label]: {} }, links };
-    saveConfessional(updated);
+    saveConfessional(updated, data);
     toast('Episode ' + label + ' added — enter times below');
     renderRankings();
   });
@@ -6876,7 +7131,7 @@ function confessionalEntryBox(data, defaultEp, episodes){
       else if(eliminated[cid] === ep) delete eliminated[cid];
     });
     const updated = { ...data, times: { ...data.times, [ep]: times }, counts: { ...(data.counts||{}), [ep]: counts }, eliminated };
-    saveConfessional(updated);
+    saveConfessional(updated, data);
     AudioFX.success();
     toast('Saved Episode ' + ep + ' times for ' + count + ' castaway' + (count===1?'':'s'));
     renderRankings();
@@ -6997,53 +7252,82 @@ function confessionalCountTable(data, episodes){
    (isAdmin is true for everyone in this mode, same as before this feature),
    so this doesn't change who *can* act — it just gets them there in one tap
    instead of Garrott doing every pick by hand. */
+function goPickStealForTeam(team, week){
+  closeProfile();
+  // Clear the query string so refreshing or re-sharing the tab doesn't
+  // re-trigger this screen.
+  if(window.history && history.replaceState) history.replaceState(null, '', location.pathname);
+  $all('nav.tabs button').forEach(b=>b.classList.remove('active'));
+  const teamsNavBtn = $('nav.tabs button[data-tab=teams]');
+  if(teamsNavBtn) teamsNavBtn.classList.add('active');
+  $all('.panel').forEach(p=>p.classList.remove('active'));
+  const teamsPanel = $('#panel-teams');
+  if(teamsPanel) teamsPanel.classList.add('active');
+  scoringSelectedTeam = team.id;
+  scoringSelectedWeek = week;
+  renderTeamsTab();
+  setTimeout(()=>{
+    const freshSource = scoringSource();
+    const freshTeam = freshSource ? freshSource.teams.find(t=>t.id===team.id) : null;
+    if(freshSource && freshTeam) openStealPicker(freshSource, freshTeam, week);
+    else toast('Couldn\'t open the steal picker — try tapping Pick Steal on your team page.');
+  }, 200);
+}
 function renderClaimTeamScreen(teamId, week){
-  const source = scoringSource();
-  if(!source){
-    toast('The draft isn\'t set up yet — ask for a new link once it is.');
-    return;
-  }
-  const team = source.teams.find(t=>t.id===teamId);
-  if(!team){
-    toast('Couldn\'t find that team — ask for a fresh link.');
-    return;
+  const modal = $('#profileModal');
+  function paint(){
+    const source = scoringSource();
+    modal.innerHTML = '';
+    const head = el('div',{class:'modal-head', style:'min-height:0'});
+    const closeBtn = el('button',{class:'modal-close', html:ICONS.close});
+    closeBtn.addEventListener('click', closeProfile);
+    head.appendChild(closeBtn);
+    modal.appendChild(head);
+    const body = el('div',{class:'modal-body', 'data-steal-modal':'claim', style:'padding-top:16px;text-align:center'});
+    modal.appendChild(body);
+    if(!source){
+      body.appendChild(el('h2',{style:'font-size:1.4rem'}, 'Loading…'));
+      body.appendChild(el('div',{class:'modal-meta'}, 'Getting the draft from the cloud — one moment.'));
+      return;
+    }
+    const team = source.teams.find(t=>t.id===teamId);
+    if(!team){ body.appendChild(el('div',{class:'modal-meta'}, 'Couldn\'t find that team — ask for a fresh link.')); return; }
+    body.appendChild(el('h2',{style:'font-size:1.35rem;padding-right:34px'}, '🏆 ' + team.name + ' · Week ' + week + ' steal'));
+    if(firebaseReady && lastRemoteScoring === null){
+      body.appendChild(el('div',{class:'modal-meta'}, 'Loading the latest picks…'));
+      return;
+    }
+    const b = stealBoardState(source, week);
+    const mine = b.rows.find(r=>r.id===teamId);
+    const myIdx = b.rows.findIndex(r=>r.id===teamId);
+    const myTurn = !!(b.onClock && b.onClock.id === teamId);
+    let status, color = 'var(--sand-dim)';
+    if(mine && mine.picked){ status = '✅ You already stole ' + mine.picks.join(' + ') + ' this week.'; color = '#6fe0a8'; }
+    else if(myTurn){ status = '🟢 You\'re on the clock — pick your steal!'; color = '#6fe0a8'; }
+    else if(b.complete){ status = 'All Week ' + week + ' steals are in.'; }
+    else { status = '⏳ Not your turn yet — ' + b.onClock.team.name + ' is picking now. You\'re #' + (myIdx+1) + ' in the order.'; color = '#ffb347'; }
+    body.appendChild(el('div',{class:'modal-meta', style:'color:' + color + ';font-weight:700'}, status));
+    body.appendChild(stealBoardList(b));
+    if(!(mine && mine.picked) && !b.complete){
+      if(myTurn){
+        const claimBtn = el('button',{class:'btn primary', style:'margin-top:8px;font-size:1rem;padding:14px 22px'}, '🏆 Claim ' + team.name + ' & Pick Steal');
+        claimBtn.addEventListener('click', ()=> goPickStealForTeam(team, week));
+        body.appendChild(claimBtn);
+      } else {
+        const waitBtn = el('button',{class:'btn primary', disabled:'disabled', style:'margin-top:8px;font-size:1rem;padding:14px 22px;opacity:.5'}, '⏳ Waiting for ' + b.onClock.team.name);
+        body.appendChild(waitBtn);
+        const overrideBtn = el('button',{class:'btn', style:'margin-top:10px;font-size:0.78rem;padding:6px 12px'}, 'Commissioner: pick out of order');
+        overrideBtn.addEventListener('click', ()=>{
+          if(confirm('It is ' + b.onClock.team.name + '\'s turn. Pick for ' + team.name + ' out of order anyway?')) goPickStealForTeam(team, week);
+        });
+        body.appendChild(overrideBtn);
+        body.appendChild(el('div',{style:'margin-top:8px;font-size:0.72rem;color:var(--sand-dim)'}, 'This page updates by itself — it unlocks the moment it\'s your turn.'));
+      }
+    }
   }
   AudioFX.whoosh();
-  const modal = $('#profileModal');
-  modal.innerHTML = '';
-  const head = el('div',{class:'modal-head', style:'min-height:0'});
-  const closeBtn = el('button',{class:'modal-close', html:ICONS.close});
-  closeBtn.addEventListener('click', closeProfile);
-  head.appendChild(closeBtn);
-  modal.appendChild(head);
-
-  const body = el('div',{class:'modal-body', style:'padding-top:16px;text-align:center'});
-  body.appendChild(el('h2',{style:'font-size:1.6rem'}, '🏆 Claim ' + team.name));
-  body.appendChild(el('div',{class:'modal-meta'}, 'Tap below to open ' + team.name + '\'s page and pick your Week ' + week + ' steal.'));
-  const claimBtn = el('button',{class:'btn primary', style:'margin-top:20px;font-size:1rem;padding:14px 22px'}, '🏆 Claim ' + team.name + ' & Pick Steal');
-  claimBtn.addEventListener('click', ()=>{
-    closeProfile();
-    // Clear the query string so refreshing or re-sharing the tab doesn't
-    // re-trigger this screen.
-    if(window.history && history.replaceState) history.replaceState(null, '', location.pathname);
-    $all('nav.tabs button').forEach(b=>b.classList.remove('active'));
-    const teamsNavBtn = $('nav.tabs button[data-tab=teams]');
-    if(teamsNavBtn) teamsNavBtn.classList.add('active');
-    $all('.panel').forEach(p=>p.classList.remove('active'));
-    const teamsPanel = $('#panel-teams');
-    if(teamsPanel) teamsPanel.classList.add('active');
-    scoringSelectedTeam = team.id;
-    scoringSelectedWeek = week;
-    renderTeamsTab();
-    setTimeout(()=>{
-      const freshSource = scoringSource();
-      const freshTeam = freshSource ? freshSource.teams.find(t=>t.id===team.id) : null;
-      if(freshSource && freshTeam) openStealPicker(freshSource, freshTeam, week);
-      else toast('Couldn\'t open the steal picker — try tapping Pick Steal on your team page.');
-    }, 200);
-  });
-  body.appendChild(claimBtn);
-  modal.appendChild(body);
+  stealModalRepaint = paint;
+  paint();
   $('#profileOverlay').classList.add('open');
 }
 (function checkClaimLink(){
@@ -7051,7 +7335,9 @@ function renderClaimTeamScreen(teamId, week){
     const params = new URLSearchParams(location.search);
     const teamId = params.get('claim');
     const week = params.get('week');
-    if(teamId && week) renderClaimTeamScreen(teamId, week);
+    const board = params.get('board');
+    if(teamId && week) whenStealDataReady(()=> renderClaimTeamScreen(teamId, week));
+    else if(board) whenStealDataReady(()=> openStealBoard(board));
   }catch(e){ console.error('Claim link check failed', e); }
 })();
 
