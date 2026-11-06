@@ -513,6 +513,9 @@ table.wk-grid td.tot,table.wk-grid th.tot{font-weight:800;border-left:1px solid 
 table.wk-grid tr.steal td,table.wk-grid tr.teamrow td{font-style:normal}
 table.wk-grid tr.teamrow td{font-weight:800;border-top:2px solid rgba(255,255,255,.18);border-bottom:none}
 table.wk-grid tr.teamrow td.nm{color:var(--torch)}
+
+.tbadge{display:inline-flex;vertical-align:middle;margin-right:6px;flex:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
+.tbadge svg{display:block}
 </style>
 </head>
 <body>
@@ -3913,7 +3916,7 @@ function stashScoringHistory(snapshot, reason){
    Plus a guard that refuses any save that would erase most of the scores
    unless it's an explicit, confirmed Reset/Restore. */
 let lastRemoteScoring = null;   // last copy seen from the cloud (normalized)
-const APP_BUILD = '2026-11-06b';
+const APP_BUILD = '2026-11-06c';
 let syncHash = '';
 /* Short fingerprint of the scores this device is showing (zeros ignored).
    If the phone and the computer show the same code in the bottom-left pill,
@@ -5137,6 +5140,24 @@ function pointsByWeekChart(source){
   return holder;
 }
 
+/* ---------- Team emblems ----------
+   Each fantasy team gets a little Survivor-style badge (drawn in its team
+   color) so you can tell whose player you're looking at at a glance:
+   Bula = hibiscus ("Bula!" is Fijian for life/hello), Sainoi = crossed
+   spears, Wai = waves (wai is water), Goji = goji berries on the vine. */
+const TEAM_EMBLEMS = {
+  Bula: '<g fill="currentColor">' + [0,72,144,216,288].map(a=>'<ellipse cx="16" cy="9.6" rx="4" ry="6" transform="rotate('+a+' 16 16)" opacity=".92"/>').join('') + '</g><circle cx="16" cy="16" r="2.7" fill="#1a0f08"/><path d="M16 16 L20.6 10.2" stroke="#ffe08a" stroke-width="1.4" stroke-linecap="round"/><circle cx="21" cy="9.7" r="1.4" fill="#ffe08a"/>',
+  Sainoi: '<g stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 25 L24 8"/><path d="M25 25 L8 8"/></g><g fill="currentColor"><path d="M27 5 L21.6 7.2 L24.8 10.4 Z"/><path d="M5 5 L10.4 7.2 L7.2 10.4 Z"/></g><circle cx="16" cy="16.5" r="3.2" fill="#10241d" stroke="currentColor" stroke-width="1.8"/>',
+  Wai: '<g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5.5 11.5 q3.6 -4.2 7.2 0 t7.2 0 t6.6 0"/><path d="M5.5 17.5 q3.6 -4.2 7.2 0 t7.2 0 t6.6 0"/><path d="M5.5 23.5 q3.6 -4.2 7.2 0 t7.2 0 t6.6 0"/></g>',
+  Goji: '<path d="M16 6.5 C16 10 14 12 12 15 M16 6.5 C16 10 19 12 21 16" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/><ellipse cx="19.5" cy="8.2" rx="4.4" ry="2" transform="rotate(-25 19.5 8.2)" fill="currentColor" opacity=".75"/><ellipse cx="11.6" cy="19.6" rx="4" ry="5.6" transform="rotate(18 11.6 19.6)" fill="currentColor"/><ellipse cx="21.4" cy="20.4" rx="3.8" ry="5.2" transform="rotate(-16 21.4 20.4)" fill="currentColor"/><circle cx="10.4" cy="17.6" r="1" fill="#ffffff" opacity=".45"/><circle cx="20.4" cy="18.2" r="1" fill="#ffffff" opacity=".45"/>',
+  _default: '<path d="M16 5 C20 11 24 13 22 20 C21 24 18 26 16 26 C13 26 10 23 10 19 C10 15 14 14 14 10 C15 8 15.5 6.5 16 5 Z" fill="currentColor"/>'
+};
+function teamBadge(t, px){
+  px = px || 20;
+  const g = TEAM_EMBLEMS[t && t.name] || TEAM_EMBLEMS._default;
+  return el('span',{class:'tbadge', title:(t && t.name) || '', style:'color:' + ((t && t.color) || 'var(--torch)') + ';width:' + px + 'px;height:' + px + 'px',
+    html:'<svg viewBox="0 0 32 32" width="' + px + '" height="' + px + '" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="rgba(0,0,0,.45)" stroke="currentColor" stroke-width="1.6"/>' + g + '</svg>'});
+}
 function teamWeekGrid(source, t){
   const { scoring } = source;
   const allWeeks = (scoring.weeks || []).map(String);
@@ -5222,7 +5243,7 @@ function scoringStandings(source){
       const card = el('div',{class:'team-standing-card'});
       const head = el('div',{class:'team-standing-head'});
       head.appendChild(el('div',{},
-        el('div',{class:'team-standing-name', style:'color:'+t.color}, (i===0?'🏆 ':'') + t.name),
+        el('div',{class:'team-standing-name', style:'color:'+t.color+';display:flex;align-items:center'}, teamBadge(t,30), (i===0?'🏆 ':'') + t.name),
         el('div',{style:'font-size:0.78rem;color:var(--sand-dim)'}, t.ownerName ? ('👤 '+t.ownerName) : '')
       ));
       head.appendChild(el('div',{class:'team-standing-pts', style:'color:'+t.color}, String(t.total)));
@@ -5241,6 +5262,7 @@ function scoringStandings(source){
       img.onerror = function(){ this.style.display='none'; };
       row.appendChild(img);
       const nameLine = el('div',{class:'lb-name'}, r.c.short);
+      nameLine.insertBefore(teamBadge(r.team, 18), nameLine.firstChild);
       nameLine.appendChild(tribeChip(r.c));
       if(scoring.eliminated && scoring.eliminated[r.c.id]) nameLine.appendChild(el('span',{class:'elim-tag'}, 'OUT wk ' + scoring.eliminated[r.c.id]));
       row.appendChild(el('div',{class:'lb-info'}, nameLine, el('div',{class:'lb-sub'}, r.team.name)));
@@ -5415,7 +5437,7 @@ function stealBoardList(b){
     const row = el('div',{style:'display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:var(--jungle2);' +
       (clock ? 'outline:2px solid #6fe0a8;' : '') + (r.picked ? 'opacity:.7;' : '')});
     row.appendChild(el('div',{style:'font-family:\'Bebas Neue\';font-size:1.1rem;flex:none'}, ORDER_EMOJI[i] || (String(i+1)+'.')));
-    row.appendChild(el('div',{style:'flex:1;font-weight:700;color:' + r.team.color}, r.team.name));
+    row.appendChild(el('div',{style:'flex:1;font-weight:700;display:flex;align-items:center;color:' + r.team.color}, teamBadge(r.team, 22), r.team.name));
     row.appendChild(el('div',{style:'font-size:0.78rem;text-align:right;color:' + (clock ? '#6fe0a8' : 'var(--sand-dim)')},
       r.picked ? '✅ ' + r.picks.join(' + ') : (clock ? '⏳ On the clock' : 'Waiting')));
     list.appendChild(row);
@@ -5530,7 +5552,7 @@ function scoringTeamPages(source){
 
   const switcher = el('div',{class:'team-page-switcher'});
   teams.forEach(t=>{
-    const b = el('button',{class:'team-page-chip' + (t.id===scoringSelectedTeam?' on':''), style:'--tc:'+t.color}, t.name);
+    const b = el('button',{class:'team-page-chip' + (t.id===scoringSelectedTeam?' on':''), style:'--tc:'+t.color}, teamBadge(t,18), t.name);
     b.addEventListener('click', ()=>{ scoringSelectedTeam = t.id; renderTeamsTab(); });
     switcher.appendChild(b);
   });
@@ -5542,7 +5564,7 @@ function scoringTeamPages(source){
 
   const banner = el('div',{class:'team-page-banner', style:'border-color:'+team.color});
   banner.appendChild(el('div',{class:'team-page-kicker'}, '🔥 Survivor 51 Fantasy Tribe'));
-  banner.appendChild(el('div',{class:'team-page-name', style:'color:'+team.color}, team.name));
+  banner.appendChild(el('div',{class:'team-page-name', style:'color:'+team.color+';display:flex;align-items:center;justify-content:center;gap:2px'}, teamBadge(team,40), team.name));
   if(team.ownerName) banner.appendChild(el('div',{class:'team-page-owner'}, '👤 Drafted by ' + team.ownerName));
   const stats = el('div',{class:'team-page-stats'});
   [['Total Points', total, team.color], ['Castaways', team.picks.length, team.color], ['Still In', stillIn, team.color]].forEach(([label,val,color])=>{
@@ -6095,7 +6117,7 @@ function scoringWeekly(source){
     const pts = teamWeekPoints(scoring, teamScoringRoster(scoring, t), w) + stealBonusForWeek(scoring, t.id, w);
     const sel = scoringWeeklyTeam === t.id;
     const card = el('div',{class:'card-box', style:'padding:12px 14px;cursor:pointer;' + (sel ? 'outline:2px solid '+t.color+';' : (scoringWeeklyTeam ? 'opacity:.6;' : ''))},
-      el('div',{style:'font-family:\'Bebas Neue\';font-size:1.1rem;color:'+t.color}, t.name),
+      el('div',{style:'font-family:\'Bebas Neue\';font-size:1.1rem;color:'+t.color+';display:flex;align-items:center'}, teamBadge(t,24), t.name),
       el('div',{style:'font-family:\'Bebas Neue\';font-size:1.8rem;color:'+t.color}, String(pts))
     );
     card.addEventListener('click', ()=>{ scoringWeeklyTeam = sel ? null : t.id; renderScoring(); });
@@ -6127,6 +6149,8 @@ function scoringWeekly(source){
     const chips = scoring.categories.filter(cat=>Number(cats[cat.key])>0)
       .map(cat=>el('span',{class:'chip'}, cat.label + ' ×' + cats[cat.key]));
     const nameLine = el('div',{class:'wsname'}, r.c.short + ' · ' + r.team.name);
+    nameLine.insertBefore(teamBadge(r.team, 18), nameLine.firstChild);
+    row.style.borderLeft = '4px solid ' + r.team.color;
     nameLine.appendChild(tribeChip(r.c));
     if(scoring.eliminated && scoring.eliminated[r.c.id]===w) nameLine.appendChild(el('span',{class:'elim-tag'}, 'VOTED OUT'));
     row.appendChild(el('div',{class:'wsinfo'},
@@ -6150,7 +6174,7 @@ function scoringWeekly(source){
       const cats = ((scoring.entries[w]||{})[c.id])||{};
       const chips = scoring.categories.filter(cat=>Number(cats[cat.key])>0).map(cat=>el('span',{class:'chip'}, cat.label + ' ×' + cats[cat.key]));
       row.appendChild(el('div',{class:'wsinfo'},
-        el('div',{class:'wsname'}, '🥷 Steal: ' + c.short),
+        el('div',{class:'wsname'}, teamBadge(tt, 18), '🥷 Steal: ' + c.short),
         el('div',{}, chips.length ? chips : el('span',{style:'font-size:0.74rem;color:var(--sand-dim)'}, 'No points this week'))
       ));
       row.appendChild(el('div',{class:'wspts'}, String(pts)));
@@ -6831,7 +6855,7 @@ function scoringChampions(source){
   ranked.forEach((t,i)=>{
     wrap.appendChild(el('div',{class:'lb-row ' + (i===0?'r1':i===1?'r2':i===2?'r3':'')},
       el('div',{class:'lb-rank'}, String(i+1)),
-      el('div',{class:'lb-info'}, el('div',{class:'lb-name', style:'color:'+t.color}, t.name), el('div',{class:'lb-sub'}, t.ownerName||'')),
+      el('div',{class:'lb-info'}, el('div',{class:'lb-name', style:'color:'+t.color+';display:flex;align-items:center'}, teamBadge(t,22), t.name), el('div',{class:'lb-sub'}, t.ownerName||'')),
       el('div',{class:'lb-pts'}, el('b',{}, String(t.total)), el('span',{}, 'pts'))
     ));
   });
@@ -7395,7 +7419,7 @@ function renderClaimTeamScreen(teamId, week){
     }
     const team = source.teams.find(t=>t.id===teamId);
     if(!team){ body.appendChild(el('div',{class:'modal-meta'}, 'Couldn\'t find that team — ask for a fresh link.')); return; }
-    body.appendChild(el('h2',{style:'font-size:1.35rem;padding-right:34px'}, '🏆 ' + team.name + ' · Week ' + week + ' steal'));
+    body.appendChild(el('h2',{style:'font-size:1.35rem;padding-right:34px;display:flex;align-items:center;justify-content:center'}, teamBadge(team, 30), team.name + ' · Week ' + week + ' steal'));
     if(firebaseReady && lastRemoteScoring === null){
       body.appendChild(el('div',{class:'modal-meta'}, 'Loading the latest picks…'));
       return;
