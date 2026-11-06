@@ -497,6 +497,22 @@ footer.note{max-width:1180px;margin:30px auto 0;padding:0 18px;color:var(--sand-
 ::-webkit-scrollbar{width:10px;height:10px;}
 ::-webkit-scrollbar-thumb{background:var(--jungle2);border-radius:6px;}
 ::-webkit-scrollbar-track{background:transparent;}
+
+/* Standings: per-team grid of points by player by week */
+.wk-grid-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:4px -4px 2px;padding:0 4px}
+table.wk-grid{border-collapse:separate;border-spacing:0;width:100%;font-size:0.8rem}
+table.wk-grid th,table.wk-grid td{padding:6px 3px;text-align:center;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,.07)}
+table.wk-grid th{font-size:0.7rem;letter-spacing:.04em;color:var(--sand-dim);font-weight:700;position:sticky;top:0}
+table.wk-grid td.nm,table.wk-grid th.nm{text-align:left;position:sticky;left:0;background:var(--jungle2,#10241d);z-index:1;min-width:62px;max-width:84px;overflow:hidden;text-overflow:ellipsis;padding-left:6px}
+table.wk-grid td.nm{cursor:pointer;font-weight:600}
+table.wk-grid td.pt{font-weight:700}
+table.wk-grid td.zero{color:rgba(255,255,255,.28)}
+table.wk-grid td.out{color:rgba(255,120,100,.55)}
+table.wk-grid td.elimwk{color:#ff8a7a;font-weight:700}
+table.wk-grid td.tot,table.wk-grid th.tot{font-weight:800;border-left:1px solid rgba(255,255,255,.14)}
+table.wk-grid tr.steal td,table.wk-grid tr.teamrow td{font-style:normal}
+table.wk-grid tr.teamrow td{font-weight:800;border-top:2px solid rgba(255,255,255,.18);border-bottom:none}
+table.wk-grid tr.teamrow td.nm{color:var(--torch)}
 </style>
 </head>
 <body>
@@ -3897,7 +3913,7 @@ function stashScoringHistory(snapshot, reason){
    Plus a guard that refuses any save that would erase most of the scores
    unless it's an explicit, confirmed Reset/Restore. */
 let lastRemoteScoring = null;   // last copy seen from the cloud (normalized)
-const APP_BUILD = '2026-11-04a';
+const APP_BUILD = '2026-11-06a';
 let syncHash = '';
 /* Short fingerprint of the scores this device is showing (zeros ignored).
    If the phone and the computer show the same code in the bottom-left pill,
@@ -5120,6 +5136,70 @@ function pointsByWeekChart(source){
   return holder;
 }
 
+function teamWeekGrid(source, t){
+  const { scoring } = source;
+  const allWeeks = (scoring.weeks || []).map(String);
+  // show weeks up to the latest one that has anything in it
+  let last = -1;
+  allWeeks.forEach((w,i)=>{
+    const hasEntry = Object.values((scoring.entries||{})[w] || {}).some(r=> r && Object.values(r).some(v=>Number(v)>0));
+    const hasSteal = (((scoring.steals||{})[w])||[]).length > 0;
+    if(hasEntry || hasSteal) last = i;
+  });
+  const weeks = allWeeks.slice(0, last + 1);
+  const wrap = el('div',{class:'wk-grid-wrap'});
+  if(!weeks.length){ wrap.appendChild(el('div',{style:'color:var(--sand-dim);font-size:0.8rem;padding:6px'}, 'No scores entered yet.')); return wrap; }
+  const table = el('table',{class:'wk-grid'});
+  const hr = el('tr',{});
+  hr.appendChild(el('th',{class:'nm'}, 'Player'));
+  weeks.forEach(w=> hr.appendChild(el('th',{}, 'W' + w)));
+  hr.appendChild(el('th',{class:'tot'}, 'Total'));
+  table.appendChild(el('thead',{}, hr));
+  const tb = el('tbody',{});
+  const roster = teamScoringRoster(scoring, t).map(cid=>byId(cid)).filter(Boolean)
+    .sort((a,b)=>castawaySeasonPoints(scoring,b.id)-castawaySeasonPoints(scoring,a.id));
+  const colTot = weeks.map(()=>0);
+  roster.forEach(c=>{
+    const tr = el('tr',{});
+    const nm = el('td',{class:'nm', title:c.name}, c.short);
+    nm.addEventListener('click', ()=>openProfile(c.id));
+    tr.appendChild(nm);
+    const elimWk = scoring.eliminated && scoring.eliminated[c.id];
+    weeks.forEach((w,i)=>{
+      const pts = castawayWeekPoints(scoring, c.id, w);
+      colTot[i] += pts;
+      let cls = 'pt';
+      let txt = String(pts);
+      if(isOutBeforeWeek(scoring, c.id, w)){ cls = 'out'; txt = '✕'; }
+      else if(elimWk && String(elimWk) === w){ cls = 'pt elimwk'; }
+      else if(pts === 0){ cls = 'zero'; }
+      tr.appendChild(el('td',{class:cls}, txt));
+    });
+    tr.appendChild(el('td',{class:'tot'}, String(castawaySeasonPoints(scoring, c.id))));
+    tb.appendChild(tr);
+  });
+  // steal bonuses
+  const stealTr = el('tr',{class:'steal'});
+  stealTr.appendChild(el('td',{class:'nm'}, '🥷 Steals'));
+  let stealTotal = 0;
+  weeks.forEach((w,i)=>{
+    const b = stealBonusForWeek(scoring, t.id, w);
+    const names = (((scoring.steals||{})[w])||[]).filter(x=>x.teamId===t.id).map(x=>(byId(x.castawayId)||{}).short || '').filter(Boolean).join(', ');
+    stealTotal += b; colTot[i] += b;
+    stealTr.appendChild(el('td',{class: b ? 'pt' : 'zero', title: names}, names ? String(b) : '–'));
+  });
+  stealTr.appendChild(el('td',{class:'tot'}, String(stealTotal)));
+  tb.appendChild(stealTr);
+  // team row
+  const teamTr = el('tr',{class:'teamrow'});
+  teamTr.appendChild(el('td',{class:'nm'}, 'Team'));
+  colTot.forEach(v=> teamTr.appendChild(el('td',{}, String(v))));
+  teamTr.appendChild(el('td',{class:'tot'}, String(colTot.reduce((a,b)=>a+b,0))));
+  tb.appendChild(teamTr);
+  table.appendChild(tb);
+  wrap.appendChild(table);
+  return wrap;
+}
 function scoringStandings(source){
   const { teams, scoring } = source;
   const wrap = el('div',{});
@@ -5146,22 +5226,7 @@ function scoringStandings(source){
       ));
       head.appendChild(el('div',{class:'team-standing-pts', style:'color:'+t.color}, String(t.total)));
       card.appendChild(head);
-      const roster = teamScoringRoster(scoring,t).map(cid=>byId(cid)).filter(Boolean).sort((a,b)=>castawaySeasonPoints(scoring,b.id)-castawaySeasonPoints(scoring,a.id));
-      roster.forEach(c=>{
-        const row = el('div',{class:'lb-row', style:'margin-bottom:5px;padding:6px 10px'});
-        const thumb = el('div',{class:'lb-thumb', style:'width:28px;height:28px'});
-        const imgEl = el('img',{src:c.photo, style:'width:100%;height:100%;border-radius:50%;object-fit:cover'});
-        imgEl.onerror=function(){this.remove();};
-        thumb.appendChild(imgEl);
-        row.appendChild(thumb);
-        const nameLine = el('div',{class:'lb-name'}, c.short);
-        nameLine.appendChild(tribeChip(c));
-        if(scoring.eliminated && scoring.eliminated[c.id]) nameLine.appendChild(el('span',{class:'elim-tag'}, 'OUT wk ' + scoring.eliminated[c.id]));
-        row.appendChild(el('div',{class:'lb-info'}, nameLine));
-        row.appendChild(el('div',{class:'lb-pts'}, el('b',{style:'font-size:1rem'}, String(castawaySeasonPoints(scoring,c.id)))));
-        row.addEventListener('click', ()=>openProfile(c.id));
-        card.appendChild(row);
-      });
+      card.appendChild(teamWeekGrid(source, t));
       wrap.appendChild(card);
     });
   } else {
