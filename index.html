@@ -3916,7 +3916,7 @@ function stashScoringHistory(snapshot, reason){
    Plus a guard that refuses any save that would erase most of the scores
    unless it's an explicit, confirmed Reset/Restore. */
 let lastRemoteScoring = null;   // last copy seen from the cloud (normalized)
-const APP_BUILD = '2026-11-06c';
+const APP_BUILD = '2026-11-06d';
 let syncHash = '';
 /* Short fingerprint of the scores this device is showing (zeros ignored).
    If the phone and the computer show the same code in the bottom-left pill,
@@ -5082,6 +5082,7 @@ async function exportFullXLSX(source){
 let scoringSubTab = 'standings';
 let scoringLeaderView = 'team';
 let scoringSelectedWeek = null;
+let teamPageWeek = null;        // Teams tab: week shown in the week-by-week section
 let scoringWeeklyTeam = null;   // Weekly Breakdown: team whose players are shown (null = everyone)
 let scoringSelectedTeam = null;
 
@@ -5157,6 +5158,99 @@ function teamBadge(t, px){
   const g = TEAM_EMBLEMS[t && t.name] || TEAM_EMBLEMS._default;
   return el('span',{class:'tbadge', title:(t && t.name) || '', style:'color:' + ((t && t.color) || 'var(--torch)') + ';width:' + px + 'px;height:' + px + 'px',
     html:'<svg viewBox="0 0 32 32" width="' + px + '" height="' + px + '" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="rgba(0,0,0,.45)" stroke="currentColor" stroke-width="1.6"/>' + g + '</svg>'});
+}
+/* Week-by-week view for ONE team (used on the Teams tab): pick a week and see
+   every player's points that week, how they earned them (chips), who they
+   stole and what that added, and the team's total for the week. */
+function teamWeekBreakdown(source, team){
+  const { scoring } = source;
+  const weeks = (scoring.weeks || []).map(String);
+  const weekHasData = w => Object.values((scoring.entries||{})[w] || {}).some(r=> r && Object.values(r).some(v=>Number(v)>0)) || (((scoring.steals||{})[w])||[]).length > 0;
+  const box = el('div',{class:'card-box', style:'margin-top:16px;padding:14px 14px 10px'});
+  box.appendChild(el('h3',{style:'margin:0 0 4px;font-size:1.05rem'}, '📅 Week by Week'));
+  if(!weeks.length){ box.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.85rem'}, 'No weeks yet.')); return box; }
+  let lastData = -1; weeks.forEach((w,i)=>{ if(weekHasData(w)) lastData = i; });
+  // default = latest week with scores; only a week the person actually tapped is remembered
+  const w = (teamPageWeek !== null && weeks.includes(String(teamPageWeek))) ? String(teamPageWeek) : weeks[Math.max(0, lastData)];
+
+  // quick glance: team total for every week that has scores
+  const roster = teamScoringRoster(scoring, team);
+  const weekTotal = wk => teamWeekPoints(scoring, roster, wk) + stealBonusForWeek(scoring, team.id, wk);
+  const strip = el('div',{style:'display:flex;gap:6px;overflow-x:auto;padding:6px 0 10px;-webkit-overflow-scrolling:touch'});
+  weeks.forEach(wk=>{
+    if(!weekHasData(wk) && wk !== w) return;
+    const on = wk === w;
+    const b = el('button',{style:'flex:none;min-width:52px;padding:6px 8px;border-radius:10px;cursor:pointer;text-align:center;font-family:inherit;color:var(--sand);background:' + (on ? 'rgba(255,255,255,.12)' : 'var(--jungle2)') + ';border:' + (on ? '2px solid ' + team.color : '1px solid rgba(255,255,255,.12)')},
+      el('div',{style:'font-size:0.66rem;color:var(--sand-dim);letter-spacing:.04em'}, 'WEEK ' + wk),
+      el('div',{style:'font-family:\'Bebas Neue\';font-size:1.3rem;color:' + team.color}, String(weekTotal(wk))));
+    b.addEventListener('click', ()=>{ teamPageWeek = wk; renderTeamsTab(); });
+    strip.appendChild(b);
+  });
+  box.appendChild(strip);
+
+  // other weeks (no scores yet) still reachable
+  const emptyWeeks = weeks.filter(wk=>!weekHasData(wk) && wk !== w);
+  if(emptyWeeks.length){
+    const sel = el('select',{style:'width:auto;padding:5px 8px;font-size:0.76rem;margin-bottom:8px'});
+    sel.appendChild(el('option',{value:''}, 'Other weeks…'));
+    emptyWeeks.forEach(wk=> sel.appendChild(el('option',{value:wk}, 'Week ' + wk)));
+    sel.addEventListener('change', ()=>{ if(sel.value){ teamPageWeek = sel.value; renderTeamsTab(); } });
+    box.appendChild(sel);
+  }
+
+  const playerPts = teamWeekPoints(scoring, roster, w);
+  const stealPts = stealBonusForWeek(scoring, team.id, w);
+  const head = el('div',{style:'display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:6px;margin:2px 0 10px'});
+  head.appendChild(el('div',{},
+    el('div',{style:'font-family:\'Bebas Neue\';font-size:1.25rem;color:var(--sand)'}, team.name + ' — Week ' + w),
+    el('div',{style:'font-size:0.78rem;color:var(--sand-dim)'}, 'Players ' + playerPts + ' + Steals ' + stealPts)));
+  head.appendChild(el('div',{style:'font-family:\'Bebas Neue\';font-size:2.2rem;line-height:1;color:' + team.color}, String(playerPts + stealPts)));
+  box.appendChild(head);
+
+  const rows = roster.map(cid=>byId(cid)).filter(Boolean)
+    .map(c=>({ c, pts: castawayWeekPoints(scoring, c.id, w) }))
+    .sort((a,b)=>b.pts-a.pts);
+  const chipsFor = c => {
+    const cats = ((scoring.entries[w]||{})[c.id]) || {};
+    return scoring.categories.filter(cat=>Number(cats[cat.key])>0).map(cat=>el('span',{class:'chip'}, cat.label + ' ×' + cats[cat.key]));
+  };
+  rows.forEach(({c, pts})=>{
+    const row = el('div',{class:'week-scorecard'});
+    const img = el('img',{src:c.photo, alt:c.short}); img.onerror = function(){ this.style.display='none'; };
+    row.appendChild(img);
+    const nameLine = el('div',{class:'wsname'}, c.short);
+    nameLine.appendChild(tribeChip(c));
+    const out = scoring.eliminated && scoring.eliminated[c.id];
+    if(out && String(out) === w) nameLine.appendChild(el('span',{class:'elim-tag'}, 'VOTED OUT'));
+    const chips = chipsFor(c);
+    const outBefore = isOutBeforeWeek(scoring, c.id, w);
+    row.appendChild(el('div',{class:'wsinfo'}, nameLine,
+      el('div',{}, outBefore ? el('span',{style:'font-size:0.74rem;color:#ff8a7a'}, 'Out since week ' + out)
+        : (chips.length ? chips : el('span',{style:'font-size:0.74rem;color:var(--sand-dim)'}, 'No points this week')))));
+    row.appendChild(el('div',{class:'wspts'}, String(pts)));
+    row.addEventListener('click', ()=>openProfile(c.id));
+    box.appendChild(row);
+  });
+
+  const steals = (((scoring.steals||{})[w])||[]).filter(x=>x.teamId === team.id);
+  if(steals.length){
+    steals.forEach(st=>{
+      const c = st.castawayId ? byId(st.castawayId) : null;
+      const row = el('div',{class:'week-scorecard'});
+      if(c){ const img = el('img',{src:c.photo, alt:c.short}); img.onerror = function(){ this.style.display='none'; }; row.appendChild(img); }
+      const chips = c ? chipsFor(c) : [];
+      row.appendChild(el('div',{class:'wsinfo'},
+        el('div',{class:'wsname'}, '🥷 Steal: ' + (c ? c.short : (st.note || 'bonus'))),
+        el('div',{}, chips.length ? chips : el('span',{style:'font-size:0.74rem;color:var(--sand-dim)'}, c ? 'No points this week' : (st.note || ''))),
+        (c && st.note) ? el('div',{style:'font-size:0.72rem;color:var(--sand-dim);margin-top:2px'}, st.note) : null));
+      row.appendChild(el('div',{class:'wspts'}, String(stealPointsLive(scoring, st, w))));
+      if(c) row.addEventListener('click', ()=>openProfile(c.id));
+      box.appendChild(row);
+    });
+  } else {
+    box.appendChild(el('div',{style:'font-size:0.78rem;color:var(--sand-dim);padding:6px 4px 2px'}, '🥷 No steal this week.'));
+  }
+  return box;
 }
 function teamWeekGrid(source, t){
   const { scoring } = source;
@@ -5575,6 +5669,7 @@ function scoringTeamPages(source){
   });
   banner.appendChild(stats);
   wrap.appendChild(banner);
+  wrap.appendChild(teamWeekBreakdown(source, team));
 
   wrap.appendChild(el('h3',{style:'margin:22px 0 4px'}, '🏆 Roster'));
   if(source.isAdmin) wrap.appendChild(el('p',{style:'color:var(--sand-dim);font-size:0.78rem;margin:0 0 10px'}, 'Tap a card for their profile, or the ✏️ to score their week right here.'));
