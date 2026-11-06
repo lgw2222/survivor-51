@@ -3913,7 +3913,7 @@ function stashScoringHistory(snapshot, reason){
    Plus a guard that refuses any save that would erase most of the scores
    unless it's an explicit, confirmed Reset/Restore. */
 let lastRemoteScoring = null;   // last copy seen from the cloud (normalized)
-const APP_BUILD = '2026-11-06a';
+const APP_BUILD = '2026-11-06b';
 let syncHash = '';
 /* Short fingerprint of the scores this device is showing (zeros ignored).
    If the phone and the computer show the same code in the bottom-left pill,
@@ -5079,6 +5079,7 @@ async function exportFullXLSX(source){
 let scoringSubTab = 'standings';
 let scoringLeaderView = 'team';
 let scoringSelectedWeek = null;
+let scoringWeeklyTeam = null;   // Weekly Breakdown: team whose players are shown (null = everyone)
 let scoringSelectedTeam = null;
 
 function scoringEmptyNotice(msg, showDraftLinks){
@@ -6089,16 +6090,32 @@ function scoringWeekly(source){
   const w = scoringSelectedWeek;
 
   const teamRow = el('div',{style:'display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px'});
+  if(scoringWeeklyTeam && !teams.some(t=>t.id===scoringWeeklyTeam)) scoringWeeklyTeam = null;
   teams.forEach(t=>{
     const pts = teamWeekPoints(scoring, teamScoringRoster(scoring, t), w) + stealBonusForWeek(scoring, t.id, w);
-    teamRow.appendChild(el('div',{class:'card-box', style:'padding:12px 14px'},
+    const sel = scoringWeeklyTeam === t.id;
+    const card = el('div',{class:'card-box', style:'padding:12px 14px;cursor:pointer;' + (sel ? 'outline:2px solid '+t.color+';' : (scoringWeeklyTeam ? 'opacity:.6;' : ''))},
       el('div',{style:'font-family:\'Bebas Neue\';font-size:1.1rem;color:'+t.color}, t.name),
       el('div',{style:'font-family:\'Bebas Neue\';font-size:1.8rem;color:'+t.color}, String(pts))
-    ));
+    );
+    card.addEventListener('click', ()=>{ scoringWeeklyTeam = sel ? null : t.id; renderScoring(); });
+    teamRow.appendChild(card);
   });
   wrap.appendChild(teamRow);
+  const filterNote = el('div',{style:'display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-8px 0 14px;font-size:0.78rem;color:var(--sand-dim)'});
+  if(scoringWeeklyTeam){
+    const tt = teams.find(t=>t.id===scoringWeeklyTeam);
+    filterNote.appendChild(el('span',{}, 'Showing ' + tt.name + '\'s players for Week ' + w + '.'));
+    const allBtn = el('button',{class:'btn', style:'padding:4px 12px;font-size:0.74rem'}, 'Show all teams');
+    allBtn.addEventListener('click', ()=>{ scoringWeeklyTeam = null; renderScoring(); });
+    filterNote.appendChild(allBtn);
+  } else {
+    filterNote.appendChild(el('span',{}, 'Tap a team to see just its players.'));
+  }
+  wrap.appendChild(filterNote);
 
-  const allPicks = teams.flatMap(t=>teamScoringRoster(scoring,t).map(cid=>({cid,team:t})));
+  const allPicks = teams.filter(t=>!scoringWeeklyTeam || t.id===scoringWeeklyTeam)
+    .flatMap(t=>teamScoringRoster(scoring,t).map(cid=>({cid,team:t})));
   const ranked = allPicks.map(({cid,team})=>({c:byId(cid), team, pts:castawayWeekPoints(scoring,cid,w)}))
     .filter(x=>x.c).sort((a,b)=>b.pts-a.pts);
   ranked.forEach(r=>{
@@ -6120,6 +6137,27 @@ function scoringWeekly(source){
     row.addEventListener('click', ()=>openProfile(r.c.id));
     wrap.appendChild(row);
   });
+  if(scoringWeeklyTeam){
+    const tt = teams.find(t=>t.id===scoringWeeklyTeam);
+    const steals = (((scoring.steals||{})[w])||[]).filter(x=>x.teamId===tt.id);
+    steals.forEach(st=>{
+      const c = byId(st.castawayId); if(!c) return;
+      const pts = stealPointsLive(scoring, st, w);
+      const row = el('div',{class:'week-scorecard'});
+      const img = el('img',{src:c.photo, alt:c.short});
+      img.onerror=function(){this.style.display='none';};
+      row.appendChild(img);
+      const cats = ((scoring.entries[w]||{})[c.id])||{};
+      const chips = scoring.categories.filter(cat=>Number(cats[cat.key])>0).map(cat=>el('span',{class:'chip'}, cat.label + ' ×' + cats[cat.key]));
+      row.appendChild(el('div',{class:'wsinfo'},
+        el('div',{class:'wsname'}, '🥷 Steal: ' + c.short),
+        el('div',{}, chips.length ? chips : el('span',{style:'font-size:0.74rem;color:var(--sand-dim)'}, 'No points this week'))
+      ));
+      row.appendChild(el('div',{class:'wspts'}, String(pts)));
+      row.addEventListener('click', ()=>openProfile(c.id));
+      wrap.appendChild(row);
+    });
+  }
   return wrap;
 }
 
